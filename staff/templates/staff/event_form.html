@@ -1,0 +1,21 @@
+{% extends 'staff/base.html' %}
+{% load widget_tweaks %}
+{% block content %}
+    <h1>{% if event.pk %}Edit{% else %}New{% endif %} Event</h1>
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+            {{ field.label }}:
+            {% if field.name == 'date' %}
+                {% render_field field type="date" %}
+            {% elif field.name in 'start_time end_time' %}
+                {% render_field field type="time" %}
+            {% else %}
+                {{ field }}
+            {% endif %}
+            <br>
+        {% endfor %}
+        <button type="submit">Save</button>
+        <a href="{% url 'staff:event_list' %}">Cancel</a>
+    </form>
+{% endblock %}

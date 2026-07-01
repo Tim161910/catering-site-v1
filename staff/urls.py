@@ -1,0 +1,57 @@
+from django.urls import path
+from .views import (
+    StaffDashboardView, StaffListView, StaffCreateView, StaffUpdateView, StaffDeleteView, 
+    EventListView, EventDetailView, EventCreateView, EventUpdateView, 
+    RecruitmentListView, RecruitmentCreateView, RecruitmentDetailView, 
+    RecruitmentApplicantsView, RecruitmentUpdateView, RecruitmentDeleteView, 
+    CloseRecruitmentView, EditRecruitmentView, ApplicantCreateView,  
+    ExportApplicantsCSVView, SendEmailToApplicantsView, ScheduleInterviewsView, 
+    ManageInterviewSlotsView, SuccessView, 
+    RolePlayListView, RolePlayCreateView, RolePlayUpdateView, RolePlayDeleteView, 
+    RolePlayDetailView, StartScenarioView, IncidentCreateView, StaffProfileUpdateView
+)
+from . import views
+
+app_name = 'staff'
+
+urlpatterns = [
+    path('dashboard/', StaffDashboardView.as_view(), name='staff_dashboard'),
+    path('incident/add/', IncidentCreateView.as_view(), name='incident_add'),
+    path('', StaffListView.as_view(), name='staff_list'),
+    path('create/', StaffCreateView.as_view(), name='staff_create'),
+    path('<int:pk>/update/', StaffUpdateView.as_view(), name='staff_update'),
+    path('<int:pk>/delete/', StaffDeleteView.as_view(), name='staff_delete'),
+    path('event/', EventListView.as_view(), name='event_list'),
+    path('event/new/', EventCreateView.as_view(), name='event_create'),
+    path('event/<int:pk>/update/', EventUpdateView.as_view(), name='event_update'),
+    path('event/<int:pk>/', EventDetailView.as_view(), name='event_detail'),
+    path('event-status/', views.event_status, name='event_status'),
+    path('event/<int:event_id>/auto-fill/', views.auto_fill_roster, name='auto_fill_roster'),
+    path('auto-fill-all/', views.auto_fill_all_events, name='auto_fill_all_events'),
+    path('replace-staff/<int:assignment_id>/', views.replace_staff, name='replace_staff'),
+    path('recruitment/', RecruitmentListView.as_view(), name='recruitment_list'),
+    path('recruitment/new/', RecruitmentCreateView.as_view(), name='recruitment_create'),
+    path('recruitment/<int:recruitment_id>/', RecruitmentDetailView.as_view(), name='recruitment_detail'),
+    path('recruitment/<int:recruitment_id>/apply/', ApplicantCreateView.as_view(), name='apply'), 
+    path('recruitment/<int:recruitment_id>/applicants/', RecruitmentApplicantsView.as_view(), name='recruitment_applicants'),
+    path('success/', SuccessView.as_view(), name='success'),
+    path('role_play/', RolePlayListView.as_view(), name='role_play_list'),
+    path('role_play/new/', RolePlayCreateView.as_view(), name='role_play_create'),
+    path('role_play/<int:pk>/update/', RolePlayUpdateView.as_view(), name='role_play_update'),
+    path('role_play/<int:pk>/delete/', RolePlayDeleteView.as_view(), name='role_play_delete'), 
+    path('role_play/<int:pk>/', RolePlayDetailView.as_view(), name='role_play_detail'), 
+    path('role_play/<int:pk>/start/', StartScenarioView.as_view(), name='start_scenario'), 
+    path('recruitment/<int:recruitment_id>/close/', CloseRecruitmentView.as_view(), name='close_recruitment'), 
+    path('recruitment/<int:recruitment_id>/delete/', RecruitmentDeleteView.as_view(), name='recruitment_delete'), 
+    path('recruitment/<int:recruitment_id>/update/', RecruitmentUpdateView.as_view(), name='recruitment_update'),  
+    path('recruitment/<int:recruitment_id>/edit/',  EditRecruitmentView.as_view(), name='recruitment_edit'),  
+    path('recruitment/<int:recruitment_id>/export_csv/', ExportApplicantsCSVView.as_view(), name='export_applicants_csv'),  
+    path('recruitment/<int:recruitment_id>/send_email/', SendEmailToApplicantsView.as_view(), name='send_email_to_applicants'), 
+    path('recruitment/<int:recruitment_id>/schedule_interviews/', ScheduleInterviewsView.as_view(), name='schedule_interviews'), 
+    path('recruitment/<int:recruitment_id>/manage_interview_slots/', ManageInterviewSlotsView.as_view(), name='manage_interview_slots'),
+    path('api/events/<int:pk>/assignments/', views.create_assignment, name='create_assignment'),
+    path('api/assignments/<int:assignment_id>/update_role/', views.update_assignment_role, name='update_assignment_role'),
+    path('api/assignments/<int:assignment_id>/reassign/', views.reassign_assignment, name='reassign_assignment'),
+    path('api/assignments/<int:assignment_id>/replace_staff/', views.replace_staff, name='replace_staff'),
+    path('profile/edit', StaffProfileUpdateView.as_view(), name='staff_profile_edit'),
+]

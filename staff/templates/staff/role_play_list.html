@@ -1,0 +1,33 @@
+{% extends 'staff/base.html' %}
+
+{% block content %}
+    <h2>Role Play Scenarios</h2>
+    <a href="{% url 'staff:role_play_create' %}" style="background:#007bff;color:white;padding:8px 12px;text-decoration:none;border-radius:4px;">+ Add New Scenario</a>
+    <br><br>
+    
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Scenario</th>
+                <th>Role</th>
+                <th>Description</th>
+                <th>Expected Outcome</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for role_play in roleplay_list %}
+            <tr>
+                <td>{{ role_play.scenario }}</td>
+                <td>{{ role_play.role }}</td>
+                <td>{{ role_play.description }}</td>
+                <td>{{ role_play.expected_outcome }}</td>
+                <td>
+                    <a href="{% url 'staff:role_play_update' role_play.pk %}" class="btn btn-sm btn-warning">Edit</a>
+                    <a href="{% url 'staff:role_play_delete' role_play.pk %}" class="btn btn-sm btn-danger">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

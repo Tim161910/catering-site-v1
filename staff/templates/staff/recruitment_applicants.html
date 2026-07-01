@@ -1,0 +1,10 @@
+<h1>Applicants for {{ object.position }}</h1>
+<ul>
+    {% for applicant in applicants %}
+        <li>{{ applicant.name }} - {{ applicant.email }} - {{ applicant.phone }}</li>
+    {% empty %}
+        <li>No applicants yet.</li>
+    {% endfor %}
+</ul>
+<a href="{% url 'staff:recruitment_detail' recruitment_id=object.id %}">Back to Recruitment Details</a>
+

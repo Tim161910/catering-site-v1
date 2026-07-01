@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Log Incident</h2>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="mb-3">
+            <label>{{ form.staff.label }}</label>
+            {{ form.staff }}
+        </div>
+
+        <div class="mb-3">
+            <label>{{ form.event.label }}</label>
+            {{ form.event }}
+        </div>
+
+        <div class="mb-3">
+            <label>{{ form.issue_type.label }}</label>
+            {{ form.issue_type }}
+        </div>
+
+        <div class="mb-3">
+            <label>{{ form.description.label }}</label>
+            {{ form.description }}
+        </div>
+
+        <button type="submit" class="btn btn-primary">Save Incident</button>
+        <a href="{% url 'staff:staff_dashboard' %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends 'staff/base.html' %}
+
+{% block content %}
+    <h1>Upcoming Events</h1>
+    <a href="{% url 'staff:event_create' %}">+ New Event</a>
+    <ul>
+        {% for event in events %}
+            <li>
+                <a href="{% url 'staff:event_detail' event.pk %}">{{ event.name }}</a>
+                - {{ event.date }} {{ event.start_time }}
+                {% if event.status == 'Scheduled' %}
+                    <span style="color: green;">{{ event.status }}</span>
+                {% else %}
+                    <span style="color: red;">{{ event.status }}</span>
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+{% endblock %}

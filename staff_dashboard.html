@@ -1,0 +1,42 @@
+<h2>Staff Reliability Dashboard</h2>
+<table border="1" cellpadding="8">
+    <tr>
+        <th>Name</th>
+        <th>Role</th>
+        <th>Events</th>
+        <th>Incidents</th>
+        <th>No-Shows</th>
+        <th>Score</th>
+        <th>Status</th>
+        <th>Action</th>
+    </tr>
+    {% for staff in staff_list %}
+    <tr>
+        <td>{{ staff.name }}</td>
+        <td>{{ staff.role }}</td>
+        <td>{{ staff.events_worked }}</td>
+        <td>{{ staff.incident_count }}</td>
+        <td>{{ staff.no_shows }}</td>
+        <td><strong>{{ staff.reliability_score }}%</strong></td>
+        <td>
+            {% if staff.reliability_score >= 90 %}
+                <span style="color:green; font-weight:bold;">A-Team</span>
+            {% elif staff.reliability_score >= 60 %}
+                <span style="color:orange;">Standard</span>
+            {% else %}
+                <span style="color:red; font-weight:bold;">Warning</span>
+            {% endif %}
+        </td>
+        <td>
+            <a href="{% url 'staff:incident_add' %}?staff={{ staff.id }}" class="btn btn-danger btn-sm">
+                Log Issue
+            </a> 
+        </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="8">No staff yet. {# <a href="{% url 'staff:staff_create' %}">Add staff</a> #}</td></tr>
+    {% endfor %}
+</table>
+<br>
+{# <a href="{% url 'staff:staff_create' %}">Add Staff</a> | #}
+{# <a href="{% url 'staff:incident_add' %}">Log Incident</a> #}

@@ -1,0 +1,13 @@
+<h1>Emails Sent</h1>
+<p>{{ emails_sent }} emails have been sent to the applicants for the position of {{ recruitment.position }}.</p>
+{% if errors %}
+    <p>Errors:</p>
+    <ul>
+        {% for error in errors %}
+            <li>{{ error }}</li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>All emails were sent successfully!</p>
+{% endif %}
+<a href="{% url 'recruitment_detail' recruitment.id %}">Back to Recruitment Details</a>

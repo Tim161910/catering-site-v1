@@ -1,0 +1,31 @@
+{% extends 'staff/base.html' %}
+
+{% block content %}
+<h1>Recruitment List</h1>
+<ul>
+{% for recruitment in object_list %}
+    <li>
+        {{ recruitment.position }} - {{ recruitment.status }} {ID: {{ recruitment.id }}}
+        {% if recruitment.status == 'Open' %}
+             - <a href="{% url 'staff:close_recruitment' recruitment_id=recruitment.id %}">Close</a>
+        {% endif %}
+         - <a href="{% url 'staff:recruitment_detail' recruitment_id=recruitment.id %}">View Details</a>
+         -<a href="{% url 'staff:recruitment_update' recruitment_id=recruitment.id %}">Edit</a> 
+         - <a href="{% url 'staff:recruitment_delete' recruitment_id=recruitment.id %}">Delete</a>
+         {% if recruitment.status == 'Closed' %}
+             - <a href="{% url 'staff:reopen_recruitment' recruitment_id=recruitment.id %}">Reopen</a>
+        {% endif %}
+         - <a href="{% url 'staff:recruitment_applicants' recruitment_id=recruitment.id %}">View Applications</a>
+        {% if recruitment.status == 'Open' %}
+         - <a href="{% url 'staff:export_applicants_csv' recruitment_id=recruitment.id %}">Export CSV</a>
+        {% endif %} 
+        - <a href="{% url 'staff:send_email_to_applicants' recruitment_id=recruitment.id %}">Send Email to Applicants</a>
+        - <a href="{% url 'staff:schedule_interviews' recruitment_id=recruitment.id %}">Schedule Interviews</a>
+        - <a href="{% url 'staff:manage_interview_slots' recruitment_id=recruitment.id %}">Manage Interview Slots</a>
+        - <a href="{% url 'staff:apply' recruitment_id=recruitment.id %}">Apply</a>
+    </li>
+    {% empty %}
+    <li>No recruitments yet.</li>
+    {% endfor %}
+</ul>
+{% endblock %}

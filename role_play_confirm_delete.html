@@ -1,0 +1,11 @@
+{% extends 'staff/base.html' %}
+
+{% block content %}
+    <h1>Delete Role Play</h1>
+    <p>Are you sure you want to delete the role play scenario "{{ object.scenario }}" for the role of "{{ object.role }}"?</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Yes, delete</button>
+        <a href="{% url 'staff:role_play_list' %}" class="btn btn-secondary">Cancel</a>
+    </form>
+{% endblock %}

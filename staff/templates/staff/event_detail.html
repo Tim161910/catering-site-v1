@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2>{{ event.name }}</h2>
+  <p class="text-muted">Date: {{ event.date|date:"F j, Y" }}</p>
+
+  <h4 class="mt-4">Staff Assignments</h4>
+  <div class="table-responsive">
+    <table class="table table-bordered table-hover align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Role</th>
+          <th>Staff</th>
+          <th style="width: 250px;">Reassign</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for assignment in assignments %}
+        <tr>
+          <td style="width: 200px;"> 
+            <select class="form-select form-select-sm" 
+                    onchange="updateRole({{ assignment.id }}, this.value)">
+              {% for role in roles %}
+              <option value="{{ role.id }}" {% if assignment.role.id == role.id %}selected{% endif %}>
+                {{ role.name }}  
+              </option>
+              {% endfor %} 
+            </select>
+          </td>
+
+          <td>
+            {{ assignment.staff.name }}
+            {% if assignment.reassignment_reason %}
+              <small class="Text-muted d-block">Reassigned: {{ assignment.reassignment_reason }}</small>
+            {% endif %}
+          </td>
+
+          <td style="width: 250px;">
+            <div class="d-flex gap-2">
+              <select id="staff-{{ assignment.id }}" class="form-select form-select-sm">
+                <option value="">Select new staff...</option>
+                {% for staff in assignment.replacement_staff|dictsort:"name" %}
+                  <option value="{{ staff.id }}">{{ staff.name }}</option>
+                {% endfor %}   
+              </select>
+              <button type="button" class="btn btn-sm btn-primary" 
+                      onclick="openReassignModal({{ assignment.id }})">Confirm</button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Reassignment Modal -->
+  <div class="modal fade" id="reassignModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Reassign Role</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <label class="form-label">Reason for reassignment:</label>
+          <textarea id="reassignReason" class="form-control" rows="3" placeholder="e.g. Sick, better fit, etc."></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="confirmReassign">Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentAssignmentId = null;
+
+function openReassignModal(assignmentId) {
+  const staffSelect = document.getElementById(`staff-${assignmentId}`);
+  if (!staffSelect.value) {
+    alert("Please select a staff member first");
+    return;
+  }
+  currentAssignmentId = assignmentId;
+  document.getElementById('reassignReason').value = '';
+  new bootstrap.Modal(document.getElementById('reassignModal')).show();
+}
+
+document.getElementById('confirmReassign').addEventListener('click', function() {
+  const staffSelect = document.getElementById(`staff-${currentAssignmentId}`);
+  const reason = document.getElementById('reassignReason').value;
+  
+  fetch(`/reassign-assignment/${currentAssignmentId}/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': '{{ csrf_token }}'
+    },
+    body: JSON.stringify({
+      new_staff_id: staffSelect.value,
+      reason: reason
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      location.reload();
+    } else {
+      alert(data.error);
+    }
+  });
+});
+
+function updateRole(assignmentId, roleId) {
+  fetch(`/update-assignment-role/${assignmentId}/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': '{{ csrf_token }}'
+    },
+    body: JSON.stringify({ role: roleId })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (!data.success) {
+      alert(data.error);
+    }
+  });
+}
+</script>
+
+{% endblock %}
+
+

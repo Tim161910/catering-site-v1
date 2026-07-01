@@ -1,0 +1,7 @@
+<!-- staff/templates/staff/applicant_form.html -->
+ <h1>Apply for {{ recruitment.position }}</h1>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Submit Application</button>
+</form>

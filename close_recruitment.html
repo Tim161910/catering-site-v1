@@ -1,0 +1,12 @@
+{% extends 'staff/base.html' %}
+
+{% block content %}
+<h1>Close Recruitment</h1>
+<p>Are you sure you want to close "{{ recruitment.position }}"?</p>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Close</button>
+    <a href="{% url 'staff:recruitment_list' %}">Cancel</a>
+</form>
+{% endblock %}
