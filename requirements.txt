@@ -1,7 +1,7 @@
 asgiref==3.11.1
 cffi==2.0.0
 cryptography==49.0.0
-Django5.2.4
+Django==5.2.4
 django-widget-tweaks==1.5.1
 pycparser==3.0
 sqlparse==0.5.5
