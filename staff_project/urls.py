@@ -11,10 +11,9 @@ def health_check(request):
     return HttpResponse("ok")
 
 urlpatterns = [
+    path('health/', health_check),
     path('admin/', staff_admin_site.urls),
     path('staff/', include('staff.urls')), 
     path('', RedirectView.as_view(url='staff/'), name='home'),  
     path('accounts/', include('django.contrib.auth.urls')),
-    path('health/', health_check),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
