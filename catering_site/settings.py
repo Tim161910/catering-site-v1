@@ -1,50 +1,42 @@
-print("SETTINGS LOADING...")
-
-import traceback
-print("SETTINGS LOADING...")
-try:
-    # put all your existing settings.py code here
-    pass
-except Exception as e:
-    print("SETTINGS CRASHED:")
-    traceback.print_exc()
-    raise
-
 import os
+import sys
+
+print("SETTINGS LOADING...")
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# dj_database_url may not be installed in some environments (editors, CI),
-# so attempt to import it and provide a minimal fallback if unavailable.
-try:
-    # Some linters/IDEs may flag this import as unresolved; ignore for static checks
-    import dj_database_url  # type: ignore
-except Exception:
-    # Fallback stub if dj_database_url is not installed (prevents import errors in editors)
-    class dj_database_url:
-        @staticmethod
-        def config(default='sqlite:///db.sqlite3', conn_max_age=None, ssl_require=False):
-            # Return a minimal Django DATABASES config for sqlite
-            db_path = default.replace('sqlite:///', '') if default.startswith('sqlite:///') else 'db.sqlite3'
-            return {
-                'ENGINE': 'django.db.backends.sqlite3',
-                'NAME': os.path.join(BASE_DIR, db_path),
-                'CONN_MAX_AGE': conn_max_age,
-            }
+# Security
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-this')
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,.onrender.com').split(',')
 
-try:
-    from dotenv import load_dotenv
-except ImportError:
-    def load_dotenv(*args, **kwargs):
-        return False
+# Apps
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'django_widget_tweaks',
+    # add your app names here, e.g. 'catering'
+]
 
-load_dotenv()
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
 
-FERNET_KEY = os.getenv('FERNET_KEY', 'AAAAAAAAAAAAAAAAAAAAAAAAAAA=')
+ROOT_URLCONF = 'catering_site.urls'  # <-- THIS WAS MISSING
+WSGI_APPLICATION = 'catering_site.wsgi.application'
 
-
-import sys
-
+# Database
 if 'collectstatic' in sys.argv:
     DATABASES = {
         'default': {
@@ -53,6 +45,7 @@ if 'collectstatic' in sys.argv:
         }
     }
 else:
+    import dj_database_url
     DATABASES = {
         'default': dj_database_url.config(
             default=os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite3'),
@@ -61,5 +54,26 @@ else:
         )
     }
 
+# Static files
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATIC_URL = '/static/'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Templates
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
