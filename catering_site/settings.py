@@ -1,3 +1,5 @@
+print("SETTINGS LOADING...")
+
 import os
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -28,12 +30,26 @@ except ImportError:
 
 load_dotenv()
 
-FERNET_KEY = os.getenv('FERNET_KEY')
+FERNET_KEY = os.getenv('FERNET_KEY', 'AAAAAAAAAAAAAAAAAAAAAAAAAAA=')
 
-DATABASES = {
-    'default': dj_database_url.config(
-        default='sqlite:///db.sqlite3',  
-        conn_max_age=600,
-        ssl_require=True
-    )
-}
+
+import sys
+
+if 'collectstatic' in sys.argv:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        }
+    }
+else:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite3'),
+            conn_max_age=600,
+            ssl_require=os.environ.get('DATABASE_URL') is not None
+        )
+    }
+
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_URL = '/static/'
