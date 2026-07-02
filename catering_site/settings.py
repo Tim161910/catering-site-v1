@@ -1,5 +1,15 @@
 print("SETTINGS LOADING...")
 
+import traceback
+print("SETTINGS LOADING...")
+try:
+    # put all your existing settings.py code here
+    pass
+except Exception as e:
+    print("SETTINGS CRASHED:")
+    traceback.print_exc()
+    raise
+
 import os
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
