@@ -3,6 +3,8 @@ from django.http import HttpResponse
 from django.urls import path, include
 from staff.admin import staff_admin_site
 from django.views.generic import RedirectView
+from django.conf import settings
+from django.conf.urls.static import static
 
 def health_check(request):
     return HttpResponse("ok")
@@ -13,4 +15,5 @@ urlpatterns = [
     path('', RedirectView.as_view(url='staff/'), name='home'),  
     path('accounts/', include('django.contrib.auth.urls')),
     path('health/', health_check),
-]
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
