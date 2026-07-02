@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 import os
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -22,6 +23,14 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-m+1abf)q6%si-7%vl0=sg
 DEBUG = False  # 1. Change to False for Render
 
 ALLOWED_HOSTS = ['.onrender.com', 'localhost', '127.0.0.1']  # 2. .onrender.com is correct now ✅
+
+DATABASES = {
+    'default': dj_database_url.config(
+        default='sqlite:///db.sqlite3',
+        conn_max_age=600,
+        ssl_require=True
+    )
+}
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -71,3 +80,4 @@ FERNET_KEY = '2ATJ44SLjUK2w0HLf6lcLHLWui0YSkMH3KpALLaWb0U='
 
 LOGIN_REDIRECT_URL = '/staff/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
+
