@@ -18,7 +18,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django_widget_tweaks',
     # add your app names here, e.g. 'catering'
 ]
 
