@@ -81,3 +81,13 @@ FERNET_KEY = '2ATJ44SLjUK2w0HLf6lcLHLWui0YSkMH3KpALLaWb0U='
 LOGIN_REDIRECT_URL = '/staff/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 
+# Create default superuser on startup if it doesn't exist
+import os
+from django.contrib.auth import get_user_model
+
+if os.environ.get('RENDER'):
+    User = get_user_model()
+    if not User.objects.filter(username='bamboo3').exists():
+        User.objects.create_superuser('bamboo3', 'admin@test.com', 'TempPass123')
+        print("Superuser bamboo3 created on startup")
+
