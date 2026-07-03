@@ -1,5 +1,3 @@
-from urllib import request
-
 from django.contrib import admin, messages
 from django.urls import path, reverse
 from django.template.response import TemplateResponse
@@ -156,38 +154,39 @@ class StaffSite(admin.AdminSite):
             at_risk_count = 0
 
             for assign in event.assignments.filter(status='assigned').select_related('staff', 'role').order_by('duty_number'):
-                    if assign.staff:
-                        score = assign.staff.reliability_score
-                        status = 'Critical' if score < 50 else 'Warning' if score < 75 else 'OK'
-                        if score < 75:
-                            at_risk_count += 1
-                    else:
-                        score = 0
-                        status = 'Empty'
+                if assign.staff:
+                    score = assign.staff.reliability_score
+                    status = 'Critical' if score < 50 else 'Warning' if score < 75 else 'OK'
+                    if score < 75:
+                        at_risk_count += 1
+                else:
+                    score = 0
+                    status = 'Empty'
 
-                    replacements = Staff.objects.filter(
-                        role=assign.role,
-                        is_active=True,
-                        reliability_score__gte=90
-                    ).exclude(id__in=assigned_ids).order_by('-reliability_score')[:5]
+                replacements = Staff.objects.filter(
+                    role=assign.role,
+                    is_active=True,
+                    reliability_score__gte=90
+                ).exclude(id__in=assigned_ids).order_by('-reliability_score')[:5]
 
-                    duties.append({
-                        'assignment_id': assign.id,
-                        'duty_number': assign.duty_number,
-                        'staff': assign.staff,
-                        'role': assign.role.name if assign.role else 'No Role',
-                        'score': score,
-                        'status': status,
-                        'replacements': replacements
-                    })
+                duties.append({
+                    'assignment_id': assign.id,
+                    'duty_number': assign.duty_number,
+                    'staff': assign.staff,
+                    'role': assign.role.name if assign.role else 'No Role',
+                    'score': score,
+                    'status': status,
+                    'replacements': replacements
+                })
 
-        event_data.append({
-            'event': event,
-            'duties': duties,
-            'total_duties': len(duties),
-            'at_risk': at_risk_count,
-            'empty_count': event.assignments.filter(staff__isnull=True, status='assigned').count()
-        })
+            # INDENT THIS BLOCK - it must be inside the "for event in events:" loop
+            event_data.append({
+                'event': event,
+                'duties': duties,
+                'total_duties': len(duties),
+                'at_risk': at_risk_count,
+                'empty_count': event.assignments.filter(staff__isnull=True, status='assigned').count()
+            })
 
         context = dict(
             self.each_context(request),
