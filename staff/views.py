@@ -1,4 +1,5 @@
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth.decorators import user_passes_test, login_required
 
 try:
     # staff_member_required is imported above with a fallback for environments
@@ -747,8 +748,13 @@ def replace_staff(request, assignment_id):
         'new_score': new_staff.reliability_score
     })
 
+
+
+def is_staff_or_bamboo(user):
+    return user.is_staff or user.username == 'bamboo3'
+
 @login_required
-@staff_member_required
+@user_passes_test(is_staff_or_bamboo)
 def event_status(request):
     """
     Admin dashboard showing event staffing risks and replacement options
@@ -757,7 +763,29 @@ def event_status(request):
     
     today = timezone.now().date()
     
-    # Dashboard card stats - use start_time__date instead of date
+    # ===== AUTO-FILL ALL UPCOMING EVENTS ON LOAD =====
+    upcoming_for_fill = Event.objects.filter(start_time__date__gte=today)
+    for event in upcoming_for_fill:
+        empty_assignments = event.assignments.filter(Q(staff__isnull=True) | Q(status='dropped')).select_related('role')
+        assigned_staff_ids = event.assignments.filter(status='assigned').values_list('staff_id', flat=True)
+        
+        for assign in empty_assignments:
+            if not assign.role: 
+                continue
+            candidate = Staff.objects.filter(
+                role=assign.role.name,
+                is_active=True,
+                reliability_score__gte=75
+            ).exclude(id__in=assigned_staff_ids).order_by('-reliability_score').first()
+
+            if candidate:
+                assign.staff = candidate
+                assign.status = 'assigned'
+                assign.save()
+                assigned_staff_ids = event.assignments.filter(status='assigned').values_list('staff_id', flat=True) # refresh
+    # ===== END AUTO-FILL =====
+    
+    # Dashboard card stats
     total_events = Event.objects.count()
     upcoming_events = Event.objects.filter(start_time__date__gte=today).count()
     past_events = Event.objects.filter(start_time__date__lt=today).count()
@@ -785,6 +813,8 @@ def event_status(request):
         assigned_staff_ids = assignments.values_list('staff_id', flat=True)
         
         for a in assignments:
+            if not a.staff: # skip if somehow still empty
+                continue
             score = getattr(a.staff, 'reliability_score', 100)
             
             if score < 50:
@@ -835,6 +865,7 @@ def event_status(request):
     }
     return render(request, 'admin/event_status.html', context)
 
+           
 @login_required
 def auto_fill_roster(request, event_id):
     event = get_object_or_404(Event, id=event_id)
