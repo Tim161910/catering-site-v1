@@ -1,246 +1,162 @@
 {% extends "admin/base_site.html" %}
-{% load static %}
-
-{% block title %}Event Status Dashboard{% endblock %}
-
-{% block extrastyle %}
-<style>
-    .dashboard-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 20px;
-        margin: 20px 0;
-    }
-    .status-card {
-        background: #fff;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        padding: 20px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        margin-bottom: 20px;
-    }
-    .status-card h3 {
-        margin-top: 0;
-        color: #417690;
-        border-bottom: 2px solid #79aec8;
-        padding-bottom: 10px;
-    }
-    .stat-number {
-        font-size: 2.5em;
-        font-weight: bold;
-        color: #417690;
-    }
-    .event-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-    .event-list li {
-        padding: 10px 0;
-        border-bottom: 1px solid #eee;
-        color: #333;
-    }
-    .risk-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 15px;
-    }
-    .risk-table th {
-        background: #417690;
-        color: #fff;
-        padding: 12px 8px;
-        text-align: left;
-        font-weight: 600;
-    }
-    .risk-table td {
-        padding: 10px 8px;
-        border-bottom: 1px solid #eee;
-    }
-    .risk-table tr:hover {
-        background: #f5f5f5;
-    }
-    .badge {
-        padding: 4px 10px;
-        border-radius: 12px;
-        font-size: 0.85em;
-        font-weight: 600;
-    }
-    .badge-ok { background: #d4edda; color: #155724; }
-    .badge-warning { background: #fff3cd; color: #856404; }
-    .badge-critical { background: #f8d7da; color: #721c24; }
-    .badge-empty { background: #e2e3e5; color: #383d41; }
-    .risk-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 10px;
-    }
-    .risk-count {
-        background: #dc3545;
-        color: #fff;
-        padding: 2px 8px;
-        border-radius: 10px;
-        font-size: 0.9em;
-    }
-    .empty-count {
-        background: #6c757d;
-        color: #fff;
-        padding: 2px 8px;
-        border-radius: 10px;
-        font-size: 0.9em;
-        margin-left: 5px;
-    }
-    .btn-autofill {
-        background: #417690;
-        color: #fff;
-        padding: 10px 16px;
-        border-radius: 4px;
-        text-decoration: none; 
-        font-weight: 600;
-        border: none;
-        cursor: pointer;
-    }
-    .btn-autofill:hover {
-        background: #2e5a73;
-        color: #fff;
-    }
-    @media (prefers-color-scheme: dark) {
-        .status-card {
-            background: #2b2b2b;
-            border-color: #444;
-            color: #f5f5f5;
-        }
-        .status-card h3, .stat-number {
-            color: #79aec8;
-        }
-        .event-list li, .risk-table td {
-            color: #f5f5f5 !important;
-            border-bottom-color: #444;
-        }
-        .risk-table tr:hover {
-            background: #383838;
-        }
-        #content h1 {
-            color: #f5f5f5;
-        }
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<h1>Event Status Dashboard</h1>
+<style>
+.card {border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 20px; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);}
+.stats {display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 30px;}
+.stat-box {background: #417690; color: white; padding: 20px; border-radius: 8px; text-align: center;}
+.stat-box h3 {margin: 0; font-size: 2em;}
+.badge {padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; display: inline-block;}
+.badge-critical {background: #dc3545; color: white;}
+.badge-warning {background: #ffc107; color: black;}
+.badge-ok {background: #28a745; color: white;}
+.badge-empty {background: #6c757d; color: white;}
+.btn {padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;}
+.btn-success {background: #28a745; color: white;}
+.btn-success:hover {background: #218838;}
+.btn-primary {background: #417690; color: white;}
+.btn-primary:hover {background: #2d5263;}
+table {width: 100%; border-collapse: collapse; margin-top: 15px;}
+th {padding: 10px 8px; text-align: left; background: #f5f5f5; border-bottom: 2px solid #ddd;}
+td {padding: 10px 8px; border-bottom: 1px solid #eee;}
+tr:hover {background: #f9f9f9;}
+select {padding: 4px; margin-top: 5px; width: 100%; border-radius: 3px; border: 1px solid #ccc;}
+.conflict-warning {color: #dc3545; font-size: 11px; font-weight: 600; display: block; margin-top: 3px;}
+</style>
 
-{% if messages %}
-  {% for message in messages %}
-    <div class="status-card" style="background: #d4edda; border-color: #c3e6cb; color: #155724;">
-        {{ message }}
-    </div>
-  {% endfor %}
-{% endif %}
+{% csrf_token %}
 
-<div class="dashboard-grid">
-    <div class="status-card"><h3>Total Events</h3><div class="stat-number">{{ total_events|default:"0" }}</div></div>
-    <div class="status-card"><h3>Upcoming</h3><div class="stat-number">{{ upcoming_events|default:"0" }}</div></div>
-    <div class="status-card"><h3>This Month</h3><div class="stat-number">{{ this_month|default:"0" }}</div></div>
-    <div class="status-card"><h3>Past Events</h3><div class="stat-number">{{ past_events|default:"0" }}</div></div>
+<div class="stats">
+    <div class="stat-box"><h3>{{ total_events }}</h3><div>Total Events</div></div>
+    <div class="stat-box"><h3>{{ upcoming_events }}</h3><div>Upcoming</div></div>
+    <div class="stat-box"><h3>{{ this_month }}</h3><div>This Month</div></div>
+    <div class="stat-box"><h3>{{ past_events }}</h3><div>Past Events</div></div>
 </div>
 
-<div class="status-card">
-    <h3>Recent Events</h3>
-    {% if recent_events %}
-        <ul class="event-list">
-        {% for event in recent_events %}
-            <li><strong>{{ event.title }}</strong> - {{ event.start_time|date:"M d, Y" }}</li>
-        {% endfor %}
-        </ul>
-    {% else %}
-        <p style="color: #999;">No events found.</p>
-    {% endif %}
-</div>
+<h2>Event Status Dashboard</h2>
 
-{% if events %}
-    {% for event_data in events %}
-    <div class="status-card">
-        <div class="risk-header">
-           <div style="display: flex; align-items: center; gap: 15px;">
-                <h3 style="margin: 0;">{{ event_data.event.title }} - {{ event_data.event.start_time|date:"M d, Y" }}</h3>
-                {% if event_data.at_risk > 0 %}
-                    <span class="risk-count">{{ event_data.at_risk }} At Risk</span>
-                {% endif %}
-                {% if event_data.empty_count > 0 %}
-                    <span class="empty-count">{{ event_data.empty_count }} Empty</span>
-                {% endif %}
-            </div>
-            {% if event_data.empty_count > 0 %}
-            <form method="post" action="{% url 'admin:auto-fill-roster' event_data.event.id %}" style="display:inline;">
-                {% csrf_token %}
-                <button type="submit" class="btn-autofill" 
-                        onclick='return confirm("Auto-fill {{ event_data.empty_count }} empty duties for {{ event_data.event.title }}?")'>
-                    Auto-Fill Roster
-                </button>
-            </form>
+{% for e in events %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h3 style="margin: 0;">{{ e.event.title }}</h3>
+            <p style="margin: 5px 0; color: #666;">
+                {{ e.event.start_time|date:"D, M j, Y h:i A" }} - {{ e.event.end_time|date:"h:i A" }} @ {{ e.event.location }}
+            </p>
+        </div>
+        <div>
+            {% if e.empty_count > 0 %}
+                <button class="btn btn-success" onclick="autoFill('{{ e.event.id }}')">Auto-Fill {{ e.empty_count }} Duties</button>
             {% endif %}
-        </div>          
-        <table class="risk-table">
-            <thead>
-                <tr><th>Duty #</th><th>Staff</th><th>Role</th><th>Reliability</th><th>Status</th></tr>
-            </thead>
-            <tbody>
-                {% for duty in event_data.duties %}
-                <tr>
-                    <td>{{ duty.duty_number }}</td>
-                    <td>
-                        {% if duty.staff %}
-                            {{ duty.staff }}
-                            <select onchange="replaceStaff({{ duty.assignment_id }}, this.value, this)"
-                                        style="margin-left: 8px; padding: 2px 6px; font-size: 0.85em; border-radius: 3px;"
-                                        {% if not duty.replacements %}disabled title="No backups available"{% endif %}>
-                                <option value="">Replace...</option>
-                                {% for r in duty.replacements %}
-                                    <option value="{{ r.id }}">{{ r }} ({{ r.reliability_score }}%)</option>
-                                {% endfor %}
-                            </select>
-                        {% else %}
-                            <em style="color:#999;">Unassigned</em>
-                        {% endif %}
-                    </td>
-                    <td>{{ duty.role }}</td>
-                    <td>{% if duty.staff %}{{ duty.score }}%{% else %}—{% endif %}</td>
-                    <td><span class="badge badge-{{ duty.status|lower }}">{{ duty.status }}</span></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        </div>
     </div>
-    {% endfor %}
-{% else %}
-    <div class="status-card">
-        <h3>Staffing Risk</h3>
-        <p style="color: #999;">No upcoming events with assignments.</p>
-    </div>
-{% endif %}
+
+    <p style="margin: 10px 0;">
+        <strong style="color: #dc3545;">{{ e.at_risk }} At Risk</strong> |
+        <strong style="color: #6c757d;">{{ e.empty_count }} Empty</strong> |
+        <strong style="color: #28a745;">{{ e.ok_count }} OK</strong> |
+        <strong>{{ e.total_duties }} Total</strong>
+    </p>
+
+    <table>
+        <tr>
+            <th style="width: 60px;">Duty</th>
+            <th>Staff</th>
+            <th>Role</th>
+            <th style="width: 100px;">Reliability</th>
+            <th style="width: 100px;">Status</th>
+        </tr>
+        {% for d in e.duties %}
+        <tr>
+            <td>{{ d.duty_number }}</td>
+            <td>
+                {% if d.staff %}
+                    <strong>{{ d.staff.name }}</strong>
+                    <div style="font-size: 12px; color: #666;">{{ d.score }}%</div>
+                    {% if d.conflicts %}
+                        <span class="conflict-warning">🔴 Conflict with: {{ d.conflicts|join:", " }}</span>
+                    {% endif %}
+                    <select onchange="replaceStaff('{{ d.assignment_id }}', this.value)">
+                        <option value="">Replace...</option>
+                        {% for r in d.replacements %}
+                        <option value="{{ r.id }}">{{ r.name }} - {{ r.reliability_score }}%</option>
+                        {% endfor %}
+                    </select>
+                {% else %}
+                    <span style="color: #6c757d; font-style: italic;">Unassigned</span>
+                    <select onchange="replaceStaff('{{ d.assignment_id }}', this.value)">
+                        <option value="">Assign...</option>
+                        {% for r in d.replacements %}
+                        <option value="{{ r.id }}">{{ r.name }} - {{ r.reliability_score }}%</option>
+                        {% endfor %}
+                    </select>
+                {% endif %}
+            </td>
+            <td>{{ d.role }}</td>
+            <td>
+                {% if d.score > 0 %}
+                    {{ d.score }}%
+                {% else %}
+                    —
+                {% endif %}
+            </td>
+            <td>
+                {% if d.status == 'Critical' %}<span class="badge badge-critical">Critical</span>
+                {% elif d.status == 'Warning' %}<span class="badge badge-warning">Warning</span>
+                {% elif d.status == 'OK' %}<span class="badge badge-ok">OK</span>
+                {% else %}<span class="badge badge-empty">Empty</span>{% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% empty %}
+<div class="card">
+    <p>No upcoming events found.</p>
+</div>
+{% endfor %}
 
 <script>
-function replaceStaff(assignmentId, newStaffId, selectEl) {
-  if (!newStaffId) return;
-  
-  fetch(`/staff/replace-staff/${assignmentId}/`, {
-    method: 'POST',
-    headers: {
-      'X-CSRFToken': '{{ csrf_token }}',
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: `new_staff_id=${newStaffId}`
-  })
-  .then(r => r.json())
-  .then(data => {
-    if (data.success) {
-      location.reload();
-    } else {
-      alert('Error: ' + data.error);
-      selectEl.value = '';
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie!== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
     }
-  });
+    return cookieValue;
+}
+const csrftoken = getCookie('csrftoken');
+
+function replaceStaff(assignmentId, newStaffId) {
+    if(!newStaffId) return;
+    if(!confirm('Replace staff for this duty?')) return;
+
+    fetch(`/staff/replace-staff/${assignmentId}/`, { // FIXED URL
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken,
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({'new_staff_id': newStaffId})
+    }).then(r => r.json()).then(data => {
+        if(data.success) {
+            alert('Staff replaced successfully!');
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    }).catch(err => alert('Request failed: ' + err));
+}
+
+function autoFill(eventId) {
+    if(confirm('Auto-fill all empty duties with 75%+ reliable staff with no conflicts?')) {
+        window.location.href = `/staff/event/${eventId}/auto-fill/`; // FIXED URL
+    }
 }
 </script>
 {% endblock %}
