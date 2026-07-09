@@ -403,8 +403,8 @@ class StaffDeleteView(DeleteView):
 class StaffProfileUpdateView(LoginRequiredMixin, UpdateView):
     model = Staff
     form_class = StaffProfileForm
-    template_name = 'staff_profile_form.html'
-    success_url = reverse_lazy('staff_profile')
+    template_name = 'staff/staff_profile_form.html'
+    success_url = reverse_lazy('staff:staff_profile')
 
     def get_object(self, queryset=None):
         staff, created = Staff.objects.get_or_create(user=self.request.user, defaults={'name': self.request.user.get_full_name() or self.request.user.username})
@@ -863,7 +863,7 @@ def event_status(request):
         'recent_events': recent_events,
         'events': events_data
     }
-    return render(request, 'admin/event_status.html', context)
+    return render(request, 'staff/admin/event_status.html', context)
 
            
 @login_required

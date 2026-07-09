@@ -146,7 +146,41 @@ class Event(models.Model):
     
     def __str__(self):
         return f"{self.title} ({self.start_time.date()})"
-    
+
+    def save(self, *args, **kwargs):
+        created = not self.pk  # Check if this is a new instance
+        super().save(*args, **kwargs)
+        if created and self.template:
+            self._auto_assign_staff()
+
+    def _auto_assign_staff(self):
+        duty_counter = 1
+        for template_role in self.template.template_roles.all():
+            needed = template_role.count
+            role = template_role.role
+
+            # Find existing assigned staff for this role and event
+            assigned = self.assignments.filter(role=role, staff__isnull=False).count()
+            needed -= assigned  # Reduce needed by already assigned staff
+
+            if needed > 0:
+                top_staff = Staff.objects.filter(
+                    role=role,
+                    is_active=True
+                ).exclude( # Don't pick staff already assigned to this event
+                    id__in=self.assignments.filter(role=role).values_list('staff_id', flat=True)
+                ).order_by('-reliability_score')[:needed]
+
+                for staff in top_staff:
+                    Assignment.objects.create(
+                        staff=staff,
+                        event=self,
+                        duty_number=duty_counter,
+                        role=role,
+                        status='assigned'
+                    )
+                    duty_counter += 1
+           
 class Task(models.Model):
     PRIORITY_CHOICES = [
         ('low', 'Low'),
@@ -326,6 +360,8 @@ class ApplicantRolePlay(models.Model):
 class Assignment(models.Model):
     staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name='assignments', null=True, blank=True)
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='assignments')
+    start_time = models.DateTimeField(blank=True, null=True)
+    end_time = models.DateTimeField(blank=True, null=True)
     duty_number = models.PositiveIntegerField(help_text="Duty slot: 1, 2, 3...")
     role = models.ForeignKey(
         Role, 

@@ -7,7 +7,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Security
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-this')
-DEBUG = os.getenv('DEBUG', 'False') == 'True'
+DEBUG = True
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,.onrender.com').split(',')
 
 # Apps
@@ -18,7 +18,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # add your app names here, e.g. 'catering'
+    'staff',  # add your app names here, e.g. 'catering'
 ]
 
 MIDDLEWARE = [
@@ -76,3 +76,5 @@ TEMPLATES = [
 ]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+FERNET_KEY = 'gDVz3ECufpfkYF7t6za6GgNMnBC9BQx4uUn47DU2L6g='

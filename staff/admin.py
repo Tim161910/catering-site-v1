@@ -1,14 +1,13 @@
 from django.contrib import admin, messages
-from django.urls import path, reverse
+from django.urls import path, reverse_lazy
 from django.template.response import TemplateResponse
 from django.utils import timezone
 from .models import RolePlayResponse, Staff, Event, IssueType, Incident, Assignment, Role, EventTemplate, EventTemplateRole
-from django.utils.html import format_html
+from django.utils.html import format_html, mark_safe
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect
 from django.http import JsonResponse
 from django.utils.decorators import method_decorator
-from django.utils.safestring import mark_safe
 from django.views.decorators.csrf import csrf_exempt
 from .forms import StaffForm
 
@@ -65,7 +64,8 @@ class EventAdmin(admin.ModelAdmin):
         is_new = obj.pk is None
         super().save_model(request, obj, form, change)
 
-        if is_new and obj.template:
+        # Only clone + auto-fill when creating AND template is set AND no duties exist yet
+        if is_new and obj.template and not Assignment.objects.filter(event=obj).exists():
             duty_num = 1
             created = 0
             for tr in obj.template.template_roles.all():
@@ -79,8 +79,23 @@ class EventAdmin(admin.ModelAdmin):
                     )
                     duty_num += 1
                     created += 1
-            if created:
-                messages.success(request, f"Created {created} empty duties from template '{obj.template.name}'")
+            
+            # Auto-fill after cloning
+            empty_duties = obj.assignments.filter(staff__isnull=True, status='assigned').select_related('role')
+            filled_count = 0
+            for duty in empty_duties:
+                assigned_staff_ids = obj.assignments.filter(staff__isnull=False).values_list('staff_id', flat=True)
+                candidate = Staff.objects.filter(
+                    role=duty.role,
+                    is_active=True,
+                    reliability_score__gte=75
+                ).exclude(id__in=assigned_staff_ids).order_by('-reliability_score').first()
+                if candidate:
+                    duty.staff = candidate
+                    duty.save(update_fields=['staff'])
+                    filled_count += 1
+            messages.success(request, f"Created {created} duties from template and auto-filled {filled_count}.")
+
             
     def assignment_count(self, obj):
         total = obj.assignments.count()
@@ -123,6 +138,7 @@ class StaffSite(admin.AdminSite):
         custom_urls = [
             path('event-status/', self.admin_view(self.event_status_view), name='event-status'),
             path('auto-fill-roster/<int:event_id>/', self.admin_view(self.auto_fill_roster), name='auto-fill-roster'),
+            path('replace-staff/<int:assignment_id>/', self.admin_view(self.replace_staff), name='replace-staff'),
         ]
         return custom_urls + urls
 
@@ -134,7 +150,7 @@ class StaffSite(admin.AdminSite):
             'models': [{
                 'name': 'Event Risk Dashboard',
                 'object_name': 'EventRiskDashboard',
-                'admin_url': reverse('admin:event-status'),
+                'admin_url': reverse_lazy('staff_admin:event-status'),
                 'view_only': True,
             }]
         })
@@ -154,20 +170,42 @@ class StaffSite(admin.AdminSite):
             at_risk_count = 0
 
             for assign in event.assignments.filter(status='assigned').select_related('staff', 'role').order_by('duty_number'):
+                conflicts = []
                 if assign.staff:
                     score = assign.staff.reliability_score
                     status = 'Critical' if score < 50 else 'Warning' if score < 75 else 'OK'
                     if score < 75:
                         at_risk_count += 1
+
+                    # FIX: Only check conflicts if both event times exist
+                    if event.start_time and event.end_time:
+                        conflicts = list(Assignment.objects.filter(
+                            staff=assign.staff,
+                            status='assigned',
+                            event__start_time__lt=event.end_time,
+                            event__end_time__gt=event.start_time
+                        ).exclude(event=event).values_list('event__title', flat=True))
+
                 else:
                     score = 0
                     status = 'Empty'
 
-                replacements = Staff.objects.filter(
+                # FIX: Build replacement queryset with conflict exclusion only if times exist
+                replacements_qs = Staff.objects.filter(
                     role=assign.role,
                     is_active=True,
-                    reliability_score__gte=90
-                ).exclude(id__in=assigned_ids).order_by('-reliability_score')[:5]
+                    reliability_score__gte=75
+                ).exclude(id__in=assigned_ids)
+
+                if event.start_time and event.end_time: # ADD THIS CHECK
+                    conflicting_staff_ids = Assignment.objects.filter(
+                        status='assigned',
+                        event__start_time__lt=event.end_time,
+                        event__end_time__gt=event.start_time
+                    ).values_list('staff_id', flat=True)
+                    replacements_qs = replacements_qs.exclude(id__in=conflicting_staff_ids)
+                
+                replacements = replacements_qs.order_by('-reliability_score')[:5]
 
                 duties.append({
                     'assignment_id': assign.id,
@@ -176,16 +214,18 @@ class StaffSite(admin.AdminSite):
                     'role': assign.role.name if assign.role else 'No Role',
                     'score': score,
                     'status': status,
-                    'replacements': replacements
+                    'replacements': replacements,
+                    'conflicts': conflicts
                 })
-
-            # INDENT THIS BLOCK - it must be inside the "for event in events:" loop
+            empty_count = event.assignments.filter(staff__isnull=True, status='assigned').count()
+            ok_count = len(duties) - at_risk_count - empty_count
             event_data.append({
                 'event': event,
                 'duties': duties,
                 'total_duties': len(duties),
                 'at_risk': at_risk_count,
-                'empty_count': event.assignments.filter(staff__isnull=True, status='assigned').count()
+                'empty_count': empty_count,
+                'ok_count': ok_count
             })
 
         context = dict(
@@ -201,29 +241,75 @@ class StaffSite(admin.AdminSite):
         )
         return TemplateResponse(request, "admin/event_status.html", context)
 
+    def auto_fill_event(self, event):
+        empty_duties = event.assignments.filter(staff__isnull=True, status='assigned').select_related('role')
+        filled_count = 0
+
+        for duty in empty_duties:
+            # Find staff available + matching role + no conflicts
+            candidates = Staff.objects.filter(
+                role=duty.role,
+                is_active=True,
+                reliability_score__gte=75
+            ).exclude(
+                id__in=event.assignments.filter(staff__isnull=False).values_list('staff_id', flat=True)
+            )
+
+            for candidate in candidates:
+                # Check time conflicts - only check if event has valid start and end times
+                conflicts = False
+                if event.start_time and event.end_time:
+                    conflicts = Assignment.objects.filter(
+                        staff=candidate,
+                        event__start_time__lt=event.end_time,
+                        event__end_time__gt=event.start_time
+                    ).exclude(event=event).exists()
+
+                if not conflicts:
+                    duty.staff = candidate
+                    # only set times if the Assignment model has start_time and end_time fields; if not, this will raise an error. Adjust accordingly.
+                    if hasattr(duty, 'start_time') and hasattr(duty, 'end_time'):
+                        duty.start_time = event.start_time
+                        duty.end_time = event.end_time
+                        duty.save(update_fields=['staff', 'start_time', 'end_time'])
+                    else:
+                        duty.save(update_fields=['staff'])
+
+                    filled_count += 1
+                    break  # Move to next duty
+
+        return filled_count
+    
     def auto_fill_roster(self, request, event_id):
         event = get_object_or_404(Event, id=event_id)
-        empty_duties = event.assignments.filter(staff__isnull=True, status='assigned').select_related('role')
+        filled_count = self.auto_fill_event(event)
+        messages.success(request, f"Auto-filled {filled_count} duties for event '{event.title}'.")
+        return redirect('staff_admin:event-status')
+        
 
-        filled_count = 0
-        with transaction.atomic():
-            for duty in empty_duties:
-                assigned_staff_ids = event.assignments.filter(staff__isnull=False).values_list('staff_id', flat=True)
-                candidate = Staff.objects.filter(
-                    role=duty.role,
-                    is_active=True,
-                    reliability_score__gte=75
-                ).exclude(id__in=assigned_staff_ids).order_by('-reliability_score').first()
+    @csrf_exempt
+    def replace_staff(self, request, assignment_id):
+        assignment = get_object_or_404(Assignment, id=assignment_id)
+        new_staff = get_object_or_404(Staff, id=request.POST.get('new_staff_id'))
+        event = assignment.event
 
-                if candidate:
-                    duty.staff = candidate
-                    duty.save(update_fields=['staff'])
-                    filled_count += 1
+        # Check conflicts
+        conflicts = False
+        if event.start_time and event.end_time:
+            conflicts = Assignment.objects.filter(
+                staff=new_staff,
+                event__start_time__lt=event.end_time,
+                event__end_time__gt=event.start_time
+            ).exclude(event=event).exists()
 
-        messages.success(request, f"Auto-filled {filled_count} of {empty_duties.count()} duties for {event.title}")
-        return redirect('admin:event-status')
+        if conflicts:
+            return JsonResponse({'success': False, 'error': 'Staff has a conflicting booking'})
+
+        assignment.staff = new_staff
+        assignment.save(update_fields=['staff'])
+        return JsonResponse({'success': True})
              
-# Activate custom admin site
+# Activate custom admin site  
 staff_admin_site = StaffSite(name='staff_admin')
 
 # Re-register all models to custom site

@@ -255,7 +255,7 @@ class EventListView(ListView):
         """
         Returns a queryset of events with dates greater than or equal to today.
         """
-        return Event.objects.filter(date__gte=timezone.now().date())
+        return Event.objects.filter(start_time__date__gte=timezone.now().date()).order_by('start_time')
     
 class EventDetailView(DetailView):
     model = Event
@@ -268,13 +268,14 @@ class EventDetailView(DetailView):
         assignments_qs = event.assignments.all().select_related('staff', 'role').order_by('duty_number')
 
         for assignment in assignments_qs:
-            role_name = assignment.role.name if assignment.role else ''
-            staff_id = assignment.staff.id if assignment.staff else None
+            if assignment.role:
+                qs = Staff.objects.filter(role=assignment.role, is_active=True)
+                if assignment.staff_id:
+                    qs = qs.exclude(id=assignment.staff_id)
+                assignment.replacement_staff = qs
+            else:
+                assignment.replacement_staff = Staff.objects.none()
 
-            qs = Staff.objects.filter(role=role_name, is_active=True)
-            if staff_id:
-                qs = qs.exclude(id=staff_id)
-            assignment.replacement_staff = qs
         context['assignments'] = assignments_qs
         context['roles'] = Role.objects.all()
         return context
@@ -359,7 +360,7 @@ class EditRecruitmentView(UpdateView):
     model = Recruitment
     form_class = RecruitmentForm
     template_name = 'staff/recruitment_form.html'
-    success_url = reverse_lazy('recruitment_list')
+    success_url = reverse_lazy('staff:recruitment_list')
 
 @login_required
 def staff_home(request):
@@ -380,7 +381,7 @@ class StaffCreateView(CreateView):
     model = Staff
     form_class = StaffForm
     template_name = 'staff/staff_form.html'
-    success_url = reverse_lazy('staff_list')
+    success_url = reverse_lazy('staff:staff_list')
 
 class StaffUpdateView(UpdateView):
     """
@@ -389,7 +390,7 @@ class StaffUpdateView(UpdateView):
     model = Staff
     form_class = StaffForm
     template_name = 'staff/staff_form.html'
-    success_url = reverse_lazy('staff_list')
+    success_url = reverse_lazy('staff:staff_list')
 
 class StaffDeleteView(DeleteView):
     """
@@ -397,13 +398,13 @@ class StaffDeleteView(DeleteView):
     """
     model = Staff
     template_name = 'staff/staff_confirm_delete.html'
-    success_url = reverse_lazy('staff_list')
+    success_url = reverse_lazy('staff:staff_list')
 
 class StaffProfileUpdateView(LoginRequiredMixin, UpdateView):
     model = Staff
     form_class = StaffProfileForm
-    template_name = 'staff_profile_form.html'
-    success_url = reverse_lazy('staff_profile')
+    template_name = 'staff/staff_profile_form.html'
+    success_url = reverse_lazy('staff:staff_profile')
 
     def get_object(self, queryset=None):
         staff, created = Staff.objects.get_or_create(user=self.request.user, defaults={'name': self.request.user.get_full_name() or self.request.user.username})
@@ -796,13 +797,16 @@ def event_status(request):
             else:
                 status = 'OK'
             
-            replacements = Staff.objects.filter(
-                role=a.role.name,
-                is_active=True,
-                reliability_score__gte=90
-            ).exclude(
-                id__in=assigned_staff_ids
-            ).order_by('-reliability_score')[:5]
+            if a.role:
+                replacements = Staff.objects.filter(
+                    role=a.role,  # FIXED: use the Role object, not .name
+                    is_active=True,
+                    reliability_score__gte=90
+                ).exclude(
+                    id__in=assigned_staff_ids
+                ).order_by('-reliability_score')[:5]
+            else:
+                replacements = Staff.objects.none()  # No role, so no replacements
             
             duties.append({
                 'assignment_id': a.id,
@@ -822,7 +826,6 @@ def event_status(request):
                 'at_risk': at_risk
             })
     
-    # Also fix recent_events
     recent_events = Event.objects.order_by('-start_time')[:5]
     
     context = {
@@ -833,8 +836,8 @@ def event_status(request):
         'recent_events': recent_events,
         'events': events_data
     }
-    return render(request, 'admin/event_status.html', context)
-
+    return render(request, 'staff/admin/event_status.html', context)
+        
 @login_required
 def auto_fill_roster(request, event_id):
     event = get_object_or_404(Event, id=event_id)
@@ -855,7 +858,7 @@ def auto_fill_roster(request, event_id):
         
         # Best candidate: matching role, active, 75+ score, not already on event
         candidate = Staff.objects.filter(
-            role=assign.role.name,
+            role=assign.role,
             is_active=True,
             reliability_score__gte=75
         ).exclude(id__in=assigned_staff_ids).order_by('-reliability_score').first()
@@ -870,46 +873,10 @@ def auto_fill_roster(request, event_id):
                 skipped_roles.append(assign.role.name)
     
     if filled_count:
-        messages.success(request, f"Auto-filled {filled_count} duties for {event.name}.")
+        messages.success(request, f"Auto-filled {filled_count} duties for {event.title}.")
     if skipped_roles:
         messages.warning(request, f"No available staff for roles: {', '.join(skipped_roles)}")
     if not filled_count and not skipped_roles:
-        messages.info(request, f"{event.name} has no empty duties to fill.")
+        messages.info(request, f"{event.title} has no empty duties to fill.")
     
-    return redirect('staff:event_status')   
-        
-@login_required
-def auto_fill_all_events(request):
-    upcoming = Event.objects.filter(date__gte=timezone.now().date())
-    filled_count = 0  # was filter_count before - this was the bug
-    event_skips = []
-
-    for event in upcoming:
-        empty = event.assignments.filter(Q(staff__isnull=True) | Q(status='dropped'))
-        for assign in empty:
-            assigned_ids = event.assignments.filter(status='assigned').values_list('staff_id', flat=True)
-            candidate = Staff.objects.filter(
-                role=assign.role.name,
-                is_active=True,
-                reliability_score__gte=75
-            ).exclude(id__in=assigned_ids).order_by('-reliability_score').first()
-
-            if candidate:
-                assign.staff = candidate
-                assign.status = 'assigned'
-                assign.save()
-                filled_count += 1
-            else:
-                if assign.role and assign.role.name not in event_skips:
-                    event_skips.append(assign.role.name)
-
-    if filled_count:
-        msg = f"Auto-filled {filled_count} duties across upcoming events."
-        if event_skips:
-            msg += f" No staff for roles: {', '.join(event_skips)}"
-        messages.success(request, msg)
-    else:
-        messages.info(request, "No empty duties to fill in upcoming events.")
-
     return redirect('staff:event_status')
-            
