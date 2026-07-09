@@ -239,7 +239,7 @@ class StaffSite(admin.AdminSite):
             title="",
             subtitle="Event Risk Dashboard"
         )
-        return TemplateResponse(request, "admin/event_status.html", context)
+        return TemplateResponse(request,"staff/event_status.html", context)
 
     def auto_fill_event(self, event):
         empty_duties = event.assignments.filter(staff__isnull=True, status='assigned').select_related('role')
