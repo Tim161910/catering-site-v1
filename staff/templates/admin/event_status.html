@@ -1,119 +1,126 @@
-{% extends "admin/base_site.html" %}
+{% extends "staff/base.html" %}
+
 {% block content %}
-<style>
-.card {border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 20px; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);}
-.stats {display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 30px;}
-.stat-box {background: #417690; color: white; padding: 20px; border-radius: 8px; text-align: center;}
-.stat-box h3 {margin: 0; font-size: 2em;}
-.badge {padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; display: inline-block;}
-.badge-critical {background: #dc3545; color: white;}
-.badge-warning {background: #ffc107; color: black;}
-.badge-ok {background: #28a745; color: white;}
-.badge-empty {background: #6c757d; color: white;}
-.btn {padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;}
-.btn-success {background: #28a745; color: white;}
-.btn-success:hover {background: #218838;}
-.btn-primary {background: #417690; color: white;}
-.btn-primary:hover {background: #2d5263;}
-table {width: 100%; border-collapse: collapse; margin-top: 15px;}
-th {padding: 10px 8px; text-align: left; background: #f5f5f5; border-bottom: 2px solid #ddd;}
-td {padding: 10px 8px; border-bottom: 1px solid #eee;}
-tr:hover {background: #f9f9f9;}
-select {padding: 4px; margin-top: 5px; width: 100%; border-radius: 3px; border: 1px solid #ccc;}
-.conflict-warning {color: #dc3545; font-size: 11px; font-weight: 600; display: block; margin-top: 3px;}
-</style>
+<div class="container mt-4">
 
-{% csrf_token %}
-
-<div class="stats">
-    <div class="stat-box"><h3>{{ total_events }}</h3><div>Total Events</div></div>
-    <div class="stat-box"><h3>{{ upcoming_events }}</h3><div>Upcoming</div></div>
-    <div class="stat-box"><h3>{{ this_month }}</h3><div>This Month</div></div>
-    <div class="stat-box"><h3>{{ past_events }}</h3><div>Past Events</div></div>
-</div>
-
-<h2>Event Status Dashboard</h2>
-
-{% for e in events %}
-<div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-            <h3 style="margin: 0;">{{ e.event.title }}</h3>
-            <p style="margin: 5px 0; color: #666;">
-                {{ e.event.start_time|date:"D, M j, Y h:i A" }} - {{ e.event.end_time|date:"h:i A" }} @ {{ e.event.location }}
-            </p>
+    <!-- STAT CARDS -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Total Events</h6>
+                    <h2>{{ stats.total_events }}</h2>
+                </div>
+            </div>
         </div>
-        <div>
-            {% if e.empty_count > 0 %}
-                <button class="btn btn-success" onclick="autoFill('{{ e.event.id }}')">Auto-Fill {{ e.empty_count }} Duties</button>
-            {% endif %}
+        <div class="col-md-3">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Upcoming</h6>
+                    <h2>{{ stats.upcoming }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">This Month</h6>
+                    <h2>{{ stats.this_month }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Past</h6>
+                    <h2>{{ stats.past }}</h2>
+                </div>
+            </div>
         </div>
     </div>
 
-    <p style="margin: 10px 0;">
-        <strong style="color: #dc3545;">{{ e.at_risk }} At Risk</strong> |
-        <strong style="color: #6c757d;">{{ e.empty_count }} Empty</strong> |
-        <strong style="color: #28a745;">{{ e.ok_count }} OK</strong> |
-        <strong>{{ e.total_duties }} Total</strong>
-    </p>
+    <h2 class="mb-3">Event Status Dashboard</h2>
 
-    <table>
-        <tr>
-            <th style="width: 60px;">Duty</th>
-            <th>Staff</th>
-            <th>Role</th>
-            <th style="width: 100px;">Reliability</th>
-            <th style="width: 100px;">Status</th>
-        </tr>
-        {% for d in e.duties %}
-        <tr>
-            <td>{{ d.duty_number }}</td>
-            <td>
-                {% if d.staff %}
-                    <strong>{{ d.staff.name }}</strong>
-                    <div style="font-size: 12px; color: #666;">{{ d.score }}%</div>
-                    {% if d.conflicts %}
-                        <span class="conflict-warning">🔴 Conflict with: {{ d.conflicts|join:", " }}</span>
-                    {% endif %}
-                    <select onchange="replaceStaff('{{ d.assignment_id }}', this.value)">
-                        <option value="">Replace...</option>
-                        {% for r in d.replacements %}
-                        <option value="{{ r.id }}">{{ r.name }} - {{ r.reliability_score }}%</option>
-                        {% endfor %}
-                    </select>
-                {% else %}
-                    <span style="color: #6c757d; font-style: italic;">Unassigned</span>
-                    <select onchange="replaceStaff('{{ d.assignment_id }}', this.value)">
-                        <option value="">Assign...</option>
-                        {% for r in d.replacements %}
-                        <option value="{{ r.id }}">{{ r.name }} - {{ r.reliability_score }}%</option>
-                        {% endfor %}
-                    </select>
-                {% endif %}
-            </td>
-            <td>{{ d.role }}</td>
-            <td>
-                {% if d.score > 0 %}
-                    {{ d.score }}%
-                {% else %}
-                    —
-                {% endif %}
-            </td>
-            <td>
-                {% if d.status == 'Critical' %}<span class="badge badge-critical">Critical</span>
-                {% elif d.status == 'Warning' %}<span class="badge badge-warning">Warning</span>
-                {% elif d.status == 'OK' %}<span class="badge badge-ok">OK</span>
-                {% else %}<span class="badge badge-empty">Empty</span>{% endif %}
-            </td>
-        </tr>
-        {% endfor %}
-    </table>
+    <!-- EVENT CARDS -->
+    {% for event in events %}
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="mb-0">{{ event.title }}</h5>
+                <small class="text-muted">{{ event.date|date:"D, M j, Y h:i A" }} @ {{ event.location }}</small>
+            </div>
+            {% if event.empty > 0 %}
+                <button class="btn btn-success btn-sm" onclick="autoFill('{{ event.id }}')">Auto-Fill {{ event.empty }} Duties</button>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <p>
+                <strong class="text-danger">{{ event.at_risk }} At Risk</strong> |
+                <strong class="text-warning">{{ event.empty }} Empty</strong> |
+                <strong class="text-success">{{ event.ok }} OK</strong> |
+                <strong>{{ event.total_duties }} Total</strong>
+            </p>
+
+            <table class="table table-bordered table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th style="width: 60px;">Duty</th>
+                        <th>Staff</th>
+                        <th>Role</th>
+                        <th style="width: 100px;">Reliability</th>
+                        <th style="width: 100px;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in event.duties %}
+                    <tr>
+                        <td>#{{ d.index }}</td>
+                        <td>
+                            {% if d.staff %}
+                                <strong>{{ d.staff }}</strong>
+                                <div style="font-size: 12px; color: #666;">{{ d.score }}%</div>
+                                {% if d.conflicts %}
+                                    <span class="text-danger" style="font-size: 11px;">🔴 Conflict: {{ d.conflicts|join:", " }}</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">Unassigned</span>
+                            {% endif %}
+                            <select class="form-control mt-1" onchange="replaceStaff('{{ d.assignment_id }}', this.value)">
+                                <option value="">Replace...</option>
+                                {% for r in d.candidates %}
+                                <option value="{{ r.id }}">{{ r.name }} - {{ r.score }}%</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td>{{ d.role }}</td>
+                        <td>{% if d.score > 0 %}{{ d.score }}%{% else %}—{% endif %}</td>
+                        <td>
+                            {% if d.status == 'critical' %}<span class="badge bg-danger">Critical</span>
+                            {% elif d.status == 'warning' %}<span class="badge bg-warning text-dark">Warning</span>
+                            {% else %}<span class="badge bg-success">OK</span>{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% empty %}
+    <div class="card"><div class="card-body">No upcoming events found.</div></div>
+    {% endfor %}
+
 </div>
-{% empty %}
-<div class="card">
-    <p>No upcoming events found.</p>
+
+<!-- REASSIGN MODAL -->
+<div class="modal fade" id="reassignModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Reassign Staff</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body"><textarea id="reassignReason" class="form-control" placeholder="Reason for reassignment..." rows="3"></textarea></div>
+      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="button" id="confirmReassign" class="btn btn-primary">Confirm</button></div>
+    </div>
+  </div>
 </div>
-{% endfor %}
 
 <script>
 function getCookie(name) {
@@ -136,26 +143,19 @@ function replaceStaff(assignmentId, newStaffId) {
     if(!newStaffId) return;
     if(!confirm('Replace staff for this duty?')) return;
 
-    fetch(`/staff/replace-staff/${assignmentId}/`, { // FIXED URL
+    fetch(`/staff/api/assignments/${assignmentId}/reassign/`, {
         method: 'POST',
-        headers: {
-            'X-CSRFToken': csrftoken,
-            'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({'new_staff_id': newStaffId})
+        headers: {'X-CSRFToken': csrftoken, 'Content-Type': 'application/json'},
+        body: JSON.stringify({'new_staff_id': newStaffId, 'reason': 'Quick replace'})
     }).then(r => r.json()).then(data => {
-        if(data.success) {
-            alert('Staff replaced successfully!');
-            location.reload();
-        } else {
-            alert('Error: ' + data.error);
-        }
-    }).catch(err => alert('Request failed: ' + err));
+        if(data.success) { alert('Staff replaced!'); location.reload(); }
+        else { alert('Error: ' + data.error); }
+    });
 }
 
 function autoFill(eventId) {
-    if(confirm('Auto-fill all empty duties with 75%+ reliable staff with no conflicts?')) {
-        window.location.href = `/staff/event/${eventId}/auto-fill/`; // FIXED URL
+    if(confirm('Auto-fill all empty duties?')) {
+        window.location.href = `/staff/event/${eventId}/auto-fill/`;
     }
 }
 </script>
