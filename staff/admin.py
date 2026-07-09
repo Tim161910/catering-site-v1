@@ -2,7 +2,7 @@ from django.contrib import admin, messages
 from django.urls import path, reverse_lazy
 from django.template.response import TemplateResponse
 from django.utils import timezone
-from .models import RolePlayResponse, Staff, Event, IssueType, Incident, Assignment, Role, EventTemplate, EventTemplateRole, EventDuty
+from .models import RolePlayResponse, Staff, Event, IssueType, Incident, Assignment, Role, EventTemplate, EventTemplateRole
 from django.utils.html import format_html, mark_safe
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect
