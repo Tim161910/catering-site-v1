@@ -868,3 +868,47 @@ def event_status(request):
         'events': events_data
     }
     return render(request, 'staff/event_status.html', context) # <- Note: path changed
+
+@login_required
+def auto_fill_roster(request, event_id):
+    event = get_object_or_404(Event, id=event_id)
+    
+    # Find empty or dropped assignments
+    empty_assignments = event.assignments.filter(
+        Q(staff__isnull=True) | Q(status='dropped')
+    ).select_related('role')
+    
+    filled_count = 0
+    skipped_roles = []
+    
+    assigned_staff_ids = list(event.assignments.filter(status='assigned').values_list('staff_id', flat=True))
+    
+    for assign in empty_assignments:
+        if not assign.role: 
+            continue
+            
+        # Best candidate: matching role, active, 75+ score, not already on event
+        candidate = Staff.objects.filter(
+            role=assign.role,
+            is_active=True,
+            reliability_score__gte=75
+        ).exclude(id__in=assigned_staff_ids).order_by('-reliability_score').first()
+        
+        if candidate:
+            assign.staff = candidate
+            assign.status = 'assigned'
+            assign.save()
+            filled_count += 1
+            assigned_staff_ids.append(candidate.id)
+        else:
+            if assign.role and assign.role.name not in skipped_roles:
+                skipped_roles.append(assign.role.name)
+    
+    if filled_count:
+        messages.success(request, f"Auto-filled {filled_count} duties for {event.title}.")
+    if skipped_roles:
+        messages.warning(request, f"No available staff for roles: {', '.join(skipped_roles)}")
+    if not filled_count and not skipped_roles:
+        messages.info(request, f"{event.title} has no empty duties to fill.")
+    
+    return redirect('staff:event_status')   
