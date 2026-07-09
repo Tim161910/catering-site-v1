@@ -143,10 +143,12 @@ class Event(models.Model):
     location = models.CharField(max_length=255, blank=True)
     client_name = models.CharField(max_length=255, blank=True)
     template = models.ForeignKey('EventTemplate', null=True, blank=True, on_delete=models.SET_NULL)
-    
+
     def __str__(self):
-        return f"{self.title} ({self.start_time.date()})"
-    
+        if self.start_time:
+            return f"{self.title} ({self.start_time.strftime('%Y-%m-%d %H:%M')})"
+        return f"{self.title} - No Date Set"
+
 class Task(models.Model):
     PRIORITY_CHOICES = [
         ('low', 'Low'),
@@ -356,9 +358,10 @@ class Assignment(models.Model):
         ordering = ['event', 'date_assigned', 'duty_number']
         verbose_name_plural = "Assignments"
 
-    def __str__(self):
+    def __str__(self):  # <-- This line moved out
         staff_name = self.staff.name if self.staff else "Unassigned"
-        return f"Duty {self.duty_number}: {staff_name} @ {self.event.title} [{self.status}]"
+        event_title = self.event.title if self.event else "No Event"
+        return f"Duty {self.duty_number}: {staff_name} @ {event_title} [{self.status}]"
 
 class Incident(models.Model):
     staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name='incidents')
