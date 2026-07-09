@@ -770,13 +770,13 @@ def event_status(request):
     upcoming_for_fill = Event.objects.filter(start_time__date__gte=today)
     for event in upcoming_for_fill:
         empty_assignments = event.assignments.filter(Q(staff__isnull=True) | Q(status='dropped')).select_related('role')
-        assigned_staff_ids = event.assignments.filter(status='assigned').values_list('staff_id', flat=True)
+        assigned_staff_ids = list(event.assignments.filter(status='assigned').values_list('staff_id', flat=True))
         
         for assign in empty_assignments:
             if not assign.role: 
                 continue
             candidate = Staff.objects.filter(
-                role=assign.role,  # FIXED: was .name
+                role=assign.role,
                 is_active=True,
                 reliability_score__gte=75
             ).exclude(id__in=assigned_staff_ids).order_by('-reliability_score').first()
@@ -785,20 +785,18 @@ def event_status(request):
                 assign.staff = candidate
                 assign.status = 'assigned'
                 assign.save()
-                assigned_staff_ids = event.assignments.filter(status='assigned').values_list('staff_id', flat=True)
+                assigned_staff_ids.append(candidate.id) # update list so we don't double-book
     # ===== END AUTO-FILL =====
     
     # Dashboard card stats
-    total_events = Event.objects.count()
-    upcoming_events = Event.objects.filter(start_time__date__gte=today).count()
-    past_events = Event.objects.filter(start_time__date__lt=today).count()
-    this_month = Event.objects.filter(
-        start_time__year=today.year, 
-        start_time__month=today.month
-    ).count()
+    stats = {
+        'total_events': Event.objects.count(),
+        'upcoming': Event.objects.filter(start_time__date__gte=today).count(),
+        'past': Event.objects.filter(start_time__date__lt=today).count(),
+        'this_month': Event.objects.filter(start_time__year=today.year, start_time__month=today.month).count(),
+    }
     
-    print(f">>> Total events from DB: {total_events}")
-    print(f">>> Upcoming: {upcoming_events}, Past: {past_events}, This Month: {this_month}")
+    print(f">>> Total events from DB: {stats['total_events']}")
     
     events_data = []
     
@@ -808,141 +806,65 @@ def event_status(request):
     ).order_by('start_time')
     
     for event in events:
-        duties = []
+        duties_data = []
         at_risk = 0
+        empty = 0
         
-        assignments = event.assignments.filter(status='assigned').select_related('staff', 'role')
-        assigned_staff_ids = assignments.values_list('staff_id', flat=True)
+        assignments = event.assignments.all().select_related('staff', 'role')
+        assigned_staff_ids = list(assignments.filter(status='assigned').values_list('staff_id', flat=True))
         
-        for a in assignments:
-            if not a.staff:
-                continue
-            score = getattr(a.staff, 'reliability_score', 100)
+        for idx, a in enumerate(assignments.order_by('duty_number'), start=1):
+            staff_obj = a.staff
+            score = staff_obj.reliability_score if staff_obj else 0
             
-            if score < 50:
-                status = 'Critical'
+            # Determine status and counts
+            if not staff_obj:
+                status = 'critical'
+                empty += 1
                 at_risk += 1
-            elif score < 75:
-                status = 'Warning'
+            elif score < 70:
+                status = 'critical'
+                at_risk += 1
+            elif score < 85:
+                status = 'warning'
                 at_risk += 1
             else:
-                status = 'OK'
+                status = 'ok'
             
-            replacements = Staff.objects.none()
-            if a.role:
-                replacements = Staff.objects.filter(
-                    role=a.role,  # FIXED: was .name
-                    is_active=True,
-                    reliability_score__gte=90
-                ).exclude(
-                    id__in=assigned_staff_ids
-                ).order_by('-reliability_score')[:5]
+            # Get replacement candidates
+            candidates = []
+            candidates_qs = Staff.objects.filter(is_active=True).exclude(
+                id__in=assigned_staff_ids
+            ).order_by('-reliability_score')[:5]
             
-            duties.append({
+            for c in candidates_qs:
+                candidates.append({'id': c.id, 'name': c.name, 'score': c.reliability_score})
+
+            duties_data.append({
+                'index': idx,
                 'assignment_id': a.id,
-                'duty_number': a.duty_number,
-                'staff': a.staff,
+                'staff': staff_obj.name if staff_obj else None,
                 'role': a.role.name if a.role else 'No Role',
                 'score': score,
                 'status': status,
-                'replacements': replacements
+                'conflicts': [],  # placeholder for later
+                'candidates': candidates
             })
         
-        if duties:
-            events_data.append({
-                'event': event,
-                'duties': duties,
-                'total_duties': len(duties),
-                'at_risk': at_risk
-            })
-    
-    recent_events = Event.objects.order_by('-start_time')[:5]
+        events_data.append({
+            'id': event.id,
+            'title': event.title,
+            'date': event.start_time,
+            'location': event.location,
+            'duties': duties_data,
+            'total_duties': len(duties_data),
+            'at_risk': at_risk,
+            'empty': empty,
+            'ok': len(duties_data) - at_risk
+        })
     
     context = {
-        'total_events': total_events,
-        'upcoming_events': upcoming_events,
-        'this_month': this_month,
-        'past_events': past_events,
-        'recent_events': recent_events,
+        'stats': stats,
         'events': events_data
     }
-    return render(request, 'staff/admin/event_status.html', context)
-           
-@login_required
-def auto_fill_roster(request, event_id):
-    event = get_object_or_404(Event, id=event_id)
-    
-    # Find empty or dropped assignments
-    empty_assignments = event.assignments.filter(
-        Q(staff__isnull=True) | Q(status='dropped')
-    ).select_related('role')
-    
-    filled_count = 0
-    skipped_roles = []
-    
-    for assign in empty_assignments:
-        # Staff already assigned to this event
-        assigned_staff_ids = event.assignments.filter(
-            status='assigned'
-        ).exclude(id=assign.id).values_list('staff_id', flat=True)
-        
-        # Best candidate: matching role, active, 75+ score, not already on event
-        candidate = Staff.objects.filter(
-            role=assign.role,  # FIXED: was .name
-            is_active=True,
-            reliability_score__gte=75
-        ).exclude(id__in=assigned_staff_ids).order_by('-reliability_score').first()
-        
-        if candidate:
-            assign.staff = candidate
-            assign.status = 'assigned'
-            assign.save()
-            filled_count += 1
-        else:
-            if assign.role and assign.role not in skipped_roles:
-                skipped_roles.append(assign.role)
-    
-    if filled_count:
-        messages.success(request, f"Auto-filled {filled_count} duties for {event.title}.")
-    if skipped_roles:
-        messages.warning(request, f"No available staff for roles: {', '.join(skipped_roles)}")
-    if not filled_count and not skipped_roles:
-        messages.info(request, f"{event.title} has no empty duties to fill.")
-    
-    return redirect('staff:event_status')   
-        
-@login_required
-def auto_fill_all_events(request):
-    upcoming = Event.objects.filter(start_time__date__gte=timezone.now().date()).order_by('start_time')
-    filled_count = 0  # was filter_count before - this was the bug
-    event_skips = []
-
-    for event in upcoming:
-        empty = event.assignments.filter(Q(staff__isnull=True) | Q(status='dropped'))
-        for assign in empty:
-            assigned_ids = event.assignments.filter(status='assigned').values_list('staff_id', flat=True)
-            candidate = Staff.objects.filter(
-                role=assign.role,
-                is_active=True,
-                reliability_score__gte=75
-            ).exclude(id__in=assigned_ids).order_by('-reliability_score').first()
-
-            if candidate:
-                assign.staff = candidate
-                assign.status = 'assigned'
-                assign.save()
-                filled_count += 1
-            else:
-                if assign.role and assign.role not in event_skips:
-                    event_skips.append(assign.role.name if assign.role else 'No Role')
-
-    if filled_count:
-        msg = f"Auto-filled {filled_count} duties across upcoming events."
-        if event_skips:
-            msg += f" No staff for roles: {', '.join(event_skips)}"
-        messages.success(request, msg)
-    else:
-        messages.info(request, "No empty duties to fill in upcoming events.")
-
-    return redirect('staff:event_status')
-            
+    return render(request, 'staff/event_status.html', context) # <- Note: path changed
