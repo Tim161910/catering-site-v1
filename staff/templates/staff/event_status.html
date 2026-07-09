@@ -1,0 +1,190 @@
+{% extends "staff/base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <!-- STAT CARDS -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center shadow-sm border-primary">
+                <div class="card-body">
+                    <h6 class="text-muted">Total Events</h6>
+                    <h2 class="text-primary">{{ stats.total_events }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center shadow-sm border-success">
+                <div class="card-body">
+                    <h6 class="text-muted">Upcoming</h6>
+                    <h2 class="text-success">{{ stats.upcoming }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center shadow-sm border-info">
+                <div class="card-body">
+                    <h6 class="text-muted">This Month</h6>
+                    <h2 class="text-info">{{ stats.this_month }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center shadow-sm border-secondary">
+                <div class="card-body">
+                    <h6 class="text-muted">Past</h6>
+                    <h2 class="text-secondary">{{ stats.past }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h2 class="mb-3">Event Status Dashboard</h2>
+
+    <!-- EVENT CARDS -->
+    {% for event in events %}
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="mb-0">{{ event.title }}</h5>
+                <small class="text-muted">{{ event.date|date:"D, M j, Y h:i A" }} @ {{ event.location }}</small>
+            </div>
+            {% if event.empty > 0 %}
+                <button class="btn btn-success btn-sm" onclick="autoFill('{{ event.id }}')">Auto-Fill {{ event.empty }} Duties</button>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <p class="mb-3">
+                <strong class="text-danger">{{ event.at_risk }} At Risk</strong> |
+                <strong class="text-warning">{{ event.empty }} Empty</strong> |
+                <strong class="text-success">{{ event.ok }} OK</strong> |
+                <strong>{{ event.total_duties }} Total</strong>
+            </p>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="width: 60px;">Duty</th>
+                            <th>Staff</th>
+                            <th style="width: 150px;">Role</th>
+                            <th style="width: 120px;">Reliability</th>
+                            <th style="width: 100px;">Status</th>
+                            <th style="width: 200px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in event.duties %}
+                        <tr>
+                            <td>#{{ d.index }}</td>
+                            <td>
+                                {% if d.staff %}
+                                    <strong>{{ d.staff }}</strong>
+                                    {% if d.conflicts %}
+                                        <br><span class="text-danger" style="font-size: 11px;">🔴 Conflict: {{ d.conflicts|join:", " }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted fst-italic">Unassigned</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ d.role }}</td>
+                            <td>
+                                {% if d.score > 0 %}
+                                    <span class="fw-bold">{{ d.score }}%</span>
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if d.status == 'critical' %}
+                                    <span class="badge bg-danger">Critical</span>
+                                {% elif d.status == 'warning' %}
+                                    <span class="badge bg-warning text-dark">Warning</span>
+                                {% else %}
+                                    <span class="badge bg-success">OK</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <select class="form-select form-select-sm" onchange="replaceStaff('{{ d.assignment_id }}', this.value)">
+                                    <option value="">Replace...</option>
+                                    {% for r in d.candidates %}
+                                    <option value="{{ r.id }}">{{ r.name }} - {{ r.score }}%</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="card">
+        <div class="card-body text-center text-muted">No upcoming events found.</div>
+    </div>
+    {% endfor %}
+
+</div>
+
+<!-- REASSIGN MODAL -->
+<div class="modal fade" id="reassignModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+          <h5 class="modal-title">Reassign Staff</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+          <textarea id="reassignReason" class="form-control" placeholder="Reason for reassignment..." rows="3"></textarea>
+      </div>
+      <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" id="confirmReassign" class="btn btn-primary">Confirm</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie!== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+const csrftoken = getCookie('csrftoken');
+
+function replaceStaff(assignmentId, newStaffId) {
+    if(!newStaffId) return;
+    if(!confirm('Replace staff for this duty?')) return;
+
+    fetch(`/staff/api/assignments/${assignmentId}/reassign/`, {
+        method: 'POST',
+        headers: {'X-CSRFToken': csrftoken, 'Content-Type': 'application/json'},
+        body: JSON.stringify({'new_staff_id': newStaffId, 'reason': 'Quick replace'})
+    }).then(r => r.json()).then(data => {
+        if(data.success) {
+            alert('Staff replaced!');
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    });
+}
+
+function autoFill(eventId) {
+    if(confirm('Auto-fill all empty duties?')) {
+        window.location.href = `/staff/event/${eventId}/auto-fill/`;
+    }
+}
+</script>
+{% endblock %}
