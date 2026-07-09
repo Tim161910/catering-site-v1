@@ -911,4 +911,43 @@ def auto_fill_roster(request, event_id):
     if not filled_count and not skipped_roles:
         messages.info(request, f"{event.title} has no empty duties to fill.")
     
-    return redirect('staff:event_status')   
+    return redirect('staff:event_status') 
+
+@login_required
+def auto_fill_all_events(request):
+    """
+    Auto-fill all upcoming events. Used by dashboard "Fill All" button
+    """
+    today = timezone.now().date()
+    events = Event.objects.filter(start_time__date__gte=today)
+    
+    total_filled = 0
+    for event in events:
+        empty_assignments = event.assignments.filter(
+            Q(staff__isnull=True) | Q(status='dropped')
+        ).select_related('role')
+        
+        assigned_staff_ids = list(event.assignments.filter(status='assigned').values_list('staff_id', flat=True))
+        
+        for assign in empty_assignments:
+            if not assign.role: 
+                continue
+            candidate = Staff.objects.filter(
+                role=assign.role,
+                is_active=True,
+                reliability_score__gte=75
+            ).exclude(id__in=assigned_staff_ids).order_by('-reliability_score').first()
+
+            if candidate:
+                assign.staff = candidate
+                assign.status = 'assigned'
+                assign.save()
+                assigned_staff_ids.append(candidate.id)
+                total_filled += 1
+    
+    if total_filled:
+        messages.success(request, f"Auto-filled {total_filled} duties across all upcoming events.")
+    else:
+        messages.info(request, "No empty duties found to fill.")
+    
+    return redirect('staff:event_status')  
