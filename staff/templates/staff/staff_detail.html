@@ -1,0 +1,7 @@
+<h1>{{ staff.name }}</h1>
+<p>Phone: {{ staff.phone }}</p>
+<p>Email: {{ staff.email }}</p>
+<p>Reliability: {{ staff.reliability_score }}</p>
+<a href="{% url 'staff:staff_update' staff.pk %}">Edit</a>
+<a href="{% url 'staff:staff_delete' staff.pk %}">Delete</a>
+<a href="{% url 'staff:staff_list' %}">Back</a>
