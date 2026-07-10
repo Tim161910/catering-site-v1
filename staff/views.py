@@ -49,6 +49,11 @@ class ApplicantDeleteView(DeleteView):
     success_url = reverse_lazy('staff:applicant_list')
     template_name = 'staff/applicant_confirm_delete.html'
 
+class StaffListView(LoginRequiredMixin, ListView):
+    model = Staff
+    template_name = 'staff/staff_list.html'
+    context_object_name = 'staff_members'
+
 class RolePlayListView(ListView):
     model = RolePlay
     template_name = 'staff/roleplay_list.html'
