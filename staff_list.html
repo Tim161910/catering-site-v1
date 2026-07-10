@@ -1,10 +1,11 @@
 <h1>Staff List</h1>
 <a href="{% url 'staff:staff_create' %}">Add Staff</a>
 <ul>
-    {% for s in staff %}
-        <li>{{ s.name }} ({{ s.role }})
-            <a href="{% url 'staff:staff_update' s.pk %}">Edit</a>
-            <a href="{% url 'staff:staff_delete' s.pk %}">Delete</a>
-        </li>
-    {% endfor %}
+{% for s in staff_members %}
+    <li>{{ s.name }} ({{ s.role }})
+        <a href="{% url 'staff:staff_update' s.pk %}">Edit</a>
+        <a href="{% url 'staff:staff_delete' s.pk %}">Delete</a>
+        <a href="{% url 'staff:staff_detail' s.pk %}">View</a>
+    </li>
+{% endfor %}
 </ul>

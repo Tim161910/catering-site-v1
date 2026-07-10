@@ -163,7 +163,13 @@
     <div class="status-card">
         <div class="risk-header">
            <div style="display: flex; align-items: center; gap: 15px;">
-                <h3 style="margin: 0;">{{ event_data.event.title }} - {{ event_data.event.start_time|date:"M d, Y" }}</h3>
+                <h3 style="margin: 0;">
+                    {% if event_data.event %}
+                        {{ event_data.event.title }} - {{ event_data.event.start_time|date:"M d, Y" }}
+                    {% else %}
+                        Unassigned Event Slot {{ forloop.counter }}
+                    {% endif %}
+                </h3>
                 {% if event_data.at_risk > 0 %}
                     <span class="risk-count">{{ event_data.at_risk }} At Risk</span>
                 {% endif %}
@@ -171,7 +177,7 @@
                     <span class="empty-count">{{ event_data.empty_count }} Empty</span>
                 {% endif %}
             </div>
-            {% if event_data.empty_count > 0 %}
+            {% if event_data.event and event_data.empty_count > 0 %}
             <form method="post" action="{% url 'admin:auto-fill-roster' event_data.event.id %}" style="display:inline;">
                 {% csrf_token %}
                 <button type="submit" class="btn-autofill" 
@@ -183,7 +189,14 @@
         </div>          
         <table class="risk-table">
             <thead>
-                <tr><th>Duty #</th><th>Staff</th><th>Role</th><th>Reliability</th><th>Status</th></tr>
+                <tr>
+                    <th>Duty #</th>
+                    <th>Staff</th>
+                    <th>Role</th>
+                    <th>Reliability</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
             </thead>
             <tbody>
                 {% for duty in event_data.duties %}
@@ -192,14 +205,6 @@
                     <td>
                         {% if duty.staff %}
                             {{ duty.staff }}
-                            <select onchange="replaceStaff({{ duty.assignment_id }}, this.value, this)"
-                                        style="margin-left: 8px; padding: 2px 6px; font-size: 0.85em; border-radius: 3px;"
-                                        {% if not duty.replacements %}disabled title="No backups available"{% endif %}>
-                                <option value="">Replace...</option>
-                                {% for r in duty.replacements %}
-                                    <option value="{{ r.id }}">{{ r }} ({{ r.reliability_score }}%)</option>
-                                {% endfor %}
-                            </select>
                         {% else %}
                             <em style="color:#999;">Unassigned</em>
                         {% endif %}
@@ -207,6 +212,18 @@
                     <td>{{ duty.role }}</td>
                     <td>{% if duty.staff %}{{ duty.score }}%{% else %}—{% endif %}</td>
                     <td><span class="badge badge-{{ duty.status|lower }}">{{ duty.status }}</span></td>
+                    <td>
+                        {% if duty.staff %}
+                        <select onchange="replaceStaff('{{ duty.assignment_id }}', this.value, this)"
+                                style="padding: 4px 8px; font-size: 0.85em; border-radius: 3px;"
+                                {% if not duty.replacements %}disabled title="No backups available"{% endif %}>
+                            <option value="">Replace...</option>
+                            {% for r in duty.replacements %}
+                                <option value="{{ r.id }}">{{ r }} ({{ r.reliability_score }}%)</option>
+                            {% endfor %}
+                        </select>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
