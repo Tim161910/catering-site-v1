@@ -54,6 +54,28 @@ class StaffListView(LoginRequiredMixin, ListView):
     template_name = 'staff/staff_list.html'
     context_object_name = 'staff_members'
 
+class StaffCreateView(LoginRequiredMixin, CreateView):
+    model = Staff
+    fields = ['name', 'phone', 'email', 'reliability_score', 'is_active', 'user'] # change fields to match your Staff model
+    template_name = 'staff/staff_form.html'
+    success_url = reverse_lazy('staff:staff_list')
+
+class StaffDetailView(LoginRequiredMixin, DetailView):
+    model = Staff
+    template_name = 'staff/staff_detail.html'
+    context_object_name = 'staff'
+
+class StaffUpdateView(LoginRequiredMixin, UpdateView):
+    model = Staff
+    fields = ['name', 'phone', 'email', 'reliability_score', 'is_active', 'user'] # same as create
+    template_name = 'staff/staff_form.html'
+    success_url = reverse_lazy('staff:staff_list')
+
+class StaffDeleteView(LoginRequiredMixin, DeleteView):
+    model = Staff
+    template_name = 'staff/staff_confirm_delete.html'
+    success_url = reverse_lazy('staff:staff_list')
+
 class RolePlayListView(ListView):
     model = RolePlay
     template_name = 'staff/roleplay_list.html'
