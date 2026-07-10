@@ -28,7 +28,6 @@ urlpatterns = [
     path('event-status/', views.event_status, name='event_status'),
     path('event/<int:event_id>/auto-fill/', views.auto_fill_roster, name='auto_fill_roster'),
     path('auto-fill-all/', views.auto_fill_all_events, name='auto_fill_all_events'),
-    path('replace-staff/<int:assignment_id>/', views.replace_staff, name='replace_staff'),
     path('recruitment/', RecruitmentListView.as_view(), name='recruitment_list'),
     path('recruitment/new/', RecruitmentCreateView.as_view(), name='recruitment_create'),
     path('recruitment/<int:recruitment_id>/', RecruitmentDetailView.as_view(), name='recruitment_detail'),
