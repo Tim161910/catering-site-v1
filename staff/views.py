@@ -60,6 +60,11 @@ class StaffCreateView(LoginRequiredMixin, CreateView):
     template_name = 'staff/staff_form.html'
     success_url = reverse_lazy('staff:staff_list')
 
+class EventDetailView(LoginRequiredMixin, DetailView):
+    model = Event
+    template_name = 'staff/event_detail.html'
+    context_object_name = 'event'
+
 class StaffDetailView(LoginRequiredMixin, DetailView):
     model = Staff
     template_name = 'staff/staff_detail.html'
@@ -104,6 +109,12 @@ class IncidentUpdateView(UpdateView):
 class IncidentDetailView(DetailView):
     model = Incident
     template_name = 'staff/incident_detail.html'
+
+class EventListView(LoginRequiredMixin, ListView):
+    model = Event
+    template_name = 'staff/event_list.html'
+    context_object_name = 'events'
+    ordering = ['-start_time']
 
 class EventCreateView(CreateView):
     model = Event
