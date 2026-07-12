@@ -1,0 +1,73 @@
+{% extends 'staff/base.html' %}
+
+{% block title %}Assignments - {{ event.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Assignments for {{ event.title }}</h2>
+        <div>
+            <a href="{% url 'staff:create_assignments_from_template' event.id %}" class="btn btn-outline-primary">Create from Template</a>
+            <a href="{% url 'staff:add_assignment' event.id %}" class="btn btn-primary">+ Add Assignment</a>
+        </div>
+    </div>
+
+    <p class="text-muted">{{ event.start_time|date:"j F Y, P" }} to {{ event.end_time|date:"P" }}</p>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>Role</th>
+                    <th>Assigned Staff</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for assignment in assignments %}
+                <tr>
+                    <td>{{ assignment.duty_number }}</td>
+                    <td>{{ assignment.role.name }}</td>
+                    <td>
+                        {% if assignment.staff %}
+                            {{ assignment.staff.get_full_name|default:assignment.staff.email }}
+                        {% else %}
+                            <span class="badge bg-danger">Unassigned</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if assignment.status == 'confirmed' %}
+                            <span class="badge bg-success">Confirmed</span>
+                        {% elif assignment.status == 'pending' %}
+                            <span class="badge bg-warning">Pending</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ assignment.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        <a href="{% url 'staff:assign_staff' assignment.id %}" class="btn btn-sm btn-outline-secondary">Assign</a>
+                        <a href="{% url 'staff:edit_assignment' assignment.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                        <a href="{% url 'staff:delete_assignment' assignment.id %}" class="btn btn-sm btn-outline-danger"
+                           onclick="return confirm('Delete this assignment?')">Delete</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-4">No assignments yet. Create some to get started.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <a href="{% url 'staff:event_detail' event.id %}" class="btn btn-secondary mt-2">← Back to Event</a>
+</div>
+{% endblock %}

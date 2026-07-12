@@ -2,7 +2,7 @@ from django.contrib import admin, messages
 from django.urls import path, reverse_lazy
 from django.template.response import TemplateResponse
 from django.utils import timezone
-from .models import RolePlayResponse, Staff, Event, IssueType, Incident, Assignment, Role, EventTemplate, EventTemplateRole
+from .models import RolePlayResponse, Staff, Event, IssueType, Incident, Assignment, Role, EventTemplate, EventTemplateRole, Applicant, Recruitment, InterviewSlot
 from django.utils.html import format_html, mark_safe
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect
@@ -48,6 +48,10 @@ class StaffAdmin(admin.ModelAdmin):
         ('Emergency Contact', {'fields': ('next_of_kin', 'emergency_contact_name', 'emergency_contact_phone')}),
         ('Performance', {'fields': ('reliability_score', 'reliability_notes')}),
     )
+
+    def save_model(self, request, obj, form, change):
+        # pass the current admin user to save() so approval requests can be created
+        obj.save(user=request.user)
 
 class RolePlayResponseAdmin(admin.ModelAdmin):
     list_display = ['staff', 'roleplay', 'submitted_at']
@@ -308,11 +312,32 @@ class StaffSite(admin.AdminSite):
         assignment.staff = new_staff
         assignment.save(update_fields=['staff'])
         return JsonResponse({'success': True})
-             
-# Activate custom admin site  
+
+class ApplicantAdmin(admin.ModelAdmin):
+    list_display = ('name', 'email', 'status', 'interview_time', 'applied_at', 'recruitment')
+    list_filter = ('status', 'applied_at', 'recruitment')
+    search_fields = ('name', 'email')
+    date_hierarchy = 'applied_at'
+
+class RecruitmentAdmin(admin.ModelAdmin):
+    list_display = ('title', 'status', 'event')
+    list_filter = ('status',)
+    search_fields = ('title',)
+
+class InterviewSlotAdmin(admin.ModelAdmin):
+    list_display = ('recruitment', 'interviewer', 'start_time', 'end_time')
+    list_filter = ('recruitment', 'interviewer')
+    search_fields = ('interviewer__name',)
+
+# Activate custom admin site
 staff_admin_site = StaffSite(name='staff_admin')
 
-# Re-register all models to custom site
+# Register to your CUSTOM admin site
+staff_admin_site.register(Applicant, ApplicantAdmin)
+staff_admin_site.register(Recruitment, RecruitmentAdmin)
+staff_admin_site.register(InterviewSlot, InterviewSlotAdmin)
+
+# Register all models to custom site
 staff_admin_site.register(Staff, StaffAdmin)
 staff_admin_site.register(RolePlayResponse, RolePlayResponseAdmin)
 staff_admin_site.register(Event, EventAdmin)

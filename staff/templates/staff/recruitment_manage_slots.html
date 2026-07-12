@@ -1,0 +1,101 @@
+{% extends 'staff/base.html' %}
+
+{% block title %}Manage Slots - {{ recruitment.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2>Manage Interview Slots</h2>
+            <p class="text-muted mb-0">Recruitment: {{ recruitment.title }}</p>
+        </div>
+        <a href="{% url 'staff:recruitment_detail' recruitment.id %}" class="btn btn-secondary">← Back to Recruitment</a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">+ Add New Slot</h5>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Date</label>
+                        <input type="date" name="date" class="form-control" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Start Time</label>
+                        <input type="time" name="start_time" class="form-control" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">End Time</label>
+                        <input type="time" name="end_time" class="form-control" required>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Capacity</label>
+                        <input type="number" name="capacity" class="form-control" value="1" min="1" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary mt-3">Add Slot</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Existing Slots</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Capacity</th>
+                            <th>Booked</th>
+                            <th>Available</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for slot in slots %}
+                        <tr>
+                            <td>{{ slot.date|date:"j F Y" }}</td>
+                            <td>{{ slot.start_time|time:"P" }} - {{ slot.end_time|time:"P" }}</td>
+                            <td>{{ slot.capacity }}</td>
+                            <td>
+                                <span class="badge bg-info">{{ slot.booked_count }}</span>
+                            </td>
+                            <td>
+                                {% if slot.available > 0 %}
+                                    <span class="badge bg-success">{{ slot.available }}</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Full</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <a href="{% url 'staff:slot_applicants' slot.id %}" class="btn btn-sm btn-outline-primary">View Applicants</a>
+                                <a href="{% url 'staff:delete_slot' slot.id %}" class="btn btn-sm btn-outline-danger"
+                                   onclick="return confirm('Delete this slot?')">Delete</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">No interview slots created yet.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

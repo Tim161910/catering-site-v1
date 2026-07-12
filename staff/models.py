@@ -29,6 +29,9 @@ try:
 except ImportError:
     timezone = None
 from .fields import EncryptedCharField, EncryptedTextField
+from django import forms
+from django.core.exceptions import ValidationError
+
 
 class Role(models.Model):
     name = models.CharField(max_length=50, unique=True)
@@ -36,6 +39,39 @@ class Role(models.Model):
     
     def __str__(self):
         return self.name
+    
+
+class Recruitment(models.Model):
+    STATUS_CHOICES = [
+        ('open', 'Open'),
+        ('closed', 'Closed'),
+        ('draft', 'Draft'), # added this - useful before publishing
+    ]
+
+    event = models.ForeignKey('Event', on_delete=models.SET_NULL, null=True, blank=True, related_name='recruitments')
+    position = models.CharField(max_length=100)
+    title = models.CharField(max_length=255) # you can keep both, or make title = position
+    description = models.TextField()
+    requirements = models.TextField()
+    status = models.CharField(
+        max_length=20, 
+        choices=STATUS_CHOICES,
+        default='open'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    deadline = models.DateTimeField(blank=True, null=True)
+    
+    def __str__(self):
+        return f"{self.title} - {self.get_status_display()}"
+
+    @property
+    def is_active(self):
+        from django.utils import timezone
+        if self.status != 'open':
+            return False
+        if self.deadline and self.deadline < timezone.now():
+            return False
+        return True
     
 class Staff(models.Model):
     name = models.CharField(max_length=100)
@@ -53,30 +89,31 @@ class Staff(models.Model):
     reliability_score = models.IntegerField(default=100, help_text="Reliability score 0-100")
     reliability_notes = models.TextField(blank=True, null=True)
     APPROVAL_REQUIRED_FIELDS = ['address', 'next_of_kin', 'emergency_contact_name', 'emergency_contact_phone']
-    DIRECT_UPDATE_FIELDS = ['name', 'email', 'phone', 'whatsapp', 'role', 'is_active']
 
     def __str__(self):
         return self.name
 
     def save(self, *args, **kwargs):
-        user = kwargs.pop('user', None)  # Get the user from kwargs
+        user = kwargs.pop('user', None)
         if self.pk and user:
-            # Existing staff - check for changes
-            old = Staff.objects.get(pk=self.pk)
-            for field in self.APPROVAL_REQUIRED_FIELDS:
-                old_value = getattr(old, field)
-                new_value = getattr(self, field)
-                if old_value != new_value:
-                    # Create update request
-                    StaffUpdateRequest.objects.create(
-                        Staff=self,
-                        requested_by=user,
-                        request_reason=f"Change {field} from '{old_value}' to '{new_value}'",
-                        field_name=field,
-                        old_value=old_value,
-                        new_value=new_value
-                    )
+            try:
+                old = Staff.objects.get(pk=self.pk)
+                for field in self.APPROVAL_REQUIRED_FIELDS:
+                    old_value = getattr(old, field)
+                    new_value = getattr(self, field)
+                    if old_value != new_value:
+                        StaffUpdateRequest.objects.create(
+                            staff=self,
+                            requested_by=user,
+                            request_reason=f"Change {field}",
+                            field_name=field,
+                            old_value=old_value,
+                            new_value=new_value
+                        )
+            except Exception as e:
+                print(f"Error creating update request: {e}")
         super().save(*args, **kwargs)
+              
 
     def update_reliability_score(self) -> None: #noqa: F401
         penalty = self.incidents.filter(
@@ -86,7 +123,95 @@ class Staff(models.Model):
     
         self.reliability_score = max(0, 100 - min(penalty, 100))
         self.save(update_fields=['reliability_score'])
-                       
+
+class InterviewSlot(models.Model):
+    recruitment = models.ForeignKey(Recruitment, on_delete=models.CASCADE, related_name='slots')
+    date = models.DateField()
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    capacity = models.PositiveIntegerField(default=1)
+    interviewer = models.ForeignKey(Staff, on_delete=models.SET_NULL, null=True, blank=True, related_name='slots')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def booked_count(self):
+        return self.applicants.count()
+    
+    @property
+    def available(self):
+        return max(0, self.capacity - self.booked_count)
+
+    def __str__(self):
+        return f"{self.recruitment.title} - {self.date} {self.start_time}-{self.end_time}"
+
+class Applicant(models.Model):
+    STATUS_CHOICES = [
+        ('applied', 'Applied'),
+        ('interviewed', 'Interviewed'),
+        ('hired', 'Hired'),
+        ('rejected', 'Rejected'),
+    ]
+
+    recruitment = models.ForeignKey(Recruitment, on_delete=models.CASCADE, related_name='applicants')
+    slot = models.ForeignKey(InterviewSlot, on_delete=models.SET_NULL, null=True, blank=True, related_name='applicants')
+    
+    name = models.CharField(max_length=255)
+    email = models.EmailField()
+    phone = models.CharField(max_length=20)
+    resume = models.FileField(upload_to='resumes/', blank=True, null=True)
+    cover_letter = models.TextField(blank=True)
+    applied_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='applied')
+    
+    interview_time = models.DateTimeField(null=True, blank=True) # <-- new field
+
+    def __str__(self):
+        return f"{self.name} ({self.email})"
+    
+    @property
+    def is_interviewed(self):
+        return self.interviews.exists()
+    
+class Interview(models.Model):
+    INTERVIEW_TYPES = [
+        ('written', 'Written'), 
+        ('role_play', 'Role Play')
+    ]
+    
+    applicant = models.ForeignKey(Applicant, on_delete=models.CASCADE, related_name='interviews')
+    slot = models.ForeignKey(InterviewSlot, on_delete=models.SET_NULL, null=True, blank=True) # link result back to slot
+    date = models.DateTimeField()
+    interview_type = models.CharField(max_length=20, choices=INTERVIEW_TYPES)
+    score = models.IntegerField(blank=True, null=True)
+    notes = models.TextField(blank=True)
+    interviewers = models.ManyToManyField(Staff, related_name='interviews_conducted')
+    
+    def __str__(self):
+        return f"{self.applicant.name} - {self.date:%Y-%m-%d} - {self.interview_type}"
+    
+class InterviewSlotForm(forms.ModelForm):
+    class Meta:
+        model = InterviewSlot
+        fields = ['recruitment', 'date', 'start_time', 'end_time', 'capacity', 'interviewer']
+        widgets = {
+            'date': forms.DateInput(attrs={'type': 'date'}),
+            'start_time': forms.TimeInput(attrs={'type': 'time'}),
+            'end_time': forms.TimeInput(attrs={'type': 'time'}),
+        }
+
+class ApplicationStatus(models.Model):
+    STATUS_CHOICES = [
+        ('applied', 'Applied'),
+        ('interviewed', 'Interviewed'),
+        ('hired', 'Hired'),
+        ('rejected', 'Rejected'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, unique=True)
+    description = models.TextField(blank=True)
+    
+    def __str__(self):
+        return self.status
+
 class StaffUpdateLog(models.Model):
     staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name='update_logs')
     changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
@@ -113,15 +238,14 @@ class StaffUpdateRequest(models.Model):
     new_value = models.TextField(blank=True, null=True)
     is_approved = models.BooleanField(default=False)
     is_rejected = models.BooleanField(default=False)
-    timestamp = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['-timestamp']
+        ordering = ['-requested_at']
         verbose_name = "Staff Update Request"
         verbose_name_plural = "Staff Update Requests"
 
     def __str__(self):
-        return f"{self.staff.name} - {self.field_name} update requested at {self.timestamp:%Y-%m-%d %H:%M}"
+        return f"{self.staff.name} - {self.field_name} update requested at {self.requested_at:%Y-%m-%d %H:%M}"
 
 class StaffUpdateApproval(models.Model):
     update_request = models.OneToOneField(StaffUpdateRequest, on_delete=models.CASCADE, related_name='approval')
@@ -143,44 +267,77 @@ class Event(models.Model):
     location = models.CharField(max_length=255, blank=True)
     client_name = models.CharField(max_length=255, blank=True)
     template = models.ForeignKey('EventTemplate', null=True, blank=True, on_delete=models.SET_NULL)
+
+    def __str__(self):
+        if self.start_time:
+            return f"{self.title} ({self.start_time.strftime('%Y-%m-%d %H:%M')})"
+        return f"{self.title} - No Date Set"
+    
+class IssueType(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    weight_percent = models.PositiveIntegerField(default=10)
+    counts_against_staff = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name_plural = "Issue Types"
     
     def __str__(self):
-        return f"{self.title} ({self.start_time.date()})"
+        return f"{self.name} - {self.weight_percent}%"
+    
+class Incident(models.Model):
+    staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name='incidents')
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, null=True, blank=True)
+    issue_type = models.ForeignKey(IssueType, on_delete=models.PROTECT)
+    resolved = models.BooleanField(default=False)
+    description = models.TextField(blank=True)
+    reported_on = models.DateTimeField(auto_now_add=True)
 
-    def save(self, *args, **kwargs):
-        created = not self.pk  # Check if this is a new instance
-        super().save(*args, **kwargs)
-        if created and self.template:
-            self._auto_assign_staff()
+    def __str__(self):
+        return f"{self.staff.name} - {self.issue_type.name}"
 
-    def _auto_assign_staff(self):
-        duty_counter = 1
-        for template_role in self.template.template_roles.all():
-            needed = template_role.count
-            role = template_role.role
+@receiver([post_save, post_delete], sender=Incident)
+def update_staff_score_on_incident_change(sender, instance, **kwargs):
+    instance.staff.update_reliability_score()
+    
+class EventTemplate(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    default_location = models.CharField(max_length=255, blank=True)
+    default_duration_hours = models.PositiveIntegerField(default=1, help_text="Default duration in hours")
+    required_staff_count = models.PositiveIntegerField(default=1)
+    notes = models.TextField(blank=True, help_text="Internal notes for staff")
 
-            # Find existing assigned staff for this role and event
-            assigned = self.assignments.filter(role=role, staff__isnull=False).count()
-            needed -= assigned  # Reduce needed by already assigned staff
+    def create_event_with_assignments(self, start_time, **kwargs):
+        event = Event.objects.create(start_time=start_time, template=self, **kwargs)
+        for tr in self.template_roles.all():
+            for i in range(tr.count):
+                Assignment.objects.create(event=event, role=tr.role, duty_number=i+1)
+        return event
 
-            if needed > 0:
-                top_staff = Staff.objects.filter(
-                    role=role,
-                    is_active=True
-                ).exclude( # Don't pick staff already assigned to this event
-                    id__in=self.assignments.filter(role=role).values_list('staff_id', flat=True)
-                ).order_by('-reliability_score')[:needed]
+    def __str__(self):
+        return self.name
 
-                for staff in top_staff:
-                    Assignment.objects.create(
-                        staff=staff,
-                        event=self,
-                        duty_number=duty_counter,
-                        role=role,
-                        status='assigned'
-                    )
-                    duty_counter += 1
-           
+    class Meta:
+        ordering = ['name']
+
+class EventTemplateRole(models.Model):
+    template = models.ForeignKey(EventTemplate, related_name='template_roles', on_delete=models.CASCADE)
+    role = models.ForeignKey(Role, on_delete=models.CASCADE)
+    count = models.PositiveIntegerField(default=1, blank=True)
+
+    class Meta:
+        unique_together = ('template', 'role')
+        ordering = ['role__name']
+
+    def __str__(self):
+        return f"{self.template.name}: {self.count} x {self.role.name}"
+
+    def clean(self):
+        if self.count < 1:
+            raise ValidationError({'count': 'Count must be at least 1.'})
+
 class Task(models.Model):
     PRIORITY_CHOICES = [
         ('low', 'Low'),
@@ -209,6 +366,40 @@ class Task(models.Model):
         ordering = ['-created_at', 'due_date']
         verbose_name_plural = "Tasks"
 
+class Assignment(models.Model):
+    staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name='assignments', null=True, blank=True)
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='assignments')
+    duty_number = models.PositiveIntegerField(help_text="Duty slot: 1, 2, 3...")
+    role = models.ForeignKey(Role, on_delete=models.PROTECT, help_text="Role for this event")
+    
+    STATUS_CHOICES = [
+        ('assigned', 'Assigned'),
+        ('dropped', 'Dropped'),
+        ('completed', 'Completed'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='assigned')
+    
+    date_assigned = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(blank=True)
+    reassignment_reason = models.CharField(max_length=255, blank=True, null=True)
+    reassigned_at = models.DateTimeField(blank=True, null=True)
+    reassigned_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['event', 'duty_number', 'status'],
+                name='unique_assignment_per_duty_status'
+            )
+        ]
+        ordering = ['event', 'date_assigned', 'duty_number']
+        verbose_name_plural = "Assignments"
+
+    def __str__(self):
+        staff_name = self.staff.name if self.staff else "Unassigned"
+        event_title = self.event.title if self.event else "No Event"
+        return f"Duty {self.duty_number}: {staff_name} @ {event_title} [{self.status}]"
+    
 class Meeting(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
@@ -259,75 +450,6 @@ class Expense(models.Model):
         ordering = ['-submitted_at']
         verbose_name_plural = "Expenses"
 
-class IssueType(models.Model):
-    name = models.CharField(max_length=100, unique=True)
-    weight_percent = models.PositiveIntegerField(default=10)
-    counts_against_staff = models.BooleanField(default=True)
-
-    class Meta:
-        verbose_name_plural = "Issue Types"
-    
-    def __str__(self):
-        return f"{self.name} - {self.weight_percent}%"
-
-class Recruitment(models.Model):
-    position = models.CharField(max_length=100)
-    related_event = models.ForeignKey(Event, on_delete=models.SET_NULL, null=True, blank=True)
-    description = models.TextField()
-    requirements = models.TextField()
-    status = models.CharField(
-        max_length=20, 
-        choices=[('Open', 'Open'), ('Closed', 'Closed')],
-        default='Open'
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-    deadline = models.DateTimeField(blank=True, null=True)
-    
-    def __str__(self):
-        return f"{self.position} ({self.status})"
-
-class ApplicationStatus(models.Model):
-    STATUS_CHOICES = [
-        ('applied', 'Applied'),
-        ('interviewed', 'Interviewed'),
-        ('hired', 'Hired'),
-        ('rejected', 'Rejected'),
-    ]
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, unique=True)
-    description = models.TextField(blank=True)
-    
-    def __str__(self):
-        return self.status
-
-class Applicant(models.Model):
-    recruitment = models.ForeignKey(Recruitment, on_delete=models.CASCADE)
-    name = models.CharField(max_length=255)
-    email = models.EmailField()
-    phone = models.CharField(max_length=20)
-    resume = models.FileField(upload_to='resumes/', blank=True, null=True)
-    cover_letter = models.TextField(blank=True)
-    applied_at = models.DateTimeField(auto_now_add=True)
-    status = models.ForeignKey(ApplicationStatus, on_delete=models.SET_NULL, null=True, blank=True)
-    interview_time = models.DateTimeField(null=True, blank=True)
-    
-    def __str__(self):
-        return f"{self.name} ({self.email})"
-    
-    @property
-    def is_interviewed(self):
-        return self.interviews.exists()
-
-class Interview(models.Model):
-    applicant = models.ForeignKey(Applicant, on_delete=models.CASCADE, related_name='interviews')
-    date = models.DateTimeField()
-    interview_type = models.CharField(max_length=20, choices=[('written', 'Written'), ('role_play', 'Role Play')])
-    score = models.IntegerField(blank=True, null=True)
-    notes = models.TextField(blank=True)
-    interviewers = models.ManyToManyField(Staff, related_name='interviews_conducted')
-    
-    def __str__(self):
-        return f"{self.applicant.name} - {self.date} - {self.interview_type}"
-
 class RolePlay(models.Model):
     scenario = models.TextField()
     role = models.CharField(max_length=50, blank=True, null=True)
@@ -357,84 +479,6 @@ class ApplicantRolePlay(models.Model):
     role_play = models.ForeignKey(RolePlay, on_delete=models.CASCADE)
     score = models.IntegerField(null=True, blank=True)
 
-class Assignment(models.Model):
-    staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name='assignments', null=True, blank=True)
-    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='assignments')
-    start_time = models.DateTimeField(blank=True, null=True)
-    end_time = models.DateTimeField(blank=True, null=True)
-    duty_number = models.PositiveIntegerField(help_text="Duty slot: 1, 2, 3...")
-    role = models.ForeignKey(
-        Role, 
-        on_delete=models.PROTECT, 
-        help_text="Role for this event"
-    )
-     
-    STATUS_CHOICES = [
-        ('assigned', 'Assigned'),
-        ('dropped', 'Dropped'),
-    ]
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='assigned')
-    
-    date_assigned = models.DateTimeField(auto_now_add=True)
-    notes = models.TextField(blank=True)
-    reassignment_reason = models.CharField(max_length=255, blank=True, null=True)
-    reassigned_at = models.DateTimeField(blank=True, null=True)
-    reassigned_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=['event', 'duty_number'],
-                condition=models.Q(status='assigned'),
-                name='unique_active_assignment_per_duty'
-            )
-        ]
-        ordering = ['event', 'date_assigned', 'duty_number']
-        verbose_name_plural = "Assignments"
-
-    def __str__(self):
-        staff_name = self.staff.name if self.staff else "Unassigned"
-        return f"Duty {self.duty_number}: {staff_name} @ {self.event.title} [{self.status}]"
-
-class Incident(models.Model):
-    staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name='incidents')
-    event = models.ForeignKey(Event, on_delete=models.CASCADE, null=True, blank=True)
-    issue_type = models.ForeignKey(IssueType, on_delete=models.PROTECT)
-    resolved = models.BooleanField(default=False)
-    description = models.TextField(blank=True)
-    reported_on = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.staff.name} - {self.issue_type.name}"
-
-@receiver([post_save, post_delete], sender=Incident)
-def update_staff_score_on_incident_change(sender, instance, **kwargs):
-    instance.staff.update_reliability_score()
-
-class EventTemplate(models.Model):
-    name = models.CharField(max_length=100, unique=True)
-    description = models.TextField(blank=True)
-    is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.name
-
-    class Meta:
-        ordering = ['name']
-
-class EventTemplateRole(models.Model):
-    template = models.ForeignKey(EventTemplate, related_name='template_roles', on_delete=models.CASCADE)
-    role = models.ForeignKey(Role, on_delete=models.CASCADE)
-    count = models.PositiveIntegerField(default=1)
-
-    class Meta:
-        unique_together = ('template', 'role')
-        ordering = ['role__name']
-
-    def __str__(self):
-        return f"{self.template.name}: {self.count} x {self.role.name}" 
-    
 class LeaveRequest(models.Model):
     LEAVE_TYPE_CHOICES = [
         ('annual', 'Annual Leave'),

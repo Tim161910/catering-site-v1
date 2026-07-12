@@ -29,6 +29,9 @@ try:
 except ImportError:
     timezone = None
 from .fields import EncryptedCharField, EncryptedTextField
+from django import forms
+from django.core.exceptions import ValidationError
+from .models import InterviewSlot
 
 class Role(models.Model):
     name = models.CharField(max_length=50, unique=True)
@@ -294,7 +297,25 @@ class Interview(models.Model):
     interviewers = models.ManyToManyField(Staff, related_name='interviews_conducted')
     
     def __str__(self):
-        return f"{self.applicant.name} - {self.date} - {self.interview_type}"
+        return f"{self.applicant.name} - {self.date} - {self.interview_type}"   
+
+class InterviewSlot(models.Model):
+    applicant = models.ForeignKey(Applicant, on_delete=models.CASCADE, related_name='interview_slots')
+    scheduled_at = models.DateTimeField()
+    interviewer = models.ForeignKey(Staff, on_delete=models.SET_NULL, null=True, blank=True)
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.applicant.name} - {self.scheduled_at:%Y-%m-%d %H:%M}"
+
+class InterviewSlotForm(forms.ModelForm):
+    class Meta:
+        model = InterviewSlot
+        fields = ['applicant', 'scheduled_at', 'interviewer', 'notes']
+        widgets = {
+            'scheduled_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+        }
 
 class RolePlay(models.Model):
     scenario = models.TextField()
@@ -329,15 +350,12 @@ class Assignment(models.Model):
     staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name='assignments', null=True, blank=True)
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='assignments')
     duty_number = models.PositiveIntegerField(help_text="Duty slot: 1, 2, 3...")
-    role = models.ForeignKey(
-        Role, 
-        on_delete=models.PROTECT, 
-        help_text="Role for this event"
-    )
-     
+    role = models.ForeignKey(Role, on_delete=models.PROTECT, help_text="Role for this event")
+    
     STATUS_CHOICES = [
         ('assigned', 'Assigned'),
         ('dropped', 'Dropped'),
+        ('completed', 'Completed'),
     ]
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='assigned')
     
@@ -358,7 +376,7 @@ class Assignment(models.Model):
         ordering = ['event', 'date_assigned', 'duty_number']
         verbose_name_plural = "Assignments"
 
-    def __str__(self):  # <-- This line moved out
+    def __str__(self):
         staff_name = self.staff.name if self.staff else "Unassigned"
         event_title = self.event.title if self.event else "No Event"
         return f"Duty {self.duty_number}: {staff_name} @ {event_title} [{self.status}]"
@@ -383,6 +401,17 @@ class EventTemplate(models.Model):
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    default_location = models.CharField(max_length=255, blank=True)
+    default_duration_hours = models.PositiveIntegerField(default=1, help_text="Default duration in hours")
+    required_staff_count = models.PositiveIntegerField(default=1)
+    notes = models.TextField(blank=True, help_text="Internal notes for staff")
+
+    def create_event_with_assignments(self, start_time, **kwargs):
+        event = Event.objects.create(start_time=start_time, template=self, **kwargs)
+        for tr in self.template_roles.all():
+            for i in range(tr.count):
+                Assignment.objects.create(event=event, role=tr.role)
+        return event
 
     def __str__(self):
         return self.name
@@ -393,15 +422,19 @@ class EventTemplate(models.Model):
 class EventTemplateRole(models.Model):
     template = models.ForeignKey(EventTemplate, related_name='template_roles', on_delete=models.CASCADE)
     role = models.ForeignKey(Role, on_delete=models.CASCADE)
-    count = models.PositiveIntegerField(default=1)
+    count = models.PositiveIntegerField(default=1, blank=True)
 
     class Meta:
         unique_together = ('template', 'role')
         ordering = ['role__name']
 
     def __str__(self):
-        return f"{self.template.name}: {self.count} x {self.role.name}" 
-    
+        return f"{self.template.name}: {self.count} x {self.role.name}"
+
+    def clean(self):
+        if self.count < 1:
+            raise ValidationError({'count': 'Count must be at least 1.'})
+
 class LeaveRequest(models.Model):
     LEAVE_TYPE_CHOICES = [
         ('annual', 'Annual Leave'),

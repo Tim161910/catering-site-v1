@@ -1,0 +1,70 @@
+{% extends 'staff/base.html' %}
+
+{% block title %}Applicant: {{ applicant.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Applicant Details</h2>
+        <div>
+            <a href="{% url 'staff:applicant_update' applicant.id %}" class="btn btn-primary">Edit</a>
+            <a href="{% url 'staff:applicant_delete' applicant.id %}" class="btn btn-danger">Delete</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Name:</strong> {{ applicant.name }}
+                </div>
+                <div class="col-md-6">
+                    <strong>Email:</strong> {{ applicant.email }}
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Phone:</strong> {{ applicant.phone|default:"-" }}
+                </div>
+                <div class="col-md-6">
+                    <strong>Status:</strong> 
+                    {% if applicant.status == 'accepted' %}
+                        <span class="badge bg-success">Accepted</span>
+                    {% elif applicant.status == 'rejected' %}
+                        <span class="badge bg-danger">Rejected</span>
+                    {% else %}
+                        <span class="badge bg-warning">Pending</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Recruitment:</strong> 
+                    <a href="{% url 'staff:recruitment_detail' applicant.recruitment.id %}">
+                        {{ applicant.recruitment.title }}
+                    </a>
+                </div>
+                <div class="col-md-6">
+                    <strong>Applied On:</strong> {{ applicant.applied_at|date:"j F Y, P" }}
+                </div>
+            </div>
+            
+            {% if applicant.resume %}
+            <div class="mb-3">
+                <strong>Resume:</strong> 
+                <a href="{{ applicant.resume.url }}" target="_blank">Download</a>
+            </div>
+            {% endif %}
+
+            {% if applicant.notes %}
+            <div class="mb-3">
+                <strong>Notes:</strong>
+                <p>{{ applicant.notes }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <a href="{% url 'staff:applicant_list' %}" class="btn btn-secondary mt-3">← Back to Applicants</a>
+</div>
+{% endblock %}
