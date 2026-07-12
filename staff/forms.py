@@ -1,7 +1,7 @@
 from django import forms
 from django.utils import timezone
 from django.core.exceptions import ValidationError
-from .models import Staff, Event, Applicant, RolePlay, ApplicantRolePlay, Incident, EventTemplate, Recruitment, Role, RolePlayResponse, StaffUpdateRequest, Task, Meeting, Expense, Assignment
+from .models import Staff, Event, Applicant, RolePlay, ApplicantRolePlay, Incident, EventTemplate, Recruitment, Role, RolePlayResponse, StaffUpdateRequest, Task, Meeting, Expense, Assignment, InterviewSlot
 import re
 
 def validate_phone(value, allow_plus=True):
@@ -365,3 +365,13 @@ class AssignmentForm(forms.ModelForm):
             ).update(status='ended', reassigned_at=timezone.now())
     
         return super().save(commit=commit)
+
+class InterviewSlotForm(forms.ModelForm):
+    class Meta:
+        model = InterviewSlot
+        fields = ['recruitment', 'date', 'start_time', 'end_time', 'capacity', 'interviewer']
+        widgets = {
+            'date': forms.DateInput(attrs={'type': 'date'}),
+            'start_time': forms.TimeInput(attrs={'type': 'time'}),
+            'end_time': forms.TimeInput(attrs={'type': 'time'}),
+        }

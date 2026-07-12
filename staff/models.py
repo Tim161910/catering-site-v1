@@ -188,16 +188,6 @@ class Interview(models.Model):
     
     def __str__(self):
         return f"{self.applicant.name} - {self.date:%Y-%m-%d} - {self.interview_type}"
-    
-class InterviewSlotForm(forms.ModelForm):
-    class Meta:
-        model = InterviewSlot
-        fields = ['recruitment', 'date', 'start_time', 'end_time', 'capacity', 'interviewer']
-        widgets = {
-            'date': forms.DateInput(attrs={'type': 'date'}),
-            'start_time': forms.TimeInput(attrs={'type': 'time'}),
-            'end_time': forms.TimeInput(attrs={'type': 'time'}),
-        }
 
 class ApplicationStatus(models.Model):
     STATUS_CHOICES = [
