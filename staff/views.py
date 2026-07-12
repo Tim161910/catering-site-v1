@@ -35,6 +35,21 @@ class RecruitmentApplicantsView(ListView):
 
     def get_queryset(self):
         return Applicant.objects.filter(recruitment_id=self.kwargs['recruitment_id'])
+
+@method_decorator(staff_member_required, name='dispatch')
+class RecruitmentCreateView(CreateView):
+    model = Recruitment
+    form_class = RecruitmentForm
+    template_name = 'staff/recruitment_form.html'
+    success_url = reverse_lazy('staff:recruitment_list')
+
+@method_decorator(staff_member_required, name='dispatch')
+class EditRecruitmentView(UpdateView): # you have this in urls
+    model = Recruitment
+    form_class = RecruitmentForm
+    template_name = 'staff/recruitment_form.html'
+    pk_url_kwarg = 'recruitment_id'
+    success_url = reverse_lazy('staff:recruitment_list')
     
 @method_decorator(staff_member_required, name='dispatch')    
 class RecruitmentListView(LoginRequiredMixin, ListView):
@@ -54,11 +69,8 @@ class RecruitmentUpdateView(UpdateView):
     model = Recruitment
     form_class = RecruitmentForm
     template_name = 'staff/recruitment_form.html'
+    pk_url_kwarg = 'recruitment_id'  # add this
     success_url = reverse_lazy('staff:recruitment_list')
-
-    def form_valid(self, form):
-        messages.success(self.request, "Recruitment updated.")
-        return super().form_valid(form)
 
 @method_decorator(staff_member_required, name='dispatch')
 class RecruitmentDeleteView(DeleteView):
@@ -231,7 +243,7 @@ class SendEmailToApplicantsView(View):
         if emails_sent:
             messages.success(request, f'Successfully sent {emails_sent} emails.')
         
-        return redirect('recruitment:detail', pk=recruitment_id)
+        return redirect('staff:recruitment_detail', pk=recruitment_id)
 
 @method_decorator(staff_member_required, name='dispatch')    
 class ScheduleInterviewsView(View):
