@@ -883,6 +883,29 @@ def create_assignments_from_template(request, event_id):
     messages.success(request, f"Created {len(assignments)} assignments from template")
     return redirect('staff:assignment_list', event_id=event_id)
 
+@staff_member_required
+@require_POST
+@csrf_exempt
+def update_assignment_role(request, assignment_id):
+    """
+    AJAX endpoint to update the role for an assignment
+    """
+    try:
+        data = json.loads(request.body)
+        new_role_id = data.get('role_id')
+
+        assignment = get_object_or_404(Assignment, id=assignment_id)
+        new_role = get_object_or_404(Role, id=new_role_id)
+
+        assignment.role = new_role
+        assignment.save(update_fields=['role'])
+
+        return JsonResponse({
+            'success': True,
+            'role_name': new_role.name
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
     
     
