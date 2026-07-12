@@ -85,6 +85,19 @@ class RecruitmentDeleteView(DeleteView):
         messages.success(request, "Recruitment closed.")
         return HttpResponseRedirect(self.success_url)
 
+@method_decorator(staff_member_required, name='dispatch')
+class CloseRecruitmentView(View):
+    def post(self, request, recruitment_id):
+        recruitment = get_object_or_404(Recruitment, pk=recruitment_id)
+        recruitment.is_closed = True
+        recruitment.save()
+        messages.success(request, f"Recruitment for '{recruitment.position}' closed.")
+        return redirect('staff:recruitment_detail', pk=recruitment_id)
+    
+    def get(self, request, recruitment_id):
+        # In case someone clicks it as a link
+        return self.post(request, recruitment_id)
+
 
 @method_decorator(staff_member_required, name='dispatch')
 class ApplicantListView(ListView):
