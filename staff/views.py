@@ -343,7 +343,7 @@ class ManageInterviewSlotsView(View):
 class StaffListView(LoginRequiredMixin, ListView):
     model = Staff
     template_name = 'staff/staff_list.html'
-    context_object_name = 'staff_members'
+    context_object_name = 'staff'
 
 class StaffCreateView(LoginRequiredMixin, CreateView):
     model = Staff
