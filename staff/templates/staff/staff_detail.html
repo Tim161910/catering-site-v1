@@ -1,7 +1,10 @@
-<h1>{{ staff.name }}</h1>
-<p>Phone: {{ staff.phone }}</p>
-<p>Email: {{ staff.email }}</p>
-<p>Reliability: {{ staff.reliability_score }}</p>
-<a href="{% url 'staff:staff_update' staff.pk %}">Edit</a>
-<a href="{% url 'staff:staff_delete' staff.pk %}">Delete</a>
-<a href="{% url 'staff:staff_list' %}">Back</a>
+<h2>{{ staff.name }}</h2>
+<p><b>Role:</b> {{ staff.role|default:"-" }}</p>
+<p><b>Email:</b> {{ staff.email|default:"-" }}</p>
+<p><b>Phone:</b> {{ staff.phone|default:"-" }}</p>
+<p><b>WhatsApp:</b> {{ staff.whatsapp|default:"-" }}</p>
+<p><b>Address:</b> {{ staff.address|default:"-" }}</p>
+<p><b>Next of Kin:</b> {{ staff.next_of_kin|default:"-" }}</p>
+<p><b>Emergency Contact:</b> {{ staff.emergency_contact_name|default:"-" }} - {{ staff.emergency_contact_phone|default:"-" }}</p>
+<p><b>Reliability Score:</b> {{ staff.reliability_score }}</p>
+<p><b>Reliability Notes:</b> {{ staff.reliability_notes|default:"-" }}</p>
