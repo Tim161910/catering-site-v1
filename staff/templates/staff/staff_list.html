@@ -1,12 +1,33 @@
-{% for s in staff %}
-<tr>
-    <td>{{ s.name }}</td>
-    <td>{{ s.role|default:"-" }}</td>
-    <td>{{ s.email|default:"-" }}</td>
-    <td>{{ s.phone|default:"-" }}</td>
-    <td>{{ s.whatsapp|default:"-" }}</td>
-    <td>{{ s.reliability_score|default:100 }}</td>
-    <td>{{ s.is_active|yesno:"Active,Inactive" }}</td>
-    <td><a href="{% url 'staff:staff_detail' s.pk %}">View</a></td>
-</tr>
-{% endfor %}
+{% extends "base.html" %}
+{% block content %}
+<h2>Staff List: {{ staff|length }}</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Role</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>WhatsApp</th>
+            <th>Reliability</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for s in staff %}
+    <tr>
+        <td>{{ s.name }}</td>
+        <td>{{ s.role.name|default:"-" }}</td>  {# <-- this is the key fix #}
+        <td>{{ s.email|default:"-" }}</td>
+        <td>{{ s.phone|default:"-" }}</td>
+        <td>{{ s.whatsapp|default:"-" }}</td>
+        <td>{{ s.reliability_score }}</td>
+        <td>{{ s.is_active|yesno:"Active,Inactive" }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="7">No staff found</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
