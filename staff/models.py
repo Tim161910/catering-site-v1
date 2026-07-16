@@ -289,7 +289,7 @@ class EventTemplateRole(models.Model):
     def clean(self):
         if self.count < 1:
             raise ValidationError({'count': 'Count must be at least 1.'})
-
+        
 class Task(models.Model):
     PRIORITY_CHOICES = [
         ('low', 'Low'),
@@ -461,4 +461,29 @@ class LeaveRequest(models.Model):
     
     class Meta:
         ordering = ['-submitted_at']
+
+
+class Notification(models.Model):
+    NOTIFICATION_TYPES = [
+        ('assignment', 'Assignment'),
+        ('incident', 'Incident'),
+        ('leave', 'Leave'),
+        ('general', 'General'),
+    ]
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications')
+    title = models.CharField(max_length=255)
+    message = models.TextField()
+    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES, default='general')
+    related_event = models.ForeignKey(Event, on_delete=models.CASCADE, null=True, blank=True)
+    related_assignment = models.ForeignKey(Assignment, on_delete=models.CASCADE, null=True, blank=True)
+    
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.title}"
     

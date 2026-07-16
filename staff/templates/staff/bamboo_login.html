@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5" style="max-width: 420px;">
+  <h2 class="text-center mb-4">Bamboo Login</h2>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-danger">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary w-100 mt-3">Login</button>
+  </form>
+</div>
+{% endblock %}

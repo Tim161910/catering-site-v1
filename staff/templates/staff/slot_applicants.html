@@ -1,0 +1,22 @@
+{% extends "staff/base.html" %}
+{% block content %}
+<h2>Applicants for {{ slot.date }} {{ slot.start_time }} - {{ slot.end_time }}</h2>
+<p>Capacity: {{ slot.capacity }} | Booked: {{ applicants.count }}</p>
+
+<table class="w-full">
+  <thead><tr><th>Name</th><th>Email</th><th>Phone</th></tr></thead>
+  <tbody>
+    {% for a in applicants %}
+    <tr>
+      <td>{{ a.name }}</td>
+      <td>{{ a.email }}</td>
+      <td>{{ a.phone }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="3">No applicants booked yet</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<a href="{% url 'staff:manage_interview_slots' slot.recruitment.id %}">Back</a>
+{% endblock %}

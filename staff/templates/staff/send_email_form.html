@@ -1,0 +1,32 @@
+{% extends "staff/base.html" %}
+{% block content %}
+<h2>Send Email to Applicants - {{ recruitment.position }}</h2>
+<p>Total applicants: {{ total }}</p>
+
+<form method="post">
+  {% csrf_token %}
+  <div class="mb-4">
+    <label class="block"><input type="checkbox" id="select_all"> Select All</label>
+  </div>
+  
+  {% for a in applicants %}
+    <label class="block">
+      <input type="checkbox" name="applicant_ids" value="{{ a.id }}"> 
+      {{ a.name }} - {{ a.email|default:"No Email" }}
+    </label>
+  {% empty %}
+    <p>No applicants yet</p>
+  {% endfor %}
+
+  <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded mt-4">Send Email</button>
+</form>
+
+<script>
+document.getElementById('select_all').onclick = function() {
+  var checkboxes = document.getElementsByName('applicant_ids');
+  for(var checkbox of checkboxes) {
+    checkbox.checked = this.checked;
+  }
+}
+</script>
+{% endblock %}

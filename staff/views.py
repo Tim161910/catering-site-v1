@@ -30,7 +30,7 @@ from django.contrib.auth.forms import AuthenticationForm
 logger = logging.getLogger(__name__)
 
 from django import forms
-from .models import Recruitment, Applicant, RolePlay, Incident, Event, Staff, Assignment, Role, RolePlayResponse, InterviewSlot, ApplicantRolePlay, EventAssignment, Notification, StaffUpdateRequest
+from .models import Recruitment, Applicant, RolePlay, Incident, Event, Staff, Assignment, Role, RolePlayResponse, InterviewSlot, ApplicantRolePlay, Notification, StaffUpdateRequest
 from .forms import RecruitmentForm, ApplicantForm, IncidentForm, EventForm, StaffForm, StaffProfileForm, RolePlayForm, RolePlayResponseForm, StaffFilterForm
 
 def bamboo_login(request):
@@ -1031,8 +1031,10 @@ class AssignmentListView(ListView):
         event_id = self.kwargs['event_id']
         return Assignment.objects.filter(event_id=event_id).select_related('staff', 'role')
 
+@login_required
+@staff_member_required
 def assign_staff(request, assignment_id):
-    assignment = get_object_or_404(EventAssignment, id=assignment_id)
+    assignment = get_object_or_404(Assignment, id=assignment_id) # CHANGED
     event = assignment.event
     
     if request.method == 'POST':
@@ -1041,27 +1043,27 @@ def assign_staff(request, assignment_id):
             messages.error(request, 'Please select a staff member')
         else:
             assignment.staff_id = staff_id
-            assignment.status = 'pending'  # or 'invited'
+            assignment.status = 'assigned'  # 'pending' doesn't exist in your Assignment model
             assignment.save()
             
-            messages.success(request, f'Staff assigned to {assignment.role.name}')  # fixed typo
+            messages.success(request, f'Staff assigned to {assignment.role.name}')
             
             # Create in-app notification for the assigned staff
-            assignment_link = reverse('staff:assignment_detail', args=[assignment.id])  # update this to your detail URL name
+            assignment_link = reverse('staff:assignment_list', args=[event.id]) # you don't have assignment_detail url
             Notification.objects.create(
-                user=assignment.staff,
+                user=assignment.staff.user,  # CHANGED: Notification.user is a User, not Staff
                 message=f"You've been assigned as {assignment.role.name} for '{event.title}'",
-                link=assignment_link
+                related_event=event,
+                related_assignment=assignment
             )
             
-            # TODO: swap this with Twilio/WhatsApp when commercialized
-            return redirect('staff:assignment_list', event.id)
+            return redirect('staff:assignment_list', event_id=event.id) # FIX: your url uses event_id
     
     # staff already assigned to this event
     assigned_staff_ids = event.assignments.values_list('staff_id', flat=True)
     
-    # show only staff users not already assigned
-    available_staff = User.objects.filter(is_staff=True).exclude(id__in=assigned_staff_ids)
+    # show only active staff not already assigned to this event
+    available_staff = Staff.objects.filter(is_active=True).exclude(id__in=assigned_staff_ids)
     
     context = {
         'assignment': assignment,
