@@ -79,3 +79,8 @@ TEMPLATES = [
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 FERNET_KEY = 'gDVz3ECufpfkYF7t6za6GgNMnBC9BQx4uUn47DU2L6g='
+
+# Auth redirects
+LOGIN_URL = 'staff:bamboo_login'
+LOGIN_REDIRECT_URL = 'staff:staff_dashboard'
+LOGOUT_REDIRECT_URL = 'staff:bamboo_login'
