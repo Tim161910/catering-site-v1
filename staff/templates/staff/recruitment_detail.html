@@ -1,15 +1,41 @@
-<!-- staff/templates/staff/recruitment_detail.html -->
- <h1>{{ recruitment.position }} Details</h1>
- <p>Status: {{ recruitment.status }}</p>
- <p>Description: {{ recruitment.description }}</p>
-    <p>Requirements: {{ recruitment.requirements }}</p>
-    <p>Created At: {{ recruitment.created_at }}</p>
-    <p>Updated At: {{ recruitment.updated_at }}</p>
-    <a href="{% url 'staff:recruitment_update' recruitment_id=recruitment.id %}">Edit</a>
-    <a href="{% url 'staff:recruitment_delete' recruitment_id=recruitment.id %}">Delete</a>
-    <a href="{% url 'staff:recruitment_list' %}">Back to List</a>
-    {% if recruitment.status == 'Open' %}
-        <a href="{% url 'staff:close_recruitment' recruitment_id=recruitment.id %}">Close Recruitment</a>
-    {% else %}
-        <a href="{% url 'staff:reopen_recruitment' recruitment_id=recruitment.id %}">Reopen Recruitment</a>
-    {% endif %}
+{% extends 'staff/base.html' %}
+{% block title %}{{ recruitment.position }} Details{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h1 class="h3 mb-0">{{ recruitment.position }}</h1>
+            <span class="badge {% if recruitment.status == 'Open' %}bg-success{% else %}bg-secondary{% endif %} fs-6">
+                {{ recruitment.status }}
+            </span>
+        </div>
+        <div class="card-body">
+            <h5>Description</h5>
+            <p>{{ recruitment.description|linebreaks }}</p>
+
+            <h5>Requirements</h5>
+            <p>{{ recruitment.requirements|linebreaks }}</p>
+
+            <hr>
+            <small class="text-muted">
+                Created: {{ recruitment.created_at|date:"j M Y H:i" }} <br>
+                Updated: {{ recruitment.updated_at|date:"j M Y H:i" }}
+            </small>
+        </div>
+        <div class="card-footer d-flex gap-2">
+            <a href="{% url 'staff:recruitment_list' %}" class="btn btn-secondary">← Back to List</a>
+            <a href="{% url 'staff:recruitment_applicants' recruitment_id=recruitment.id %}" class="btn btn-info">View Applications</a>
+            <a href="{% url 'staff:recruitment_update' recruitment_id=recruitment.id %}" class="btn btn-primary">Edit</a>
+            
+            {% if recruitment.status == 'Open' %}
+                <a href="{% url 'staff:close_recruitment' recruitment_id=recruitment.id %}" class="btn btn-warning">Close</a>
+            {% else %}
+                <a href="{% url 'staff:reopen_recruitment' recruitment_id=recruitment.id %}" class="btn btn-success">Reopen</a>
+            {% endif %}
+            
+            <a href="{% url 'staff:recruitment_delete' recruitment_id=recruitment.id %}" class="btn btn-outline-danger ms-auto">Delete</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

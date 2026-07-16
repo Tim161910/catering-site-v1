@@ -1,10 +1,195 @@
-<h2>{{ staff.name }}</h2>
-<p><b>Role:</b> {{ staff.role|default:"-" }}</p>
-<p><b>Email:</b> {{ staff.email|default:"-" }}</p>
-<p><b>Phone:</b> {{ staff.phone|default:"-" }}</p>
-<p><b>WhatsApp:</b> {{ staff.whatsapp|default:"-" }}</p>
-<p><b>Address:</b> {{ staff.address|default:"-" }}</p>
-<p><b>Next of Kin:</b> {{ staff.next_of_kin|default:"-" }}</p>
-<p><b>Emergency Contact:</b> {{ staff.emergency_contact_name|default:"-" }} - {{ staff.emergency_contact_phone|default:"-" }}</p>
-<p><b>Reliability Score:</b> {{ staff.reliability_score }}</p>
-<p><b>Reliability Notes:</b> {{ staff.reliability_notes|default:"-" }}</p>
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-3xl mx-auto mt-8">
+  <div class="bg-white shadow-lg rounded-2xl p-8 border-gray-200">
+    
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="text-2xl font-bold text-gray-800">{{ staff.name }}</h2>
+      <span class="px-3 py-1 text-sm font-semibold rounded-full 
+        {% if staff.is_active %} bg-green-100 text-green-700 {% else %} bg-red-100 text-red-700 {% endif %}">
+        {% if staff.is_active %} Active {% else %} Inactive {% endif %}
+      </span>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <p class="text-sm text-gray-500">Role</p>
+        <p class="font-semibold">{{ staff.get_role_display }}</p>
+      </div>
+      <div>
+        <p class="text-sm text-gray-500">Reliability Score</p>
+        <div class="flex items-center gap-2">
+          <p class="font-semibold">{{ staff.reliability_score }}/100</p>
+          {% if staff.reliability_score >= 90 %}
+            <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">A-Team</span>
+          {% elif staff.reliability_score >= 60 %}
+            <span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs">Standard</span>
+          {% else %}
+            <span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-semibold">Warning</span>
+          {% endif %}
+        </div>
+      </div>
+      <div>
+        <p class="text-sm text-gray-500">Phone</p>
+        <p class="font-semibold">{{ staff.phone }}</p>
+      </div>
+      <div>
+        <p class="text-sm text-gray-500">WhatsApp</p>
+        <p class="font-semibold">{{ staff.whatsapp }}</p>
+      </div>
+      <div class="md:col-span-2">
+        <p class="text-sm text-gray-500">Address</p>
+        <p class="font-semibold">{{ staff.address|default:"-" }}</p>
+      </div>
+      <div>
+        <p class="text-sm text-gray-500">Next of Kin</p>
+        <p class="font-semibold">{{ staff.next_of_kin|default:"-" }}</p>
+      </div>
+      <div>
+        <p class="text-sm text-gray-500">Emergency Contact</p>
+        <p class="font-semibold">{{ staff.emergency_contact_name }} - {{ staff.emergency_contact_phone }}</p>
+      </div>
+    </div>
+
+    {% if staff.reliability_notes %}
+    <div class="mt-6">
+      <p class="text-sm text-gray-500">Reliability Notes</p>
+      <p class="bg-gray-50 p-3 rounded-lg">{{ staff.reliability_notes }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Recent Events -->
+    <div class="mt-8">
+      <h3 class="text-lg font-semibold mb-3">Recent Events</h3>
+      <div class="overflow-x-auto bg-white rounded-lg shadow">
+        <table class="w-full">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="p-3 text-left">Event</th>
+              <th class="p-3 text-center">Date</th>
+              <th class="p-3 text-center">Role</th>
+              <th class="p-3 text-center">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for assignment in staff.assignments.all|slice:":3" %}
+          <tr class="border-t">
+            <td class="p-3">
+              <a href="{% url 'staff:event_detail' assignment.event.id %}" class="text-blue-600 hover:underline">
+                {{ assignment.event.title }}
+              </a>
+            </td>
+            <td class="p-3 text-center">{{ assignment.event.start_time|date:"M d, Y" }}</td>
+            <td class="p-3 text-center">{{ assignment.get_role_display }}</td>
+            <td class="p-3 text-center">
+              <span class="px-2 py-1 rounded text-xs font-semibold
+                {% if assignment.status == 'confirmed' %} bg-green-100 text-green-700
+                {% elif assignment.status == 'pending' %} bg-yellow-100 text-yellow-700
+                {% else %} bg-red-100 text-red-700 {% endif %}">
+                {{ assignment.get_status_display }}
+              </span>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="p-4 text-center text-gray-500">No recent events</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Recent Incidents -->
+    <div class="mt-8">
+      <h3 class="text-lg font-semibold mb-3">Recent Incidents</h3>
+      <div class="overflow-x-auto bg-white rounded-lg shadow">
+        <table class="w-full">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="p-3 text-left">Type</th>
+              <th class="p-3 text-center">Date</th>
+              <th class="p-3 text-left">Event</th>
+              <th class="p-3 text-left">Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for incident in staff.incidents.all|slice:":3" %}
+          <tr class="border-t">
+            <td class="p-3">
+              <span class="px-2 py-1 rounded text-xs font-semibold
+                {% if incident.incident_type == 'no_show' %} bg-red-100 text-red-700
+                {% elif incident.incident_type == 'late' %} bg-orange-100 text-orange-700
+                {% else %} bg-yellow-100 text-yellow-700 {% endif %}">
+                {{ incident.get_incident_type_display }}
+              </span>
+            </td>
+            <td class="p-3 text-center">{{ incident.created_at|date:"M d, Y" }}</td>
+            <td class="p-3">
+              {% if incident.event %}
+              <a href="{% url 'staff:event_detail' incident.event.id %}" class="text-blue-600 hover:underline">
+                {{ incident.event.title }}
+              </a>
+              {% else %}-{% endif %}
+            </td>
+            <td class="p-3">{{ incident.notes|truncatechars:50 }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="p-4 text-center text-gray-500">No incidents</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Reliability Chart -->
+    <div class="mt-8">
+      <h3 class="text-lg font-semibold mb-3">Reliability History</h3>
+      <canvas id="reliabilityChart" class="bg-white p-4 rounded-lg shadow"></canvas>
+    </div>
+
+    <!-- Buttons -->
+    <div class="flex flex-wrap gap-3 mt-8">
+      <a href="{% url 'staff:staff_update' staff.pk %}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">Edit</a>
+      <a href="{% url 'staff:incident_add' %}?staff={{ staff.id }}" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg">Log Issue</a>
+      <a href="{% url 'staff:staff_delete' staff.pk %}" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg">Delete</a>
+      <a href="{% url 'staff:staff_list' %}" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg">Back</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+{{ chart_labels|json_script:"chart-labels" }}
+{{ chart_data|json_script:"chart-data" }}
+
+<script>
+  const labels = JSON.parse(document.getElementById('chart-labels').textContent);
+  const data = JSON.parse(document.getElementById('chart-data').textContent);
+
+  const ctx = document.getElementById('reliabilityChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Reliability Score',
+        data: data,
+        borderColor: 'rgb(59, 130, 246)',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        tension: 0.1,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 100
+        }
+      }
+    }
+  });
+</script>
+{% endblock %}

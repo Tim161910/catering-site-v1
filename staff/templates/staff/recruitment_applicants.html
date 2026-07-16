@@ -1,10 +1,44 @@
-<h1>Applicants for {{ object.position }}</h1>
-<ul>
-    {% for applicant in applicants %}
-        <li>{{ applicant.name }} - {{ applicant.email }} - {{ applicant.phone }}</li>
-    {% empty %}
-        <li>No applicants yet.</li>
-    {% endfor %}
-</ul>
-<a href="{% url 'staff:recruitment_detail' recruitment_id=object.id %}">Back to Recruitment Details</a>
+{% extends 'staff/base.html' %}
+{% block title %}Applicants for {{ object.position }}{% endblock %}
 
+{% block content %}
+<div class="container mt-4">
+    <h1>Applicants for {{ object.position }}</h1>
+    <a href="{% url 'staff:recruitment_detail' recruitment_id=object.id %}" class="btn btn-link mb-3">← Back to Recruitment</a>
+
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Status</th>
+                    <th>Applied</th>
+                    <th>Resume</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for applicant in applicants %}
+                <tr>
+                    <td>{{ applicant.name }}</td>
+                    <td>{{ applicant.email }}</td>
+                    <td>{{ applicant.phone }}</td>
+                    <td><span class="badge bg-info">{{ applicant.status }}</span></td>
+                    <td>{{ applicant.created_at|date:"j M Y" }}</td>
+                    <td>
+                        {% if applicant.resume %}
+                            <a href="{{ applicant.resume.url }}" class="btn btn-sm btn-outline-primary" target="_blank">Download</a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center text-muted">No applicants yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

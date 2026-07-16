@@ -1,34 +1,46 @@
 {% extends "base.html" %}
+{% load widget_tweaks %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2>Log Incident</h2>
+<div class="max-w-2xl mx-auto p-6">
+    <h2 class="text-2xl font-bold mb-6 text-gray-800">Log Incident</h2>
 
-    <form method="post">
-        {% csrf_token %}
+    <div class="bg-white shadow-lg rounded-2xl p-8 border border-gray-200">
+        <form method="post" class="space-y-5">
+            {% csrf_token %}
 
-        <div class="mb-3">
-            <label>{{ form.staff.label }}</label>
-            {{ form.staff }}
-        </div>
+            {% if form.non_field_errors %}
+            <div class="bg-red-100 border-red-400 text-red-700 px-4 py-3 rounded-lg">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
 
-        <div class="mb-3">
-            <label>{{ form.event.label }}</label>
-            {{ form.event }}
-        </div>
+            {% for field in form %}
+                <div>
+                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        {{ field.label }} {% if field.field.required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
+                    
+                    {{ field|add_class:"w-full px-3 py-2 border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500" }}
+                    
+                    {% if field.help_text %}
+                        <p class="text-gray-500 text-xs mt-1">{{ field.help_text }}</p>
+                    {% endif %}
+                    {% if field.errors %}
+                        <p class="text-red-600 text-sm mt-1">{{ field.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            {% endfor %}
 
-        <div class="mb-3">
-            <label>{{ form.issue_type.label }}</label>
-            {{ form.issue_type }}
-        </div>
-
-        <div class="mb-3">
-            <label>{{ form.description.label }}</label>
-            {{ form.description }}
-        </div>
-
-        <button type="submit" class="btn btn-primary">Save Incident</button>
-        <a href="{% url 'staff:staff_event_list' %}" class="btn btn-secondary">Cancel</a>
-    </form>
+            <div class="flex justify-end gap-3 pt-4 border-t">
+                <a href="{% url 'staff:staff_list' %}" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700">
+                    Cancel
+                </a>
+                <button type="submit" class="bg-red-600 text-white px-5 py-2 rounded-lg hover:bg-red-700 shadow">
+                    Save Incident
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
 {% endblock %}

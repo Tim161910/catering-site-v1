@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import (
-    StaffDashboardView, StaffListView, StaffCreateView, StaffUpdateView, StaffDeleteView, 
+    StaffDashboardView, StaffListView, StaffCreateView, StaffUpdateView, StaffDeleteView, StaffDetailView,
     EventListView, EventDetailView, EventCreateView, EventUpdateView, 
     RecruitmentListView, RecruitmentCreateView, RecruitmentDetailView, 
     RecruitmentApplicantsView, RecruitmentUpdateView, RecruitmentDeleteView, 
@@ -8,7 +8,7 @@ from .views import (
     ExportApplicantsCSVView, SendEmailToApplicantsView, ScheduleInterviewsView, 
     ManageInterviewSlotsView, SuccessView, 
     RolePlayListView, RolePlayCreateView, RolePlayUpdateView, RolePlayDeleteView, 
-    RolePlayDetailView, StartScenarioView, IncidentCreateView, StaffProfileUpdateView
+    RolePlayDetailView, StartScenarioView, IncidentCreateView, StaffProfileUpdateView, ExportStaffCSVView
 )
 from . import views
 
@@ -33,7 +33,8 @@ urlpatterns = [
     path('recruitment/', RecruitmentListView.as_view(), name='recruitment_list'),
     path('recruitment/new/', RecruitmentCreateView.as_view(), name='recruitment_create'),
     path('recruitment/<int:recruitment_id>/', RecruitmentDetailView.as_view(), name='recruitment_detail'),
-    path('recruitment/<int:recruitment_id>/apply/', ApplicantCreateView.as_view(), name='apply'), 
+    path('recruitment/<int:recruitment_id>/applicant/add/', ApplicantCreateView.as_view(), name='applicant_add'),
+    path('recruitment/<int:recruitment_id>/apply/', views.apply_to_recruitment, name='apply_to_recruitment'),       
     path('recruitment/<int:recruitment_id>/applicants/', RecruitmentApplicantsView.as_view(), name='recruitment_applicants'),
     path('success/', SuccessView.as_view(), name='success'),
     path('role_play/', RolePlayListView.as_view(), name='role_play_list'),
@@ -54,5 +55,9 @@ urlpatterns = [
     path('api/assignments/<int:assignment_id>/update_role/', views.update_assignment_role, name='update_assignment_role'),
     path('api/assignments/<int:assignment_id>/reassign/', views.reassign_assignment, name='reassign_assignment'),
     path('api/assignments/<int:assignment_id>/replace_staff/', views.replace_staff, name='replace_staff'),
-    path('profile/edit', StaffProfileUpdateView.as_view(), name='staff_profile_edit'),
+    path('profile/edit/', StaffProfileUpdateView.as_view(), name='staff_profile_edit'),
+    path('<int:pk>/', StaffDetailView.as_view(), name='staff_detail'),
+    path('slot/<int:slot_id>/applicants/', views.SlotApplicantsView.as_view(), name='slot_applicants'),
+    path('slot/<int:slot_id>/delete/', views.DeleteSlotView.as_view(), name='delete_slot'),
+    path('dashboard/export-csv/', ExportStaffCSVView.as_view(), name='export_staff_csv'),
 ]

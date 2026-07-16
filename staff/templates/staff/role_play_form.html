@@ -1,14 +1,57 @@
 {% extends 'staff/base.html' %}
+{% load widget_tweaks %}
+
+{% block title %}{% if object %}Update{% else %}Create{% endif %} Role Play Scenario{% endblock %}
 
 {% block content %}
-    <h1>{% if object %} Update{% else %} Create {% endif %} Role Play Scenario</h1>
-    <form method="post">
+<div class="container mt-4">
+  <div class="card shadow-sm border-0" style="max-width: 700px; margin: 0 auto;">
+    <div class="card-body p-4">
+      <h2 class="mb-4">
+        {% if object %}Update{% else %}Create{% endif %} Role Play Scenario
+      </h2>
+
+      <form method="post" id="roleplay-form">
         {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit" class="btn btn-primary">Save</button>
-        <a href="{% url 'staff:role_play_list' %}" class="btn btn-secondary">Cancel</a>
-    </form>
+
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger">
+            {{ form.non_field_errors }}
+          </div>
+        {% endif %}
+
+        {% for field in form %}
+          <div class="mb-3">
+            <label for="{{ field.id_for_label }}" class="form-label">
+              {{ field.label }} {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+            
+            {% render_field field class="form-control" %}
+            
+            {% if field.help_text %}
+              <div class="form-text">{{ field.help_text }}</div>
+            {% endif %}
+            
+            {% if field.errors %}
+              <div class="text-danger small mt-1">{{ field.errors|striptags }}</div>
+            {% endif %}
+          </div>
+        {% endfor %}
+
+        <div class="d-flex gap-2 pt-3 border-top">
+          <button type="submit" class="btn btn-primary">Save</button>
+          <a href="{% url 'staff:role_play_list' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
-
-
+{% block extra_js %}
+<script>
+document.getElementById('roleplay-form').addEventListener('submit', function() {
+  showToast('Saving scenario...', 'bg-info');
+});
+</script>
+{% endblock %}

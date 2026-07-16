@@ -50,8 +50,7 @@ class StaffAdmin(admin.ModelAdmin):
     )
 
     def save_model(self, request, obj, form, change):
-        # pass the current admin user to save() so approval requests can be created
-        obj.save(user=request.user)
+        super().save_model(request, obj, form, change)
 
 class RolePlayResponseAdmin(admin.ModelAdmin):
     list_display = ['staff', 'roleplay', 'submitted_at']
@@ -112,9 +111,28 @@ class IssueTypeAdmin(admin.ModelAdmin):
     list_editable = ['weight_percent', 'counts_against_staff']
     
 class IncidentAdmin(admin.ModelAdmin):
-    list_display = ['staff', 'issue_type', 'event', 'resolved', 'reported_on']
-    list_filter = ['issue_type', 'resolved', 'reported_on']
-    search_fields = ['staff__name']
+    list_display = ['staff', 'event', 'issue_type', 'incident_type', 'reliability_impact', 'resolved', 'reported_on']
+    list_filter = ['issue_type', 'incident_type', 'reliability_impact', 'resolved', 'reported_on']
+    search_fields = ['staff__name', 'incident_type', 'notes', 'description']
+    list_editable = ['resolved'] 
+    readonly_fields = ['reported_on']
+    autocomplete_fields = ['staff', 'event'] # makes dropdowns faster
+    
+    fieldsets = (
+        ('Basic Info', {
+            'fields': ('staff', 'event', 'issue_type')
+        }),
+        ('Incident Details', {
+            'fields': ('incident_type', 'reliability_impact', 'notes', 'description')
+        }),
+        ('Status', {
+            'fields': ('resolved', 'reported_on')
+        }),
+    )
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('staff', 'event', 'issue_type') # faster loading
 
 class AssignmentAdmin(admin.ModelAdmin):
     list_display = ['event', 'duty_number', 'staff', 'role', 'staff_score', 'status']

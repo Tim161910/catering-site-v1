@@ -1,31 +1,50 @@
 {% extends 'staff/base.html' %}
+{% block title %}Job Openings{% endblock %}
 
 {% block content %}
-<h1>Recruitment List</h1>
-<ul>
-{% for recruitment in object_list %}
-    <li>
-        {{ recruitment.position }} - {{ recruitment.status }} {ID: {{ recruitment.id }}}
-        {% if recruitment.status == 'Open' %}
-             - <a href="{% url 'staff:close_recruitment' recruitment_id=recruitment.id %}">Close</a>
-        {% endif %}
-         - <a href="{% url 'staff:recruitment_detail' recruitment_id=recruitment.id %}">View Details</a>
-         -<a href="{% url 'staff:recruitment_update' recruitment_id=recruitment.id %}">Edit</a> 
-         - <a href="{% url 'staff:recruitment_delete' recruitment_id=recruitment.id %}">Delete</a>
-         {% if recruitment.status == 'Closed' %}
-             - <a href="{% url 'staff:reopen_recruitment' recruitment_id=recruitment.id %}">Reopen</a>
-        {% endif %}
-         - <a href="{% url 'staff:recruitment_applicants' recruitment_id=recruitment.id %}">View Applications</a>
-        {% if recruitment.status == 'Open' %}
-         - <a href="{% url 'staff:export_applicants_csv' recruitment_id=recruitment.id %}">Export CSV</a>
-        {% endif %} 
-        - <a href="{% url 'staff:send_email_to_applicants' recruitment_id=recruitment.id %}">Send Email to Applicants</a>
-        - <a href="{% url 'staff:schedule_interviews' recruitment_id=recruitment.id %}">Schedule Interviews</a>
-        - <a href="{% url 'staff:manage_interview_slots' recruitment_id=recruitment.id %}">Manage Interview Slots</a>
-        - <a href="{% url 'staff:apply' recruitment_id=recruitment.id %}">Apply</a>
-    </li>
+<div class="container mt-4">
+    <h1 class="mb-4">Current Job Openings</h1>
+    
+    {% for recruitment in object_list %}
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h5 class="card-title">{{ recruitment.position }}</h5>
+                    <p class="card-text">{{ recruitment.description|truncatewords:20 }}</p>
+                    <span class="badge {% if recruitment.status == 'Open' %}bg-success{% else %}bg-secondary{% endif %}">
+                        {{ recruitment.status }}
+                    </span>
+                    <small class="text-muted ms-2">ID: {{ recruitment.id }}</small>
+                </div>
+                
+                <div class="text-end">
+                    {% if recruitment.status == 'Open' %}
+                        {# PUBLIC APPLY BUTTON #}
+                        <a href="{% url 'staff:apply_to_recruitment' recruitment_id=recruitment.id %}" class="btn btn-success btn-sm mb-1">Apply Now</a>
+                        <br>
+                    {% endif %}
+                    
+                    {% if user.is_staff %} {# STAFF ONLY LINKS #}
+                        <a href="{% url 'staff:recruitment_detail' recruitment_id=recruitment.id %}" class="btn btn-outline-primary btn-sm">View Details</a>
+                        <a href="{% url 'staff:recruitment_applicants' recruitment_id=recruitment.id %}" class="btn btn-outline-info btn-sm">Applications</a>
+                        
+                        {% if recruitment.status == 'Open' %}
+                             <a href="{% url 'staff:close_recruitment' recruitment_id=recruitment.id %}" class="btn btn-outline-warning btn-sm">Close</a>
+                             <a href="{% url 'staff:export_applicants_csv' recruitment_id=recruitment.id %}" class="btn btn-outline-secondary btn-sm">Export CSV</a>
+                        {% else %}
+                             <a href="{% url 'staff:reopen_recruitment' recruitment_id=recruitment.id %}" class="btn btn-outline-success btn-sm">Reopen</a>
+                        {% endif %}
+                        
+                        <a href="{% url 'staff:recruitment_update' recruitment_id=recruitment.id %}" class="btn btn-outline-primary btn-sm">Edit</a>
+                        <a href="{% url 'staff:recruitment_delete' recruitment_id=recruitment.id %}" class="btn btn-outline-danger btn-sm">Delete</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
     {% empty %}
-    <li>No recruitments yet.</li>
+    <p>No recruitments yet.</p>
     {% endfor %}
-</ul>
+</div>
 {% endblock %}

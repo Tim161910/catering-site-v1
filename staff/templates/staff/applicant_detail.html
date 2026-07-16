@@ -13,6 +13,9 @@
     </div>
 
     <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">{{ applicant.name }}</h5>
+        </div>
         <div class="card-body">
             <div class="row mb-3">
                 <div class="col-md-6">
@@ -32,8 +35,10 @@
                         <span class="badge bg-success">Accepted</span>
                     {% elif applicant.status == 'rejected' %}
                         <span class="badge bg-danger">Rejected</span>
+                    {% elif applicant.status == 'interview' %}
+                        <span class="badge bg-info">Interview</span>
                     {% else %}
-                        <span class="badge bg-warning">Pending</span>
+                        <span class="badge bg-warning text-dark">Pending</span>
                     {% endif %}
                 </div>
             </div>
@@ -52,14 +57,21 @@
             {% if applicant.resume %}
             <div class="mb-3">
                 <strong>Resume:</strong> 
-                <a href="{{ applicant.resume.url }}" target="_blank">Download</a>
+                <a href="{{ applicant.resume.url }}" target="_blank" class="btn btn-sm btn-outline-primary">Download</a>
+            </div>
+            {% endif %}
+
+            {% if applicant.cover_letter %}
+            <div class="mb-3">
+                <strong>Cover Letter:</strong>
+                <div class="border rounded p-3 bg-light">{{ applicant.cover_letter|linebreaks }}</div>
             </div>
             {% endif %}
 
             {% if applicant.notes %}
             <div class="mb-3">
                 <strong>Notes:</strong>
-                <p>{{ applicant.notes }}</p>
+                <div class="border rounded p-3 bg-light">{{ applicant.notes|linebreaks }}</div>
             </div>
             {% endif %}
         </div>

@@ -1,19 +1,60 @@
 {% extends 'staff/base.html' %}
 
+{% block title %}Upcoming Events{% endblock %}
+
 {% block content %}
-    <h1>Upcoming Events</h1>
-    <a href="{% url 'staff:event_create' %}">+ New Event</a>
-    <ul>
-        {% for event in events %}
-            <li>
-                <a href="{% url 'staff:event_detail' event.pk %}">{{ event.name }}</a>
-                - {{ event.date }} {{ event.start_time }}
-                {% if event.status == 'Scheduled' %}
-                    <span style="color: green;">{{ event.status }}</span>
-                {% else %}
-                    <span style="color: red;">{{ event.status }}</span>
-                {% endif %}
-            </li>
-        {% endfor %}
-    </ul>
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Upcoming Events</h2>
+    <a href="{% url 'staff:event_create' %}" class="btn btn-primary">+ New Event</a>
+  </div>
+
+  {% if events %}
+    <div class="list-group">
+      {% for event in events %}
+        <a href="{% url 'staff:event_detail' event.pk %}" 
+           class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="mb-1">{{ event.name }}</h5>
+            <small class="text-muted">
+              {{ event.date|date:"F j, Y" }} - {{ event.start_time|time:"g:i A" }}
+            </small>
+          </div>
+          <div>
+            {% if event.status == 'Scheduled' %}
+              <span class="badge bg-success">{{ event.status }}</span>
+            {% elif event.status == 'Cancelled' %}
+              <span class="badge bg-danger">{{ event.status }}</span>
+            {% else %}
+              <span class="badge bg-secondary">{{ event.status }}</span>
+            {% endif %}
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="alert alert-info">No upcoming events yet.</div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const urlParams = new URLSearchParams(window.location.search);
+  
+  if (urlParams.get('created')) {
+    showToast('Event created successfully', 'bg-success');
+  }
+  if (urlParams.get('updated')) {
+    showToast('Event updated successfully', 'bg-success');
+  }
+  if (urlParams.get('deleted')) {
+    showToast('Event deleted', 'bg-warning');
+  }
+  if (urlParams.get('error') === 'protected') {
+    showToast("Can't delete event. It has assignments linked to it.", 'bg-danger');
+  }
+});
+</script>
 {% endblock %}

@@ -4,26 +4,41 @@
 
 {% block content %}
 <div class="container mt-4">
-    <div class="card mx-auto border-danger" style="max-width: 550px;">
-        <div class="card-header bg-danger text-white">
-            <h3 class="mb-0">Confirm Delete</h3>
-        </div>
-        <div class="card-body">
-            <p class="fs-5">Are you sure you want to delete this event?</p>
-            
-            <div class="mb-3 p-3 bg-light rounded">
-                <strong>{{ event.title }}</strong><br>
-                <span class="text-muted">{{ event.start_time|date:"j F Y, P" }} - {{ event.end_time|date:"P" }}</span>
-            </div>
-
-            <p class="text-danger"><strong>Warning:</strong> This will also delete all assignments, slots, and related data for this event. This action cannot be undone.</p>
-            
-            <form method="post">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-danger">Yes, Delete Event</button>
-                <a href="{% url 'staff:event_detail' event.id %}" class="btn btn-secondary">Cancel</a>
-            </form>
-        </div>
+  <div class="card mx-auto border-danger" style="max-width: 550px;">
+    <div class="card-header bg-danger text-white">
+      <h3 class="mb-0">Confirm Delete</h3>
     </div>
+    <div class="card-body">
+      <p class="fs-5">Are you sure you want to delete this event?</p>
+      
+      <div class="mb-3 p-3 bg-light rounded">
+        <strong>{{ event.title }}</strong><br>
+        <span class="text-muted">
+          {{ event.start_time|date:"j F Y, P" }} - {{ event.end_time|date:"P" }}
+        </span>
+      </div>
+
+      <p class="text-danger">
+        <strong>Warning:</strong> This will also delete all assignments, slots, and related data for this event. This action cannot be undone.
+      </p>
+      
+      <form method="post" id="delete-event-form">
+        {% csrf_token %}
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-danger">Yes, Delete Event</button>
+          <a href="{% url 'staff:event_detail' event.id %}" class="btn btn-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
-{% endblock %}
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+document.getElementById('delete-event-form').addEventListener('submit', function() {
+  // Show toast before page redirects
+  showToast('Deleting event...', 'bg-warning');
+});
+</script>
+{% endblock extra_js %}

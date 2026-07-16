@@ -1,11 +1,39 @@
 {% extends 'staff/base.html' %}
 
+{% block title %}Delete Scenario{% endblock %}
+
 {% block content %}
-    <h1>Delete Role Play</h1>
-    <p>Are you sure you want to delete the role play scenario "{{ object.scenario }}" for the role of "{{ object.role }}"?</p>
-    <form method="post">
+<div class="container mt-4">
+  <div class="card border-danger shadow-sm" style="max-width: 600px; margin: 0 auto;">
+    <div class="card-header bg-danger text-white">
+      <h4 class="mb-0">Delete Role Play Scenario</h4>
+    </div>
+    <div class="card-body">
+      <p class="mb-3">Are you sure you want to delete this scenario?</p>
+      
+      <div class="alert alert-light border">
+        <strong>Scenario:</strong> {{ object.scenario }}<br>
+        <strong>Role:</strong> {{ object.role }}
+      </div>
+
+      <p class="text-danger small">This action cannot be undone.</p>
+
+      <form method="post" id="delete-form">
         {% csrf_token %}
-        <button type="submit" class="btn btn-danger">Yes, delete</button>
-        <a href="{% url 'staff:role_play_list' %}" class="btn btn-secondary">Cancel</a>
-    </form>
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-danger">Yes, delete</button>
+          <a href="{% url 'staff:role_play_list' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('delete-form').addEventListener('submit', function() {
+  showToast('Deleting scenario...', 'bg-warning');
+});
+</script>
 {% endblock %}

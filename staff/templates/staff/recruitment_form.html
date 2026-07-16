@@ -1,105 +1,64 @@
 {% extends 'staff/base.html' %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">
-                        {% if object %}
-                            Edit Recruitment: {{ object.position }}
-                        {% else %}
-                            Create New Recruitment
-                        {% endif %}
-                    </h4>
+<div class="p-6 max-w-3xl mx-auto">
+    <div class="bg-white shadow-md rounded-lg">
+        <div class="bg-blue-600 text-white px-6 py-4 rounded-t-lg">
+            <h4 class="text-xl font-bold">
+                {% if object %}
+                    Edit Recruitment: {{ object.position }}
+                {% else %}
+                    Create New Recruitment
+                {% endif %}
+            </h4>
+        </div>
+        
+        <div class="p-6">
+            <form method="post" novalidate class="space-y-4">
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                    {{ form.non_field_errors }}
                 </div>
-                <div class="card-body">
-                    <form method="post" novalidate>
-                        {% csrf_token %}
-                        
-                        {% if form.non_field_errors %}
-                        <div class="alert alert-danger">
-                            {{ form.non_field_errors }}
-                        </div>
-                        {% endif %}
+                {% endif %}
 
-                        <div class="mb-3">
-                            <label for="{{ form.position.id_for_label }}" class="form-label fw-semibold">
-                                {{ form.position.label }}
-                            </label>
-                            {{ form.position }}
-                            {% if form.position.help_text %}
-                                <div class="form-text">{{ form.position.help_text }}</div>
-                            {% endif %}
-                            {% for error in form.position.errors %}
-                                <div class="text-danger small mt-1">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="{{ form.related_event.id_for_label }}" class="form-label fw-semibold">
-                                {{ form.related_event.label }}
-                            </label>
-                            {{ form.related_event }}  <!-- Fixed: was form.event -->
-                            <div class="form-text">Optional: Link this recruitment to a specific event</div>
-                            {% for error in form.related_event.errors %}
-                                <div class="text-danger small mt-1">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="{{ form.description.id_for_label }}" class="form-label fw-semibold">
-                                {{ form.description.label }}
-                            </label>
-                            {{ form.description }}
-                            {% for error in form.description.errors %}
-                                <div class="text-danger small mt-1">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="{{ form.requirements.id_for_label }}" class="form-label fw-semibold">
-                                {{ form.requirements.label }}
-                            </label>
-                            {{ form.requirements }}
-                            {% for error in form.requirements.errors %}
-                                <div class="text-danger small mt-1">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="{{ form.status.id_for_label }}" class="form-label fw-semibold">
-                                {{ form.status.label }}
-                            </label>
-                            {{ form.status }}
-                            {% for error in form.status.errors %}
-                                <div class="text-danger small mt-1">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-
-                        <div class="mb-4">
-                            <label for="{{ form.deadline.id_for_label }}" class="form-label fw-semibold">
-                                {{ form.deadline.label }}
-                            </label>
-                            {{ form.deadline }}
-                            {% for error in form.deadline.errors %}
-                                <div class="text-danger small mt-1">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary">
-                                {% if object %}Update{% else %}Create{% endif %} Recruitment
-                            </button>
-                            <a href="{% url 'staff:recruitment_list' %}" class="btn btn-secondary">Cancel</a>
-                            {% if object %}
-                                <a href="{% url 'staff:recruitment_detail' recruitment_id=object.id %}" class="btn btn-outline-info">View Details</a>
-                            {% endif %}
-                        </div>
-                    </form>
+                {% for field in form %}
+                <div>
+                    <label for="{{ field.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-1">
+                        {{ field.label }} {% if field.field.required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
+                    
+                    {{ field }}
+                    
+                    {% if field.name == 'related_event' %}
+                        <p class="text-gray-500 text-xs mt-1">Optional: Link this recruitment to a specific event</p>
+                    {% endif %}
+                    
+                    {% if field.help_text %}
+                        <p class="text-gray-500 text-xs mt-1">{{ field.help_text }}</p>
+                    {% endif %}
+                    
+                    {% if field.errors %}
+                        <p class="text-red-600 text-sm mt-1">{{ field.errors|striptags }}</p>
+                    {% endif %}
                 </div>
-            </div>
+                {% endfor %}
+
+                <div class="flex gap-3 pt-4">
+                    <button type="submit" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 shadow">
+                        {% if object %}Update{% else %}Create{% endif %} Recruitment
+                    </button>
+                    <a href="{% url 'staff:recruitment_list' %}" class="bg-gray-200 text-gray-800 px-5 py-2 rounded-lg hover:bg-gray-300">
+                        Cancel
+                    </a>
+                    {% if object %}
+                        <a href="{% url 'staff:recruitment_detail' recruitment_id=object.id %}" class="bg-cyan-600 text-white px-5 py-2 rounded-lg hover:bg-cyan-700">
+                            View Details
+                        </a>
+                    {% endif %}
+                </div>
+            </form>
         </div>
     </div>
 </div>

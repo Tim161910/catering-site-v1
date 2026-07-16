@@ -1,51 +1,82 @@
 {% extends 'staff/base.html' %}
+{% load widget_tweaks %}
+
+{% block title %}Role Play: {{ roleplay.scenario }}{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <h1>ROLE PLAY</h1>
-    
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-        {% endfor %}
-    {% endif %}
-    
-    <div class="card p-4">
-        <h2>{{ roleplay.scenario }}</h2>
-        <p><strong>Role:</strong> {{ roleplay.role }}</p>
-        <p><strong>Description:</strong> {{ roleplay.description }}</p>
-        <p><strong>Expected Outcome:</strong> {{ roleplay.expected_outcome }}</p>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>ROLE PLAY</h2>
+    <a href="{% url 'staff:role_play_list' %}" class="btn btn-outline-secondary btn-sm">← Back to Scenarios</a>
+  </div>
+
+  {# Django messages will auto-show via base.html #}
+  
+  <div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+      <h3 class="card-title mb-3">{{ roleplay.scenario }}</h3>
+      
+      <div class="row mb-2">
+        <div class="col-md-2 fw-semibold text-muted">Role</div>
+        <div class="col-md-10"><span class="badge bg-secondary">{{ roleplay.role }}</span></div>
+      </div>
+      <div class="row mb-2">
+        <div class="col-md-2 fw-semibold text-muted">Description</div>
+        <div class="col-md-10">{{ roleplay.description|linebreaks }}</div>
+      </div>
+      <div class="row mb-3">
+        <div class="col-md-2 fw-semibold text-muted">Expected Outcome</div>
+        <div class="col-md-10">{{ roleplay.expected_outcome|linebreaks }}</div>
+      </div>
+
+      <hr>
+
+      <form method="post" action="{% url 'staff:start_scenario' roleplay.id %}" id="action-form">
+        {% csrf_token %}
         
-        <form method="post" action="{% url 'staff:start_scenario' roleplay.id %}">
-            {% csrf_token %}
-            
-            {% if form.non_field_errors %}
-                <div class="alert alert-danger">{{ form.non_field_errors }}</div>
-            {% endif %}
-            
-            <div class="mb-3">
-                <label for="{{ form.action.id_for_label }}" class="form-label">What do you do?</label>
-                {{ form.action }}
-                {% if form.action.errors %}
-                    <div class="text-danger">{{ form.action.errors }}</div>
-                {% endif %}
-            </div>
-            
-            <button type="submit" class="btn btn-primary">Submit Action</button>
-        </form>
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+        {% endif %}
+        
+        <div class="mb-3">
+          <label for="{{ form.action.id_for_label }}" class="form-label fw-semibold">What do you do?</label>
+          {% render_field form.action class="form-control" rows="5" placeholder="Describe your action..." %}
+          {% if form.action.errors %}
+            <div class="text-danger small mt-1">{{ form.action.errors }}</div>
+          {% endif %}
+        </div>
+        
+        <button type="submit" class="btn btn-primary">Submit Action</button>
+      </form>
     </div>
-    
-    {% if responses %}
-        <hr>
-        <h4>Previous Responses:</h4>
-        {% for resp in responses %}
-            <div class="card mb-2">
-                <div class="card-body">
-                    <strong>{{ resp.staff.name }}</strong> - {{ resp.submitted_at|date:"d M Y H:i" }}
-                    <p>{{ resp.action|linebreaks }}</p>
-                </div>
-            </div>
-        {% endfor %}
-    {% endif %}
+  </div>
+  
+  {% if responses %}
+    <h4 class="mb-3">Previous Responses</h4>
+    {% for resp in responses %}
+      <div class="card mb-2">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <strong>{{ resp.staff.name }}</strong> 
+            <small class="text-muted">{{ resp.submitted_at|date:"d M Y H:i" }}</small>
+          </div>
+          <p class="mt-2 mb-0">{{ resp.action|linebreaks }}</p>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="alert alert-light">No responses yet. Submit the first action above.</div>
+  {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('action-form').addEventListener('submit', function() {
+  const actionText = document.getElementById('{{ form.action.id_for_label }}').value.trim();
+  if (actionText) {
+    showToast('Action submitted', 'bg-success');
+  }
+});
+</script>
 {% endblock %}

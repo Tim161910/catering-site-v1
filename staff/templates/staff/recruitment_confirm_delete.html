@@ -1,6 +1,22 @@
-<form method="post">
-    {% csrf_token %}
-    <p>Are you sure you want to delete the recruitment for {{ object.position }}?</p>
-    <button type="submit">Confirm Delete</button>
-    <a href="{% url 'staff:recruitment_detail' object.id %}">Cancel</a>
-</form>
+{% extends 'staff/base.html' %}
+{% block title %}Delete {{ object.position }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card border-danger">
+        <div class="card-header bg-danger text-white">
+            <h1 class="h4 mb-0">Confirm Delete</h1>
+        </div>
+        <div class="card-body">
+            <p class="lead">Are you sure you want to delete the recruitment for <strong>{{ object.position }}</strong>?</p>
+            <p class="text-muted">This will also delete all {{ object.applicant_set.count }} applications linked to this job. This cannot be undone.</p>
+
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">Yes, Delete</button>
+                <a href="{% url 'staff:recruitment_detail' object.id %}" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

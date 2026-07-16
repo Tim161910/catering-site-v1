@@ -1,33 +1,67 @@
 {% extends 'staff/base.html' %}
 
+{% block title %}Role Play Scenarios{% endblock %}
+
 {% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
     <h2>Role Play Scenarios</h2>
-    <a href="{% url 'staff:role_play_create' %}" style="background:#007bff;color:white;padding:8px 12px;text-decoration:none;border-radius:4px;">+ Add New Scenario</a>
-    <br><br>
-    
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Scenario</th>
-                <th>Role</th>
-                <th>Description</th>
-                <th>Expected Outcome</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for role_play in roleplay_list %}
-            <tr>
-                <td>{{ role_play.scenario }}</td>
-                <td>{{ role_play.role }}</td>
-                <td>{{ role_play.description }}</td>
-                <td>{{ role_play.expected_outcome }}</td>
-                <td>
-                    <a href="{% url 'staff:role_play_update' role_play.pk %}" class="btn btn-sm btn-warning">Edit</a>
-                    <a href="{% url 'staff:role_play_delete' role_play.pk %}" class="btn btn-sm btn-danger">Delete</a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
+    <a href="{% url 'staff:role_play_create' %}" class="btn btn-primary">+ Add New Scenario</a>
+  </div>
+
+  {% if roleplay_list %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Scenario</th>
+          <th>Role</th>
+          <th>Description</th>
+          <th>Expected Outcome</th>
+          <th style="width: 150px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for role_play in roleplay_list %}
+        <tr>
+          <td class="fw-semibold">{{ role_play.scenario }}</td>
+          <td><span class="badge bg-secondary">{{ role_play.role }}</span></td>
+          <td>{{ role_play.description|truncatechars:80 }}</td>
+          <td>{{ role_play.expected_outcome|truncatechars:80 }}</td>
+          <td>
+            <div class="btn-group btn-group-sm">
+              <a href="{% url 'staff:role_play_update' role_play.pk %}" class="btn btn-outline-primary">Edit</a>
+              <a href="{% url 'staff:role_play_delete' role_play.pk %}" class="btn btn-outline-danger">Delete</a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
     </table>
+  </div>
+  {% else %}
+    <div class="alert alert-info">No role play scenarios yet. <a href="{% url 'staff:role_play_create' %}">Create one</a></div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const urlParams = new URLSearchParams(window.location.search);
+  
+  if (urlParams.get('created')) {
+    showToast('Scenario created successfully', 'bg-success');
+  }
+  if (urlParams.get('updated')) {
+    showToast('Scenario updated successfully', 'bg-success');
+  }
+  if (urlParams.get('deleted')) {
+    showToast('Scenario deleted', 'bg-warning');
+  }
+  if (urlParams.get('error') === 'protected') {
+    showToast("Can't delete scenario. It has responses linked to it.", 'bg-danger');
+  }
+});
+</script>
 {% endblock %}

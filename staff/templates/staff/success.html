@@ -1,6 +1,8 @@
-{% extends 'staff/base.html' %}
+{% extends "base.html" %}
 {% block content %}
-    <h1>Application Submitted</h1>
-    <p>Thank you for applying. We'll be in touch soon.</p>
-    <a href="{% url 'staff:recruitment_list' %}">Back to recruitments</a>
+<div class="container mt-5 text-center">
+    <h2>Application Submitted! 🎉</h2>
+    <p>Thank you for applying. We will review your application and get back to you.</p>
+    <a href="{% url 'staff:recruitment_list' %}" class="btn btn-primary">Back to Job Listings</a>
+</div>
 {% endblock %}

@@ -1,21 +1,99 @@
 {% extends 'staff/base.html' %}
 {% load widget_tweaks %}
+
+{% block title %}{% if event.pk %}Edit Event{% else %}New Event{% endif %}{% endblock %}
+
 {% block content %}
-    <h1>{% if event.pk %}Edit{% else %}New{% endif %} Event</h1>
-    <form method="post">
+<div class="container mt-4">
+  <div class="card shadow-sm border-0" style="max-width: 750px; margin: 0 auto;">
+    <div class="card-body p-4">
+      <h2 class="mb-4">
+        {% if event.pk %}Edit Event{% else %}New Event{% endif %}
+      </h2>
+
+      <form method="post" id="event-form">
         {% csrf_token %}
+
         {% for field in form %}
-            {{ field.label }}:
-            {% if field.name == 'date' %}
-                {% render_field field type="date" %}
-            {% elif field.name in 'start_time end_time' %}
-                {% render_field field type="time" %}
-            {% else %}
-                {{ field }}
-            {% endif %}
-            <br>
+          {% if field.name!= 'template' and not field.name|slice:":5" == 'role_' %}
+            <div class="mb-3">
+              <label for="{{ field.id_for_label }}" class="form-label">
+                {{ field.label }} {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+              </label>
+              {% render_field field class="form-control" %}
+              {% if field.errors %}
+                <div class="text-danger small mt-1">{{ field.errors|striptags }}</div>
+              {% endif %}
+            </div>
+          {% endif %}
         {% endfor %}
-        <button type="submit">Save</button>
-        <a href="{% url 'staff:event_list' %}">Cancel</a>
-    </form>
+
+        {# DUTY SLOTS CARD #}
+        <div class="card bg-light mb-3">
+          <div class="card-body">
+            <h5 class="card-title mb-3">Duty Slots</h5>
+            <div class="row g-3">
+              {% for field in form %}
+                {% if field.name|slice:":5" == 'role_' %}
+                  <div class="col-md-6">
+                    <label for="{{ field.id_for_label }}" class="form-label small text-muted">
+                      {{ field.label }}
+                    </label>
+                    {% render_field field class="form-control form-control-sm" %}
+                    {% if field.errors %}
+                      <div class="text-danger small mt-1">{{ field.errors|striptags }}</div>
+                    {% endif %}
+                  </div>
+                {% endif %}
+              {% endfor %}
+            </div>
+            {% if form.template %}
+              <small class="text-muted mt-2 d-block">Pick a template to auto-fill these counts</small>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="d-flex gap-2 pt-3 border-top">
+          <button type="submit" class="btn btn-primary">Save</button>
+          <a href="{% url 'staff:event_list' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Template autofill
+$(document).ready(function() {
+  const templateSelect = $('#id_template');
+  if (templateSelect.length) {
+    templateSelect.on('change', function() {
+      const templateId = $(this).val();
+      if (!templateId) return;
+
+      fetch(`/staff/api/templates/${templateId}/`)
+     .then(res => res.json())
+     .then(data => {
+        if (data.success) {
+          // Loop through role fields and set values
+          Object.keys(data.roles).forEach(roleId => {
+            $(`#id_role_${roleId}`).val(data.roles[roleId]);
+          });
+          showToast('Template applied', 'bg-success');
+        } else {
+          showToast('Failed to load template', 'bg-danger');
+        }
+      })
+     .catch(() => showToast('Error loading template', 'bg-danger'));
+    });
+  }
+
+  // Show toast on save
+  $('#event-form').on('submit', function() {
+    showToast('Saving event...', 'bg-info');
+  });
+});
+</script>
 {% endblock %}

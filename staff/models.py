@@ -1,36 +1,12 @@
 from django.db.models import Sum
-try: 
-    from django.conf import settings  # type: ignore[import]
-except ImportError:  # fallback for static analysis or missing Django in environment
-    settings = None
-try:
-    from django.db import models  # type: ignore[import]
-except ImportError:
-    models = None
-try:
-    from django.db.models.signals import post_save, post_delete  # type: ignore[import]
-except ImportError:
-    post_save = None
-    post_delete = None
-try:
-    from django.dispatch import receiver  # type: ignore[import]
-except ImportError:
-    receiver = None
-try:
-    from django.contrib.auth.models import User  # type: ignore[import]
-except ImportError:
-    User = None
-try:
-    from django.urls import reverse_lazy  # type: ignore[import]
-except ImportError:
-    reverse_lazy = None
-try:
-    from django.utils import timezone  # type: ignore[import]
-except ImportError:
-    timezone = None
-from .fields import EncryptedCharField, EncryptedTextField
-from django import forms
+from django.conf import settings
+from django.db import models
+from django.contrib.auth.models import User
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
 from django.core.exceptions import ValidationError
+
+from .fields import EncryptedCharField, EncryptedTextField
 
 
 class Role(models.Model):
@@ -72,8 +48,9 @@ class Recruitment(models.Model):
         if self.deadline and self.deadline < timezone.now():
             return False
         return True
-    
+
 class Staff(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
     name = models.CharField(max_length=100)
     email = models.EmailField(unique=True, blank=True, null=True)
     phone = EncryptedCharField(max_length=255)
@@ -81,48 +58,27 @@ class Staff(models.Model):
     role = models.ForeignKey(Role, on_delete=models.SET_NULL, null=True, blank=True)
     is_active = models.BooleanField(default=True)
     
-    # Add these 4 new fields:
     address = EncryptedTextField(max_length=355)
     next_of_kin = EncryptedCharField(max_length=255)
     emergency_contact_name = models.CharField(max_length=100)
     emergency_contact_phone = EncryptedCharField(max_length=255)
+    
     reliability_score = models.IntegerField(default=100, help_text="Reliability score 0-100")
     reliability_notes = models.TextField(blank=True, null=True)
+    
     APPROVAL_REQUIRED_FIELDS = ['address', 'next_of_kin', 'emergency_contact_name', 'emergency_contact_phone']
+    DIRECT_UPDATE_FIELDS = ['name', 'email', 'phone', 'whatsapp', 'role', 'is_active']
 
     def __str__(self):
         return self.name
 
-    def save(self, *args, **kwargs):
-        user = kwargs.pop('user', None)
-        if self.pk and user:
-            try:
-                old = Staff.objects.get(pk=self.pk)
-                for field in self.APPROVAL_REQUIRED_FIELDS:
-                    old_value = getattr(old, field)
-                    new_value = getattr(self, field)
-                    if old_value != new_value:
-                        StaffUpdateRequest.objects.create(
-                            staff=self,
-                            requested_by=user,
-                            request_reason=f"Change {field}",
-                            field_name=field,
-                            old_value=old_value,
-                            new_value=new_value
-                        )
-            except Exception as e:
-                print(f"Error creating update request: {e}")
-        super().save(*args, **kwargs)
-              
-
-    def update_reliability_score(self) -> None: #noqa: F401
+    def update_reliability_score(self) -> None:
         penalty = self.incidents.filter(
             resolved=False,
             issue_type__counts_against_staff=True
         ).aggregate(total=Sum('issue_type__weight_percent'))['total'] or 0
-    
         self.reliability_score = max(0, 100 - min(penalty, 100))
-        self.save(update_fields=['reliability_score'])
+        self.save(update_fields=['reliability_score'])              
 
 class InterviewSlot(models.Model):
     recruitment = models.ForeignKey(Recruitment, on_delete=models.CASCADE, related_name='slots')
@@ -277,7 +233,13 @@ class IssueType(models.Model):
 class Incident(models.Model):
     staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name='incidents')
     event = models.ForeignKey(Event, on_delete=models.CASCADE, null=True, blank=True)
-    issue_type = models.ForeignKey(IssueType, on_delete=models.PROTECT)
+    issue_type = models.ForeignKey(IssueType, on_delete=models.PROTECT)  # existing FK
+    
+    # NEW FIELDS
+    incident_type = models.CharField(max_length=100, blank=True, null=True, help_text="e.g. Late, No-Show, Uniform")
+    reliability_impact = models.CharField(max_length=100, blank=True, null=True, help_text="e.g. Low, Medium, High")
+    notes = models.TextField(blank=True, null=True)
+    
     resolved = models.BooleanField(default=False)
     description = models.TextField(blank=True)
     reported_on = models.DateTimeField(auto_now_add=True)
@@ -288,7 +250,7 @@ class Incident(models.Model):
 @receiver([post_save, post_delete], sender=Incident)
 def update_staff_score_on_incident_change(sender, instance, **kwargs):
     instance.staff.update_reliability_score()
-    
+
 class EventTemplate(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)

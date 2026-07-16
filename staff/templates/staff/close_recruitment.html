@@ -1,12 +1,23 @@
 {% extends 'staff/base.html' %}
+{% block title %}Close {{ recruitment.position }}{% endblock %}
 
 {% block content %}
-<h1>Close Recruitment</h1>
-<p>Are you sure you want to close "{{ recruitment.position }}"?</p>
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Close</button>
-    <a href="{% url 'staff:recruitment_list' %}">Cancel</a>
-</form>
+<div class="container mt-4">
+    <div class="card border-warning">
+        <div class="card-header bg-warning">
+            <h1 class="h4 mb-0">Close Recruitment</h1>
+        </div>
+        <div class="card-body">
+            <p class="lead">Are you sure you want to close <strong>"{{ recruitment.position }}"</strong>?</p>
+            <p class="text-muted">Once closed, people can no longer apply to this job. You can reopen it later.</p>
+
+            <form method="post">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button type="submit" class="btn btn-warning">Yes, Close Recruitment</button>
+                <a href="{% url 'staff:recruitment_list' %}" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}

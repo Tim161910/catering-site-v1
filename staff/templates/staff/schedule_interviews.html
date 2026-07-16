@@ -1,24 +1,53 @@
+{% extends "staff/base.html" %}
+{% block content %}
 <h1>Schedule Interviews for {{ recruitment.position }}</h1>
+
+{% if scheduled_applicants %}
+  <div class="bg-green-100 p-4 mb-4 rounded">
+    <p>Successfully scheduled: {{ scheduled_applicants|join:", " }}</p>
+  </div>
+{% endif %}
+
 {% if errors %}
-    <div class="error">
+    <div class="bg-red-100 p-4 mb-4 rounded">
         <ul>
         {% for error in errors %}
-            <li>{{ error }}</li>
+            <li class="text-red-700">{{ error }}</li>
         {% endfor %}
         </ul>
     </div>
 {% endif %}
+
 <form method="post">
     {% csrf_token %}
-    {% for applicant in recruitment.applicant_set.all %}
-        <div>
-            <input type="datetime-local" name="interview_time_{{ applicant.id }}" placeholder="Interview Time">
-            <input type="checkbox" name="applicant_ids" value="{{ applicant.id }}">
-            {{ applicant.name }} - {{ applicant.email }}
+    <div class="mb-4">
+      <label><input type="checkbox" id="select_all"> Select All</label>
+    </div>
+    {% for applicant in applicants %}
+        <div class="border p-2 mb-2 rounded">
+            <input type="checkbox" name="applicant_ids" value="{{ applicant.id }}" class="applicant_check">
+            <strong>{{ applicant.name }}</strong> - {{ applicant.email }}
+            <br>
+            <label>Interview Time: 
+              <input type="datetime-local" name="interview_time_{{ applicant.id }}" 
+                     value="{{ applicant.interview_time|date:'Y-m-d\TH:i' }}">
+            </label>
+            {% if applicant.interview_time %}
+              <span class="text-green-600">Current: {{ applicant.interview_time|date:"M d, Y H:i" }}</span>
+            {% endif %}
         </div>
     {% empty %}
         <p>No applicants to schedule interviews for.</p>
     {% endfor %}
-    <!-- Here you would include form fields to select applicants and schedule interview times -->
-    <button type="submit">Schedule Interviews</button>
+    <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded mt-4">Schedule Interviews</button>
 </form>
+
+<script>
+document.getElementById('select_all').onclick = function() {
+  var checkboxes = document.getElementsByClassName('applicant_check');
+  for(var checkbox of checkboxes) {
+    checkbox.checked = this.checked;
+  }
+}
+</script>
+{% endblock %}

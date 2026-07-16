@@ -1,55 +1,102 @@
-{% extends "base.html" %}
+{% extends "staff/base.html" %}
 {% block content %}
-<div class="container mt-4">
-  <h2>Staff Reliability Dashboard</h2>
+<div class="p-6">
+  <h2 class="text-2xl font-bold mb-6">Staff Reliability Dashboard</h2>
 
-  <h3 class="mt-3">Upcoming Events</h3>
-  <ul>
+  <!-- Filters -->
+  <form method="get" class="bg-white p-4 rounded-lg shadow mb-6 flex flex-wrap gap-4 items-end">
+    <div>
+      <label class="block text-sm font-medium mb-1">Status</label>
+      <select name="status" class="w-full p-2 border rounded">
+        <option value="">All</option>
+        <option value="A-Team" {% if request.GET.status == 'A-Team' %}selected{% endif %}>A-Team (90%+)</option>
+        <option value="Standard" {% if request.GET.status == 'Standard' %}selected{% endif %}>Standard (60-90%)</option>
+        <option value="Warning" {% if request.GET.status == 'Warning' %}selected{% endif %}>Warning (<60%)</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-1">Sort By</label>
+      <select name="sort" class="w-full p-2 border rounded">
+        <option value="">Default</option>
+        <option value="score" {% if request.GET.sort == 'score' %}selected{% endif %}>Reliability Score</option>
+        <option value="events" {% if request.GET.sort == 'events' %}selected{% endif %}>Events Worked</option>
+        <option value="incidents" {% if request.GET.sort == 'incidents' %}selected{% endif %}>Incidents</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-1">Search</label>
+      <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Name or Role" class="w-full p-2 border rounded">
+    </div>
+    <div>
+      <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Apply</button>
+      <a href="{% url 'staff:staff_dashboard' %}" class="ml-2 text-gray-500 hover:text-gray-700">Clear</a>
+      {% if staff_list %}
+      <a href="{% url 'staff:export_staff_csv' %}?{{ request.GET.urlencode }}" 
+         class="ml-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
+         Export CSV
+      </a>
+      {% endif %}
+    </div>
+  </form>
+
+  <!-- Upcoming Events -->
+  <h3 class="text-lg font-semibold mb-3">Upcoming Events</h3>
+  <ul class="mb-6 space-y-2">
   {% for event in upcoming_events %}
-    <li><a href="{% url 'staff:event_detail' event.id %}">{{ event.title }}</a> - {{ event.start_time|date:"M d, Y H:i" }}</li>
+    <li>
+      <a href="{% url 'staff:event_detail' event.id %}" class="text-blue-600 hover:underline">{{ event.title }}</a> 
+      - {{ event.start_time|date:"M d, Y H:i" }}
+    </li>
   {% empty %}
-    <li>No upcoming events</li>
+    <li class="text-gray-500">No upcoming events</li>
   {% endfor %}
   </ul>
 
-  <h3 class="mt-4">Staff Performance</h3>
-  <table border="1" cellpadding="8" class="table">
-      <tr>
-          <th>Name</th>
-          <th>Role</th>
-          <th>Events</th>
-          <th>Incidents</th>
-          <th>No-Shows</th>
-          <th>Score</th>
-          <th>Status</th>
-          <th>Action</th>
-      </tr>
+  <!-- Staff Performance Table -->
+  <h3 class="text-lg font-semibold mb-3">Staff Performance</h3>
+  <div class="overflow-x-auto bg-white rounded-lg shadow">
+    <table class="w-full">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="p-3 text-left">Name</th>
+          <th class="p-3 text-left">Role</th>
+          <th class="p-3 text-center">Events</th>
+          <th class="p-3 text-center">Incidents</th>
+          <th class="p-3 text-center">No-Shows</th>
+          <th class="p-3 text-center">Score</th>
+          <th class="p-3 text-center">Status</th>
+          <th class="p-3 text-center">Action</th>
+        </tr>
+      </thead>
+      <tbody>
       {% for staff in staff_list %}
-      <tr>
-          <td>{{ staff.name }}</td>
-          <td>{{ staff.role }}</td>
-          <td>{{ staff.events_worked }}</td>
-          <td>{{ staff.incident_count }}</td>
-          <td>{{ staff.no_show }}</td>  <!-- FIXED: was no_shows -->
-          <td><strong>{{ staff.reliability_score }}%</strong></td>
-          <td>
+      <tr class="border-t">
+          <td class="p-3">{{ staff.name }}</td>
+          <td class="p-3">{{ staff.get_role_display }}</td>
+          <td class="p-3 text-center">{{ staff.events_worked }}</td>
+          <td class="p-3 text-center">{{ staff.incident_count }}</td>
+          <td class="p-3 text-center">{{ staff.no_show }}</td>  
+          <td class="p-3 text-center font-bold">{{ staff.reliability_score }}%</td>
+          <td class="p-3 text-center">
               {% if staff.reliability_score >= 90 %}
-                  <span style="color:green; font-weight:bold;">A-Team</span>
+                  <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">A-Team</span>
               {% elif staff.reliability_score >= 60 %}
-                  <span style="color:orange;">Standard</span>
+                  <span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs">Standard</span>
               {% else %}
-                  <span style="color:red; font-weight:bold;">Warning</span>
+                  <span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-semibold">Warning</span>
               {% endif %}
           </td>
-          <td>
-              <a href="{% url 'staff:incident_add' %}?staff={{ staff.id }}" class="btn btn-danger btn-sm">
+          <td class="p-3 text-center">
+              <a href="{% url 'staff:incident_add' %}?staff={{ staff.id }}" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm">
                   Log Issue
               </a> 
           </td>
       </tr>
       {% empty %}
-      <tr><td colspan="8">No staff yet.</td></tr>
+      <tr><td colspan="8" class="p-4 text-center text-gray-500">No staff yet.</td></tr>
       {% endfor %}
-  </table>
+      </tbody>
+    </table>
+  </div>
 </div>
 {% endblock %}
