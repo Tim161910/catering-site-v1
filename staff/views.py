@@ -373,6 +373,12 @@ class ManageInterviewSlotsView(View):
 
         return redirect('staff:manage_interview_slots', recruitment_id=recruitment_id)
 
+class StaffCreateView(CreateView):
+    model = Staff
+    form_class = StaffForm
+    template_name = 'staff/staff_form.html'
+    success_url = '/staff/'
+
 class StaffListView(LoginRequiredMixin, ListView):
     model = Staff
     template_name = 'staff/staff_list.html'
