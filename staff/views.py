@@ -21,9 +21,9 @@ from datetime import datetime, timedelta
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib import messages
 from django.utils.decorators import method_decorator
-from  .forms import StaffFilterForm
+from  .forms import StaffFilterForm, StaffForm
 from django.http import Http404
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import login
 from django.shortcuts import render, redirect
 from django.contrib.auth.forms import AuthenticationForm
 
@@ -916,6 +916,7 @@ class IncidentCreateView(CreateView):
 @require_POST
 @csrf_exempt
 @login_required
+@staff_member_required
 def create_assignment(request, pk):
     """
     AJAX endpoint to create an assignment for a specific event.
@@ -930,15 +931,20 @@ def create_assignment(request, pk):
         if not staff_id or not role_id or not duty_number:
             return JsonResponse({'success': False, 'error': 'Staff, Role and Duty Number are required.'}, status=400)
 
+        # Prevent double booking same staff on same duty
         if Assignment.objects.filter(event=event, staff_id=staff_id, status='assigned', duty_number=duty_number).exists():
             return JsonResponse({'success': False, 'error': 'Staff already assigned to this duty number.'}, status=400)
 
-        role_obj = get_object_or_404(Role, id=role_id) # get Role object based on role_id
+        # Prevent same duty_number + role having 2 people
+        if Assignment.objects.filter(event=event, role_id=role_id, duty_number=duty_number, status='assigned').exists():
+            return JsonResponse({'success': False, 'error': 'This duty slot is already filled.'}, status=400)
+
+        role_obj = get_object_or_404(Role, id=role_id)
         assignment = Assignment.objects.create(
             event=event,
             staff_id=staff_id,
             duty_number=duty_number,
-            role=role_obj, # pass Role object
+            role=role_obj,
             status='assigned'
         )
 
@@ -948,11 +954,14 @@ def create_assignment(request, pk):
             'role_name': role_obj.name,
             'duty_number': assignment.duty_number
         })
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=400)        
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)  
 
 @require_POST
 @login_required
+@staff_member_required
 @csrf_exempt
 def reassign_assignment(request, assignment_id):
     try:
@@ -963,18 +972,15 @@ def reassign_assignment(request, assignment_id):
         if not new_staff_id:
             return JsonResponse({'success': False, 'error': 'No staff selected'}, status=400)
 
-        # BIT 1: Don't filter by status='assigned' here. You might reassign an 'unassigned' slot
         old_assignment = get_object_or_404(Assignment, id=assignment_id)
 
         if old_assignment.status == 'dropped':
             return JsonResponse({'success': False, 'error': 'This assignment was already dropped'}, status=400)
 
-        # BIT 2: Check if new staff is already assigned to THIS event on ANY duty
+        # Check if new staff is already assigned to THIS event on ANY duty
         if old_assignment.event.assignments.filter(staff_id=new_staff_id, status='assigned').exists():
             return JsonResponse({'success': False, 'error': 'Staff already assigned to this event'}, status=400)
 
-        # BIT 3: Wrap in transaction so we don't end up with 2 assignments if create fails
-        from django.db import transaction
         with transaction.atomic():
             # Drop old assignment
             old_assignment.status = 'dropped'
@@ -992,7 +998,7 @@ def reassign_assignment(request, assignment_id):
 
         return JsonResponse({
             'success': True,
-            'new_staff': new_assignment.staff.get_full_name() or new_assignment.staff.username, # FIX: .name might not exist
+            'new_staff': new_assignment.staff.get_full_name() or new_assignment.staff.username,
             'duty': new_assignment.duty_number
         })
     except json.JSONDecodeError:
@@ -1001,6 +1007,7 @@ def reassign_assignment(request, assignment_id):
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
 @login_required
+@staff_member_required
 @require_POST
 def replace_staff(request, assignment_id):
     assignment = get_object_or_404(Assignment, id=assignment_id)
@@ -1010,8 +1017,11 @@ def replace_staff(request, assignment_id):
         return JsonResponse({'success': False, 'error': 'No staff selected'}, status=400)
     
     new_staff = get_object_or_404(Staff, id=new_staff_id)
+    
+    # Check if staff already assigned to this event
     if assignment.event.assignments.filter(staff=new_staff, status='assigned').exists():
         return JsonResponse({'success': False, 'error': 'Staff already assigned to this event'}, status=400)
+    
     old_staff_name = assignment.staff.name if assignment.staff else 'Empty'
 
     assignment.staff = new_staff
@@ -1019,10 +1029,11 @@ def replace_staff(request, assignment_id):
     assignment.reassigned_at = timezone.now()
     assignment.reassigned_by = request.user
     assignment.reassignment_reason = request.POST.get('reason', 'Replaced via dashboard')
-    assignment.save()
+    assignment.save(update_fields=['staff', 'status', 'reassigned_at', 'reassigned_by', 'reassignment_reason'])
 
     return JsonResponse({
         'success': True,
+        'old_staff': old_staff_name,
         'new_staff': new_staff.name,
         'new_score': new_staff.reliability_score
     })
@@ -1263,7 +1274,7 @@ def auto_fill_roster(request, event_id):
 
     return redirect('staff:event_status')
 
-
+@staff_member_required
 def auto_fill_event(event):
     """Auto-fill empty or dropped assignments for a single Event instance.
     Returns the number of duties filled."""
@@ -1299,7 +1310,7 @@ def auto_fill_all_events(request):
     for event in events:
         filled = auto_fill_event(event)
         total_filled += filled
-    messages.success(request, f"Auto-filled all upcoming events")
+    messages.success(request, f"Auto-filled {total_filled} assignments across {events.count()} upcoming events")
     return redirect('staff:event_status')
 
 @staff_member_required
@@ -1311,7 +1322,11 @@ def create_assignments_from_template(request, event_id):
         messages.error(request, "No template provided")
         return redirect('staff:assignment_list', event_id=event_id)
 
-    role_counts = json.loads(template)  # expects {"1": 2, "3": 1} = role_id: count
+    try:
+        role_counts = json.loads(template)  # expects {"1": 2, "3": 1} = role_id: count
+    except json.JSONDecodeError:
+        messages.error(request, "Invalid template format")
+        return redirect('staff:assignment_list', event_id=event_id)
     
     assignments = []
     duty_num = event.assignments.count() + 1
@@ -1321,8 +1336,12 @@ def create_assignments_from_template(request, event_id):
             assignments.append(Assignment(event=event, role=role, duty_number=duty_num, status='assigned'))
             duty_num += 1
     
-    Assignment.objects.bulk_create(assignments)
-    messages.success(request, f"Created {len(assignments)} assignments from template")
+    if assignments:
+        Assignment.objects.bulk_create(assignments)
+        messages.success(request, f"Created {len(assignments)} assignments from template")
+    else:
+        messages.warning(request, "Template had no roles")
+
     return redirect('staff:assignment_list', event_id=event_id)
 
 @staff_member_required
@@ -1340,13 +1359,13 @@ def update_assignment_role(request, assignment_id):
             return JsonResponse({'success': False, 'error': 'No role_id provided'}, status=400)
 
         assignment = get_object_or_404(Assignment, id=assignment_id)
-        new_role = get_object_or_404(Role, id=new_role_id, is_active=True) # BIT 1: only allow active roles
+        new_role = get_object_or_404(Role, id=new_role_id, is_active=True) # only allow active roles
 
         if assignment.role_id == new_role_id:
             return JsonResponse({'success': True, 'role_name': new_role.name, 'message': 'No change'})
 
         assignment.role = new_role
-        assignment.save(update_fields=['role']) # BIT 2: only update role field
+        assignment.save(update_fields=['role']) # only update role field
 
         return JsonResponse({
             'success': True,
@@ -1367,7 +1386,7 @@ def apply_to_recruitment(request, recruitment_id):
             applicant.recruitment = recruitment
             applicant.save()
             messages.success(request, f"Application submitted for {recruitment.position}!")
-            return redirect('staff:success')  # we'll make this page next
+            return redirect('staff:recruitment_detail', recruitment_id=recruitment_id)
     else:
         form = ApplicantForm()
 
