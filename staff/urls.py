@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import (
     StaffDashboardView, StaffListView, StaffCreateView, StaffUpdateView, StaffDeleteView, StaffDetailView,
+    bamboo_login,
     EventListView, EventDetailView, EventCreateView, EventUpdateView, 
     RecruitmentListView, RecruitmentCreateView, RecruitmentDetailView, 
     RecruitmentApplicantsView, RecruitmentUpdateView, RecruitmentDeleteView, 
@@ -16,6 +17,7 @@ app_name = 'staff'
 
 urlpatterns = [
     path('dashboard/', StaffDashboardView.as_view(), name='staff_dashboard'),
+    path('login/', bamboo_login, name='bamboo_login'),
     path('incident/add/', IncidentCreateView.as_view(), name='incident_add'),
     path('', StaffListView.as_view(), name='staff_list'),
     path('create/', StaffCreateView.as_view(), name='staff_create'),

@@ -23,12 +23,32 @@ from django.contrib import messages
 from django.utils.decorators import method_decorator
 from  .forms import StaffFilterForm
 from django.http import Http404
+from django.contrib.auth import authenticate, login
+from django.shortcuts import render, redirect
+from django.contrib.auth.forms import AuthenticationForm
 
 logger = logging.getLogger(__name__)
 
 from django import forms
 from .models import Recruitment, Applicant, RolePlay, Incident, Event, Staff, Assignment, Role, RolePlayResponse, InterviewSlot, ApplicantRolePlay, EventAssignment, Notification, StaffUpdateRequest
 from .forms import RecruitmentForm, ApplicantForm, IncidentForm, EventForm, StaffForm, StaffProfileForm, RolePlayForm, RolePlayResponseForm, StaffFilterForm
+
+def bamboo_login(request):
+    if request.method == 'POST':
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            login(request, user)
+            # Redirect based on role
+            if user.is_superuser or user.is_staff:
+                return redirect('staff:staff_dashboard')
+            else:
+                return redirect('staff:staff_profile_edit')
+        else:
+            messages.error(request, "Invalid username or password")
+    else:
+        form = AuthenticationForm()
+    return render(request, 'staff/bamboo_login.html', {'form': form})
 
 @method_decorator(staff_member_required, name='dispatch')
 class RecruitmentApplicantsView(ListView):
