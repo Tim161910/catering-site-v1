@@ -516,24 +516,27 @@ class StaffFilterForm(forms.Form):
         required=False, 
         widget=forms.TextInput(attrs={
             'placeholder': 'Search name, phone, email...', 
-            'class': 'form-control'
+            'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
         })
     )
     role = forms.ModelChoiceField(
         queryset=Role.objects.all(), 
         required=False, 
         empty_label="All Roles", 
-        widget=forms.Select(attrs={'class': 'form-select'})
+        widget=forms.Select(attrs={
+            'class': 'w-full px-4 py-2.5 border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white'
+        })
     )
     reliability = forms.ChoiceField(
         required=False,
         choices=[
             ('', 'All Reliability'),
-            ('a_team', 'A-Team 90+'),
-            ('good', 'Good 80-89'),
-            ('watch', 'Watch 70-79'),
-            ('warning', 'Warning <70'),
+            ('90', 'A-Team 90+'),
+            ('80', 'Good 80-89'),
+            ('70', 'Watch 70-79'),
+            ('0', 'Warning <70'),
         ],
-        widget=forms.Select(attrs={'class': 'form-select'})
+        widget=forms.Select(attrs={
+            'class': 'w-full px-4 py-2.5 border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white'
+        })
     )
-

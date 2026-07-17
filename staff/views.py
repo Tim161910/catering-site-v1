@@ -30,7 +30,7 @@ from django.contrib.auth.forms import AuthenticationForm
 logger = logging.getLogger(__name__)
 
 from django import forms
-from .models import Recruitment, Applicant, RolePlay, Incident, Event, Staff, Assignment, Role, RolePlayResponse, InterviewSlot, ApplicantRolePlay, Notification, StaffUpdateRequest
+from .models import Recruitment, Applicant, RolePlay, Incident, Event, Staff, Assignment, Role, RolePlayResponse, InterviewSlot, ApplicantRolePlay, Notification, StaffUpdateRequest, Task
 from .forms import RecruitmentForm, ApplicantForm, IncidentForm, EventForm, StaffForm, StaffProfileForm, RolePlayForm, RolePlayResponseForm, StaffFilterForm
 
 def bamboo_login(request):
@@ -382,29 +382,29 @@ class StaffCreateView(CreateView):
 class StaffListView(LoginRequiredMixin, ListView):
     model = Staff
     template_name = 'staff/staff_list.html'
-    context_object_name = 'staff'
+    context_object_name = 'staff_list'
     paginate_by = 20
 
     def get_queryset(self):
+        # Don't loop here. Assume score is updated via signal on Incident save
         qs = Staff.objects.select_related('role').all()
-        search = self.request.GET.get('search')
-        role_id = self.request.GET.get('role')  # ModelChoiceField returns ID
+
+        search = self.request.GET.get('q') # match your template input name
+        role_id = self.request.GET.get('role')
         reliability = self.request.GET.get('reliability')
 
         if search:
+            # Can't do icontains on EncryptedCharField. So only search non-encrypted fields
             qs = qs.filter(
                 Q(name__icontains=search) |
-                Q(phone__icontains=search) |
-                Q(whatsapp__icontains=search) |
                 Q(email__icontains=search) |
                 Q(role__name__icontains=search)
             )
         
-        # ModelChoiceField gives us the PK, not slug
         if role_id:
             qs = qs.filter(role_id=role_id)
 
-        # Reliability filter for A-Team / Warning badges
+        # Reliability filter
         if reliability == 'a_team':
             qs = qs.filter(reliability_score__gte=90)
         elif reliability == 'good':
@@ -419,17 +419,17 @@ class StaffListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['filter_form'] = StaffFilterForm(self.request.GET)
-        context['staff_count'] = self.get_queryset().count()  # count updates after filter
+        context['roles'] = Role.objects.all() # for role dropdown
+        context['staff_count'] = self.get_queryset().count()
         return context
     
     def get(self, request, *args, **kwargs):
-        # If export=csv is in URL, return CSV instead of HTML
         if request.GET.get('export') == 'csv':
             return self.export_to_csv()
         return super().get(request, *args, **kwargs)
 
     def export_to_csv(self):
-        queryset = self.get_queryset()  # respects current filters
+        queryset = self.get_queryset()
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="staff_list.csv"'
 
@@ -440,8 +440,8 @@ class StaffListView(LoginRequiredMixin, ListView):
                 staff.name,
                 staff.role.name if staff.role else '-',
                 staff.email or '-',
-                staff.phone or '-',
-                staff.whatsapp or '-',
+                str(staff.phone) if staff.phone else '-', # cast EncryptedField to str
+                str(staff.whatsapp) if staff.whatsapp else '-',
                 staff.reliability_score,
                 'Active' if staff.is_active else 'Inactive'
             ])
@@ -849,6 +849,16 @@ class EventStatusView(LoginRequiredMixin, TemplateView):
         context['events'] = event_list
         return context
 
+class TaskListView(ListView):
+    model = Task
+    template_name = 'staff/task_list.html'
+    context_object_name = 'tasks'
+    paginate_by = 20  # optional
+
+    def get_queryset(self):
+        # Show all tasks. You can filter by user later if you want
+        return Task.objects.all()
+
 @method_decorator(staff_member_required, name='dispatch')
 class StaffDashboardView(ListView):
     model = Staff
@@ -875,9 +885,14 @@ class StaffDashboardView(ListView):
         elif status == 'Warning':
             qs = qs.filter(reliability_score__lt=60)
 
-        # 3. Search
+        # 3. Search - FIXED HERE
         if q:
-            qs = qs.filter(Q(name__icontains=q) | Q(role__icontains=q))
+            qs = qs.filter(
+                Q(name__icontains=q) |
+                Q(role__name__icontains=q) |  # <- was role__icontains
+                Q(email__icontains=q) |
+                Q(phone__icontains=q)
+            )
 
         # 4. Sort
         if sort == 'score':

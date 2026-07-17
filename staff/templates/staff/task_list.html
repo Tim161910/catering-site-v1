@@ -1,0 +1,30 @@
+{% extends 'staff/base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Tasks</h2>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Assigned To</th>
+                <th>Due Date</th>
+                <th>Priority</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for task in tasks %}
+            <tr>
+                <td>{{ task.title }}</td>
+                <td>{{ task.assigned_to.name|default:"Unassigned" }}</td>
+                <td>{{ task.due_date|date:"M d, Y H:i"|default:"-" }}</td>
+                <td><span class="badge bg-{% if task.priority == 'high' %}danger{% elif task.priority == 'medium' %}warning{% else %}success{% endif %}">{{ task.get_priority_display }}</span></td>
+                <td>{{ task.get_status_display }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5">No tasks yet</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
