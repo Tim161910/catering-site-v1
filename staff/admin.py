@@ -37,11 +37,14 @@ class EventTemplateAdmin(admin.ModelAdmin):
         return obj.event_set.count()
     event_count.short_description = 'Events Using'
 
+from django.utils.html import format_html  # <-- add this import at top of admin.py
+
 class StaffAdmin(admin.ModelAdmin):
     form = StaffForm
-    list_display = ('name', 'role', 'phone', 'reliability_score', 'is_active')
+    list_display = ('name', 'role', 'phone', 'reliability_badge', 'is_active') # <-- changed here
     list_filter = ('role', 'is_active', 'reliability_score')
     search_fields = ('name', 'email', 'phone')
+    readonly_fields = ('reliability_score',) # <-- make it readonly so signal controls it
     fieldsets = (
         ('Basic Info', {'fields': ('name', 'email', 'role', 'is_active')}),
         ('Contact', {'fields': ('phone', 'whatsapp', 'address')}),
@@ -51,6 +54,23 @@ class StaffAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
+
+    @admin.display(description='Reliability', ordering='reliability_score')
+    def reliability_badge(self, obj):
+        score = obj.reliability_score
+        if score >= 90:
+            color = '#28a745'  # green
+            emoji = '🟢'
+        elif score >= 75:
+            color = '#ffc107'  # yellow
+            emoji = '🟡'
+        else:
+            color = '#dc3545'  # red  
+            emoji = '🔴'
+        return format_html(
+            '<span style="color: {}; font-weight: 600;">{} {}%</span>',
+            color, emoji, score
+        )
 
 class RolePlayResponseAdmin(admin.ModelAdmin):
     list_display = ['staff', 'roleplay', 'submitted_at']
