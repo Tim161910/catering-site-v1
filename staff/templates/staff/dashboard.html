@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Welcome back, {{ staff.name }}</h2>
+
+    <div class="row g-3 mt-2">
+        <!-- Card 1: Upcoming Events -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header fw-bold">Upcoming Events</div>
+                <div class="card-body">
+                    {% if assignments %}
+                        <ul class="list-group list-group-flush">
+                        {% for a in assignments %}
+                            <li class="list-group-item">
+                                <strong>{{ a.event.title }}</strong><br>
+                                <small class="text-muted">{{ a.role.name }} | {{ a.event.start_time|date:"D, M j - H:i" }} @ {{ a.event.location }}</small>
+                            </li>
+                        {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted mb-0">No upcoming events.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 2: Notifications -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header fw-bold">Notifications {% if unread_count %}<span class="badge bg-danger">{{ unread_count }}</span>{% endif %}</div>
+                <div class="card-body">
+                    {% if notifications %}
+                        <ul class="list-group list-group-flush">
+                        {% for n in notifications %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                {{ n.message }}
+                                <button class="btn btn-sm btn-link mark-read" data-id="{{ n.id }}">Mark read</button>
+                            </li>
+                        {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted mb-0">All caught up!</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 3: Reliability Score -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header fw-bold">Reliability Score</div>
+                <div class="card-body">
+                    <div class="progress mb-3" style="height: 25px;">
+                        <div class="progress-bar {% if reliability_score >= 90 %}bg-success{% elif reliability_score >= 70 %}bg-warning{% else %}bg-danger{% endif %}" 
+                             role="progressbar" style="width: {{ reliability_score }}%">
+                            {{ reliability_score }}%
+                        </div>
+                    </div>
+                    <canvas id="reliabilityChart" height="120"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 4: Quick Actions -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header fw-bold">Quick Actions</div>
+                <div class="card-body d-grid gap-2">
+                    <a href="{% url 'staff:staff_profile_edit' %}" class="btn btn-outline-primary">Update Profile</a>
+                    <a href="{% url 'staff:event_list' %}" class="btn btn-outline-secondary">View All Events</a>
+                    <a href="{% url 'staff:task_list' %}" class="btn btn-outline-info">My Tasks</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Reliability Chart
+const ctx = document.getElementById('reliabilityChart');
+new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: {{ chart_labels|safe }},
+        datasets: [{
+            label: 'Reliability Trend',
+            data: {{ chart_data|safe }},
+            borderWidth: 2,
+            tension: 0.3,
+            fill: false
+        }]
+    },
+    options: { scales: { y: { beginAtZero: true, max: 100 } }
+});
+
+// Mark notification read
+document.querySelectorAll('.mark-read').forEach(btn => {
+    btn.addEventListener('click', () => {
+        fetch(`/staff/notifications/${btn.dataset.id}/read/`, {method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token }}'}})
+        .then(() => location.reload())
+    })
+})
+</script>
+{% endblock %}

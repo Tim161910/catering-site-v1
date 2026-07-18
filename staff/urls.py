@@ -51,4 +51,5 @@ urlpatterns = [
     path('slot/<int:slot_id>/applicants/', views.SlotApplicantsView.as_view(), name='slot_applicants'),
     path('slot/<int:slot_id>/delete/', views.DeleteSlotView.as_view(), name='delete_slot'),
     path('dashboard/export-csv/', views.ExportStaffCSVView.as_view(), name='export_staff_csv'),
+    path('dashboard/', views.staff_dashboard, name='staff_dashboard'),
 ]

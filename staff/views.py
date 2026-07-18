@@ -1480,6 +1480,48 @@ class ExportStaffCSVView(View):
             ])
         return response
 
+@login_required
+def staff_dashboard(request):
+    try:
+        staff = request.user.staff
+    except Staff.DoesNotExist:
+        messages.error(request, "No staff profile linked to your account.")
+        return redirect('staff:staff_profile_edit')
+
+    now = timezone.now()
+    
+    # 1. Upcoming assignments
+    upcoming_assignments = Assignment.objects.filter(
+        staff=staff,
+        status='assigned',
+        event__start_time__gte=now
+    ).select_related('event', 'role').order_by('event__start_time')[:5]
+
+    # 2. Unread notifications
+    notifications = Notification.objects.filter(user=request.user, is_read=False).order_by('-created_at')[:5]
+    unread_count = notifications.count()
+
+    # 3. Reliability history for chart
+    history = staff.incidents.annotate(
+        month=TruncMonth('created_at')
+    ).values('month').annotate(
+        score=Avg('reliability_impact')
+    ).order_by('month')[:6]
+
+    chart_labels = [h['month'].strftime("%b %Y") for h in history if h['month']]
+    chart_data = [round(h['score'] or 0, 1) for h in history]
+
+    context = {
+        'staff': staff,
+        'assignments': upcoming_assignments,
+        'notifications': notifications,
+        'unread_count': unread_count,
+        'reliability_score': staff.reliability_score,
+        'chart_labels': json.dumps(chart_labels),
+        'chart_data': json.dumps(chart_data),
+    }
+    return render(request, 'staff/dashboard.html', context)
+
 @require_POST
 def mark_notification_read(request, notification_id):
     notification = get_object_or_404(Notification, id=notification_id, user=request.user)
