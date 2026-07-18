@@ -26,6 +26,8 @@ from django.http import Http404
 from django.contrib.auth import login
 from django.shortcuts import render, redirect
 from django.contrib.auth.forms import AuthenticationForm
+from django.db.models.functions import Coalesce
+from django.db.models import IntegerField, Value
 
 logger = logging.getLogger(__name__)
 
@@ -862,7 +864,7 @@ class TaskListView(ListView):
 @method_decorator(staff_member_required, name='dispatch')
 class StaffDashboardView(ListView):
     model = Staff
-    template_name = 'staff/staff_dashboard.html'
+    template_name = 'admin/risk_dashboard.html'  # <-- fixed
     context_object_name = 'staff_list'
 
     def get_queryset(self):
@@ -870,39 +872,36 @@ class StaffDashboardView(ListView):
             events_worked=Count('assignments__event', distinct=True),
             incident_count=Count('incidents'),
             no_show=Count('incidents', filter=Q(incidents__incident_type='no_show')),
+            reliability_score_safe=Coalesce('reliability_score', Value(0), output_field=IntegerField())
         )
 
-        # 1. Get filters from URL
         status = self.request.GET.get('status')
         q = self.request.GET.get('q')
         sort = self.request.GET.get('sort')
 
-        # 2. Status Filter
         if status == 'A-Team':
-            qs = qs.filter(reliability_score__gte=90)
+            qs = qs.filter(reliability_score_safe__gte=90)
         elif status == 'Standard':
-            qs = qs.filter(reliability_score__gte=60, reliability_score__lt=90)
+            qs = qs.filter(reliability_score_safe__gte=60, reliability_score_safe__lt=90)
         elif status == 'Warning':
-            qs = qs.filter(reliability_score__lt=60)
+            qs = qs.filter(reliability_score_safe__lt=60)
 
-        # 3. Search - FIXED HERE
         if q:
             qs = qs.filter(
                 Q(name__icontains=q) |
-                Q(role__name__icontains=q) |  # <- was role__icontains
+                Q(role__name__icontains=q) |
                 Q(email__icontains=q) |
                 Q(phone__icontains=q)
             )
 
-        # 4. Sort
         if sort == 'score':
-            qs = qs.order_by('-reliability_score')
+            qs = qs.order_by('-reliability_score_safe')
         elif sort == 'events':
             qs = qs.order_by('-events_worked')
         elif sort == 'incidents':
             qs = qs.order_by('-incident_count')
         else:
-            qs = qs.order_by('-reliability_score') # default
+            qs = qs.order_by('-reliability_score_safe')
 
         return qs
 
@@ -910,8 +909,9 @@ class StaffDashboardView(ListView):
         context = super().get_context_data(**kwargs)
         today = timezone.now().date()
         context['upcoming_events'] = Event.objects.filter(start_time__date__gte=today).order_by('start_time')
+        context['risky_staff'] = Staff.objects.filter(reliability_score__lt=80).order_by('reliability_score')
         return context
-
+    
 @method_decorator(staff_member_required, name='dispatch')
 class IncidentCreateView(CreateView):
     model = Incident

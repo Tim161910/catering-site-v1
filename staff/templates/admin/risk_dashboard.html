@@ -7,6 +7,7 @@
 .red { color: #dc3545; }
 .yellow { color: #ffc107; }
 .green { color: #28a745; }
+.gray { color: #6c757d; }
 </style>
 
 <h1>📊 Event Risk Dashboard</h1>
@@ -21,14 +22,17 @@
     <td>{{ event.start_time|date:"D, M d, Y H:i" }}</td>
     <td>
         {% for a in event.assignments.all %}
-            {% if a.staff %} {# Only show if someone is assigned #}
+            {% if a.staff %} 
+            {% with score=a.staff.reliability_score|default:0 %}
             <span class="badge 
-                {% if a.staff.reliability_score < 75 %}red
-                {% elif a.staff.reliability_score < 90 %}yellow
+                {% if score == 0 %}gray
+                {% elif score < 75 %}red
+                {% elif score < 90 %}yellow
                 {% else %}green
                 {% endif %}">
-                {{ a.staff.name }} ({{ a.staff.reliability_score }}%)
+                {{ a.staff.name }} ({{ score }}%)
             </span><br>
+            {% endwith %}
             {% endif %}
         {% empty %} 
             <i>No staff assigned</i> 
@@ -44,7 +48,7 @@
 <h2>⚠️ At-Risk Staff &lt; 80%</h2>
 <ul>
 {% for s in risky_staff %}
-    <li class="red">🔴 {{ s.name }} - {{ s.reliability_score }}% - {{ s.role }}</li>
+    <li class="red">🔴 {{ s.name }} - {{ s.reliability_score|default:0 }}% - {{ s.role.name|default:"No Role" }}</li>
 {% empty %}
     <li class="green">🟢 All staff are above 80% reliability</li>
 {% endfor %}
