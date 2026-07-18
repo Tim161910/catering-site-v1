@@ -1,0 +1,52 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<style>
+.risk-table { width:100%; border-collapse: collapse; margin-bottom: 30px; }
+.risk-table th, .risk-table td { padding: 8px 12px; border-bottom: 1px solid #ddd; text-align: left; }
+.badge { font-weight: 600; }
+.red { color: #dc3545; }
+.yellow { color: #ffc107; }
+.green { color: #28a745; }
+</style>
+
+<h1>📊 Event Risk Dashboard</h1>
+
+<h2>Upcoming Events - Next 14 Days</h2>
+<table class="risk-table">
+<thead><tr><th>Event</th><th>Date</th><th>Assigned Staff Risk</th></tr></thead>
+<tbody>
+{% for event in upcoming_events %}
+<tr>
+    <td>{{ event.name }}</td>
+    <td>{{ event.date }}</td>
+    <td>
+        {% for a in event.assignment_set.all %}
+            {% if a.staff.reliability_score < 75 %}
+                {% with color_class="red" %}
+            {% elif a.staff.reliability_score < 90 %}
+                {% with color_class="yellow" %}
+            {% else %}
+                {% with color_class="green" %}
+            {% endif %}
+            <span class="badge {{ color_class }}">
+                {{ a.staff.name }} ({{ a.staff.reliability_score }}%)
+            </span><br>
+            {% endwith %}
+        {% empty %} <i>No staff assigned</i> {% endfor %}
+    </td>
+</tr>
+{% empty %}
+<tr><td colspan="3">No upcoming events</td></tr>
+{% endfor %}
+</tbody>
+</table>
+
+<h2>⚠️ At-Risk Staff &lt; 80%</h2>
+<ul>
+{% for s in risky_staff %}
+    <li class="red">🔴 {{ s.name }} - {{ s.reliability_score }}% - {{ s.role }}</li>
+{% empty %}
+    <li class="green">🟢 All staff are above 80% reliability</li>
+{% endfor %}
+</ul>
+{% endblock %}

@@ -2,6 +2,7 @@ from django.contrib import admin, messages
 from django.urls import path, reverse_lazy
 from django.template.response import TemplateResponse
 from django.utils import timezone
+from datetime import timedelta
 from .models import RolePlayResponse, Staff, Event, IssueType, Incident, Assignment, Role, EventTemplate, EventTemplateRole, Applicant, Recruitment, InterviewSlot
 from django.utils.html import format_html, mark_safe
 from django.db import transaction
@@ -71,6 +72,30 @@ class StaffAdmin(admin.ModelAdmin):
             '<span style="color: {}; font-weight: 600;">{} {}%</span>',
             color, emoji, score
         )
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('risk-dashboard/', self.admin_site.admin_view(self.risk_dashboard), name='risk-dashboard'),
+        ]
+        return custom_urls + urls
+
+    def risk_dashboard(self, request):
+        # Staff with low reliability
+        risky_staff = Staff.objects.filter(reliability_score__lt=80, is_active=True)
+
+        # Events in next 14 days
+        upcoming_events = Event.objects.filter(
+            date__gte=timezone.now(),
+            date__lte=timezone.now() + timedelta(days=14)
+        )
+
+        context = dict(
+            self.admin_site.each_context(request),
+            risky_staff=risky_staff,
+            upcoming_events=upcoming_events,
+            title="Event Risk Dashboard"
+        )
+        return TemplateResponse(request, "admin/risk_dashboard.html", context)
 
 class RolePlayResponseAdmin(admin.ModelAdmin):
     list_display = ['staff', 'roleplay', 'submitted_at']
@@ -384,3 +409,6 @@ staff_admin_site.register(Incident, IncidentAdmin)
 staff_admin_site.register(Assignment, AssignmentAdmin)
 staff_admin_site.register(Role, RoleAdmin)
 staff_admin_site.register(EventTemplate, EventTemplateAdmin)
+
+from django.contrib import admin
+admin.site.index_template = 'admin/custom_index.html'
