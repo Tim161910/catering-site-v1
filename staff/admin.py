@@ -81,13 +81,13 @@ class StaffAdmin(admin.ModelAdmin):
 
     def risk_dashboard(self, request):
         # Staff with low reliability
-        risky_staff = Staff.objects.filter(reliability_score__lt=80, is_active=True)
+        risky_staff = Staff.objects.filter(reliability_score__lt=80, is_active=True).order_by('reliability_score')
 
         # Events in next 14 days
         upcoming_events = Event.objects.filter(
-            date__gte=timezone.now(),
-            date__lte=timezone.now() + timedelta(days=14)
-        )
+            start_time__gte=timezone.now(),
+            start_time__lte=timezone.now() + timedelta(days=14)
+        ).prefetch_related('assignments__staff', 'assignments__role')  # Use 'assignments' not 'assignment_set'
 
         context = dict(
             self.admin_site.each_context(request),
