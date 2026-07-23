@@ -4,23 +4,51 @@
 <div class="container mt-4">
     <h2>Welcome back, {{ staff.name }}</h2>
 
+    <!-- Messages: Success/Error from Accept/Decline -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
     <div class="row g-3 mt-2">
         <!-- Card 1: Upcoming Events -->
         <div class="col-lg-6">
             <div class="card shadow-sm h-100">
-                <div class="card-header fw-bold">Upcoming Events</div>
+                <div class="card-header fw-bold d-flex justify-content-between align-items-center">
+                    <span>Upcoming Events</span>
+                    <span class="badge bg-primary">{{ assigned_count }}</span>
+                </div>
                 <div class="card-body">
                     {% if assignments %}
                         <ul class="list-group list-group-flush">
                         {% for a in assignments %}
                             <li class="list-group-item">
-                                <strong>{{ a.event.title }}</strong><br>
-                                <small class="text-muted">{{ a.role.name }} | {{ a.event.start_time|date:"D, M j - H:i" }} @ {{ a.event.location }}</small>
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <strong>{{ a.event.title }}</strong><br>
+                                        <small class="text-muted">
+                                            {{ a.role.name }} | {{ a.event.start_time|date:"D, M j - H:i" }} @ {{ a.event.location }}
+                                        </small>
+                                    </div>
+                                    <!-- Accept / Decline Buttons -->
+                                    {% if a.status == 'Assigned' %}
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'staff:accept_assignment' a.id %}" class="btn btn-success">Accept</a>
+                                            <a href="{% url 'staff:decline_assignment' a.id %}" class="btn btn-outline-danger">Decline</a>
+                                        </div>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ a.status }}</span>
+                                    {% endif %}
+                                </div>
                             </li>
                         {% endfor %}
                         </ul>
                     {% else %}
-                        <p class="text-muted mb-0">No upcoming events.</p>
+                        <p class="text-muted mb-0">No upcoming events assigned yet.</p>
                     {% endif %}
                 </div>
             </div>
@@ -29,7 +57,14 @@
         <!-- Card 2: Notifications -->
         <div class="col-lg-6">
             <div class="card shadow-sm h-100">
-                <div class="card-header fw-bold">Notifications {% if unread_count %}<span class="badge bg-danger">{{ unread_count }}</span>{% endif %}</div>
+                <div class="card-header fw-bold d-flex justify-content-between align-items-center">
+                    <span>
+                        Notifications {% if unread_count %}<span class="badge bg-danger">{{ unread_count }}</span>{% endif %}
+                    </span>
+                    {% if unread_count %}
+                    <a href="{% url 'staff:mark_all_notifications_read' %}" class="btn btn-sm btn-outline-secondary">Mark All Read</a>
+                    {% endif %}
+                </div>
                 <div class="card-body">
                     {% if notifications %}
                         <ul class="list-group list-group-flush">
@@ -93,13 +128,23 @@ new Chart(ctx, {
             fill: false
         }]
     },
-    options: { scales: { y: { beginAtZero: true, max: 100 } }
+    options: { 
+        scales: { 
+            y: { 
+                beginAtZero: true, 
+                max: 100 
+            } 
+        } 
+    }
 });
 
 // Mark notification read
 document.querySelectorAll('.mark-read').forEach(btn => {
     btn.addEventListener('click', () => {
-        fetch(`/staff/notifications/${btn.dataset.id}/read/`, {method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token }}'}})
+        fetch(`/staff/notifications/${btn.dataset.id}/read/`, {
+            method: 'POST', 
+            headers: {'X-CSRFToken': '{{ csrf_token }}'}
+        })
         .then(() => location.reload())
     })
 })

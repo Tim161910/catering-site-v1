@@ -200,120 +200,25 @@ class RoleAdmin(admin.ModelAdmin):
 class StaffSite(admin.AdminSite):
     site_header = "Catering Operations"
 
+    def each_context(self, request):
+        context = super().each_context(request)
+        context['event_status_url'] = '/staff/event-status/'  # <-- changed to app URL
+        return context
+
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
-            path('event-status/', self.admin_view(self.event_status_view), name='event-status'),
+            # path('event-status/', self.admin_view(self.event_status_view), name='event-status'),  <-- DELETED
             path('auto-fill-roster/<int:event_id>/', self.admin_view(self.auto_fill_roster), name='auto-fill-roster'),
             path('replace-staff/<int:assignment_id>/', self.admin_view(self.replace_staff), name='replace-staff'),
         ]
         return custom_urls + urls
-
-    def get_app_list(self, request, app_label=None):
-        app_list = super().get_app_list(request, app_label)
-        app_list.insert(0, {
-            'name': 'Operations',
-            'app_label': 'operations',
-            'models': [{
-                'name': 'Event Risk Dashboard',
-                'object_name': 'EventRiskDashboard',
-                'admin_url': reverse_lazy('staff_admin:event-status'),
-                'view_only': True,
-            }]
-        })
-        return app_list
-
-    def event_status_view(self, request):
-        today = timezone.now().date()
-        events = Event.objects.filter(start_time__date__gte=today).prefetch_related(
-            'assignments__staff',
-            'assignments__role'
-        ).order_by('start_time')
-
-        event_data = []
-        for event in events:
-            duties = []
-            assigned_ids = list(event.assignments.filter(status='assigned', staff__isnull=False).values_list('staff_id', flat=True))
-            at_risk_count = 0
-
-            for assign in event.assignments.filter(status='assigned').select_related('staff', 'role').order_by('duty_number'):
-                conflicts = []
-                if assign.staff:
-                    score = assign.staff.reliability_score
-                    status = 'Critical' if score < 50 else 'Warning' if score < 75 else 'OK'
-                    if score < 75:
-                        at_risk_count += 1
-
-                    # FIX: Only check conflicts if both event times exist
-                    if event.start_time and event.end_time:
-                        conflicts = list(Assignment.objects.filter(
-                            staff=assign.staff,
-                            status='assigned',
-                            event__start_time__lt=event.end_time,
-                            event__end_time__gt=event.start_time
-                        ).exclude(event=event).values_list('event__title', flat=True))
-
-                else:
-                    score = 0
-                    status = 'Empty'
-
-                # FIX: Build replacement queryset with conflict exclusion only if times exist
-                replacements_qs = Staff.objects.filter(
-                    role=assign.role,
-                    is_active=True,
-                    reliability_score__gte=75
-                ).exclude(id__in=assigned_ids)
-
-                if event.start_time and event.end_time: # ADD THIS CHECK
-                    conflicting_staff_ids = Assignment.objects.filter(
-                        status='assigned',
-                        event__start_time__lt=event.end_time,
-                        event__end_time__gt=event.start_time
-                    ).values_list('staff_id', flat=True)
-                    replacements_qs = replacements_qs.exclude(id__in=conflicting_staff_ids)
-                
-                replacements = replacements_qs.order_by('-reliability_score')[:5]
-
-                duties.append({
-                    'assignment_id': assign.id,
-                    'duty_number': assign.duty_number,
-                    'staff': assign.staff,
-                    'role': assign.role.name if assign.role else 'No Role',
-                    'score': score,
-                    'status': status,
-                    'replacements': replacements,
-                    'conflicts': conflicts
-                })
-            empty_count = event.assignments.filter(staff__isnull=True, status='assigned').count()
-            ok_count = len(duties) - at_risk_count - empty_count
-            event_data.append({
-                'event': event,
-                'duties': duties,
-                'total_duties': len(duties),
-                'at_risk': at_risk_count,
-                'empty_count': empty_count,
-                'ok_count': ok_count
-            })
-
-        context = dict(
-            self.each_context(request),
-            total_events=Event.objects.count(),
-            upcoming_events=Event.objects.filter(start_time__date__gte=today).count(),
-            this_month=Event.objects.filter(start_time__year=today.year, start_time__month=today.month).count(),
-            past_events=Event.objects.filter(start_time__date__lt=today).count(),
-            recent_events=Event.objects.order_by('-start_time')[:5],
-            events=event_data,
-            title="",
-            subtitle="Event Risk Dashboard"
-        )
-        return TemplateResponse(request,"staff/event_status.html", context)
 
     def auto_fill_event(self, event):
         empty_duties = event.assignments.filter(staff__isnull=True, status='assigned').select_related('role')
         filled_count = 0
 
         for duty in empty_duties:
-            # Find staff available + matching role + no conflicts
             candidates = Staff.objects.filter(
                 role=duty.role,
                 is_active=True,
@@ -323,7 +228,6 @@ class StaffSite(admin.AdminSite):
             )
 
             for candidate in candidates:
-                # Check time conflicts - only check if event has valid start and end times
                 conflicts = False
                 if event.start_time and event.end_time:
                     conflicts = Assignment.objects.filter(
@@ -334,16 +238,14 @@ class StaffSite(admin.AdminSite):
 
                 if not conflicts:
                     duty.staff = candidate
-                    # only set times if the Assignment model has start_time and end_time fields; if not, this will raise an error. Adjust accordingly.
                     if hasattr(duty, 'start_time') and hasattr(duty, 'end_time'):
                         duty.start_time = event.start_time
                         duty.end_time = event.end_time
                         duty.save(update_fields=['staff', 'start_time', 'end_time'])
                     else:
                         duty.save(update_fields=['staff'])
-
                     filled_count += 1
-                    break  # Move to next duty
+                    break
 
         return filled_count
     
@@ -351,7 +253,7 @@ class StaffSite(admin.AdminSite):
         event = get_object_or_404(Event, id=event_id)
         filled_count = self.auto_fill_event(event)
         messages.success(request, f"Auto-filled {filled_count} duties for event '{event.title}'.")
-        return redirect('staff_admin:event-status')
+        return redirect('/staff/event-status/')  # <-- changed to app URL
         
 
     @csrf_exempt
@@ -360,7 +262,6 @@ class StaffSite(admin.AdminSite):
         new_staff = get_object_or_404(Staff, id=request.POST.get('new_staff_id'))
         event = assignment.event
 
-        # Check conflicts
         conflicts = False
         if event.start_time and event.end_time:
             conflicts = Assignment.objects.filter(

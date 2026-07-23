@@ -44,7 +44,7 @@
 
           <td>
             {% if assignment.staff %}
-              {{ assignment.staff.get_full_name|default:assignment.staff.username }}
+              {{ assignment.staff.get_full_name|default:assignment.staff.email }}
               {% if assignment.reassignment_reason %}
                 <small class="text-muted d-block">Last change: {{ assignment.reassignment_reason }}</small>
               {% endif %}
@@ -58,7 +58,7 @@
               <select id="staff-{{ assignment.id }}" class="form-select form-select-sm">
                 <option value="">Select new staff...</option>
                 {% for staff in available_staff %}
-                  <option value="{{ staff.id }}">{{ staff.get_full_name|default:staff.username }}</option>
+                  <option value="{{ staff.id }}">{{ staff.get_full_name|default:staff.email }}</option>
                 {% endfor %}   
               </select>
               <button type="button" class="btn btn-sm btn-primary reassign-btn" 
@@ -72,10 +72,32 @@
       </tbody>
     </table>
   </div>
+
+  <!-- Reassign Modal -->
+  <div class="modal fade" id="reassignModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Reassign Staff</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <label for="reassignReason" class="form-label">Reason for reassignment</label>
+          <input type="text" id="reassignReason" class="form-control" placeholder="e.g. Called in sick">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="confirmReassignBtn">Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 {% block extra_js %}
 <script>
+let currentAssignmentId = null;
+
 document.addEventListener('DOMContentLoaded', function() {
   // Wire up Confirm buttons
   document.querySelectorAll('.reassign-btn').forEach(btn => {
@@ -92,6 +114,13 @@ document.addEventListener('DOMContentLoaded', function() {
       updateRole(assignmentId, this.value);
     });
   });
+
+  // Confirm reassign in modal
+  document.getElementById('confirmReassignBtn').addEventListener('click', function() {
+    const reason = document.getElementById('reassignReason').value;
+    const staffId = document.getElementById(`staff-${currentAssignmentId}`).value;
+    reassignStaff(currentAssignmentId, staffId, reason);
+  });
 });
 
 function openReassignModal(assignmentId) {
@@ -104,5 +133,21 @@ function openReassignModal(assignmentId) {
   document.getElementById('reassignReason').value = '';
   new bootstrap.Modal(document.getElementById('reassignModal')).show();
 }
+
+function showToast(message, bgClass) {
+  // Add your toast logic here
+  alert(message);
+}
+
+function updateRole(assignmentId, roleId) {
+  // Add your AJAX call here
+  console.log('Update role', assignmentId, roleId);
+}
+
+function reassignStaff(assignmentId, staffId, reason) {
+  // Add your AJAX call here
+  console.log('Reassign', assignmentId, staffId, reason);
+}
 </script>
-{% endblock %}
+{% endblock extra_js %}
+{% endblock content %}

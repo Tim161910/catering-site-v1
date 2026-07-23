@@ -1,103 +1,152 @@
-{% extends "base.html" %}
+{% extends "staff/base.html" %}
+{% load static %}
 
 {% block content %}
-<div class="p-6 max-w-7xl mx-auto space-y-6">
+<div class="container-fluid py-4">
 
     <!-- STAT CARDS -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div class="bg-white rounded-2xl shadow p-5 border-l-4 border-blue-500">
-            <p class="text-sm text-gray-500">Total Events</p>
-            <p class="text-3xl font-bold text-blue-600">{{ stats.total_events }}</p>
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-3">
+            <div class="card border-start border-primary border-4">
+                <div class="card-body">
+                    <p class="text-muted mb-1">Total Events</p>
+                    <h2 class="text-primary fw-bold">{{ stats.total_events }}</h2>
+                </div>
+            </div>
         </div>
-        <div class="bg-white rounded-2xl shadow p-5 border-l-4 border-green-500">
-            <p class="text-sm text-gray-500">Upcoming</p>
-            <p class="text-3xl font-bold text-green-600">{{ stats.upcoming }}</p>
+        <div class="col-12 col-md-3">
+            <div class="card border-start border-success border-4">
+                <div class="card-body">
+                    <p class="text-muted mb-1">Upcoming</p>
+                    <h2 class="text-success fw-bold">{{ stats.upcoming }}</h2>
+                </div>
+            </div>
         </div>
-        <div class="bg-white rounded-2xl shadow p-5 border-l-4 border-cyan-500">
-            <p class="text-sm text-gray-500">This Month</p>
-            <p class="text-3xl font-bold text-cyan-600">{{ stats.this_month }}</p>
+        <div class="col-12 col-md-3">
+            <div class="card border-start border-info border-4">
+                <div class="card-body">
+                    <p class="text-muted mb-1">This Month</p>
+                    <h2 class="text-info fw-bold">{{ stats.this_month }}</h2>
+                </div>
+            </div>
         </div>
-        <div class="bg-white rounded-2xl shadow p-5 border-l-4 border-gray-400">
-            <p class="text-sm text-gray-500">Past</p>
-            <p class="text-3xl font-bold text-gray-600">{{ stats.past }}</p>
+        <div class="col-12 col-md-3">
+            <div class="card border-start border-secondary border-4">
+                <div class="card-body">
+                    <p class="text-muted mb-1">Past</p>
+                    <h2 class="text-secondary fw-bold">{{ stats.past }}</h2>
+                </div>
+            </div>
         </div>
     </div>
 
-    <h2 class="text-2xl font-bold text-gray-800">Event Status Dashboard</h2>
+    <!-- HEADER + BULK ACTION BUTTON -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-2">
+        <h2 class="fw-bold">Event Status Dashboard</h2>
+        <a href="{% url 'staff:auto_fill_all_events' %}"
+           onclick="return confirm('Auto-fill all empty duties across all upcoming events?')"
+           class="btn btn-autofill btn-autofill-all btn-purple">
+            🚀 Auto-Fill All Events
+        </a>
+    </div>
 
-    <!-- EVENT CARDS -->
+    {% if request.session.last_auto_fill %}
+    <div class="alert alert-info">
+        🕒 Last auto-filled: {{ request.session.last_auto_fill|date:"D, M j, Y h:i A" }}
+    </div>
+    {% endif %}
+
     {% for event in events %}
-    <div class="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-        <div class="bg-gray-50 px-6 py-4 flex justify-between items-center border-b">
+    <div class="card mb-4 event-card">
+        <div class="card-header bg-light d-flex flex-column flex-md-row justify-content-between align-items-md-center">
             <div>
-                <h5 class="text-lg font-bold">{{ event.title }}</h5>
-                <p class="text-sm text-gray-500">{{ event.date|date:"D, M j, Y h:i A" }} @ {{ event.location }}</p>
+                <h5 class="mb-1 d-flex align-items-center gap-2 flex-wrap">
+                    {{ event.title|default:"Untitled Event" }}
+                    <span class="text-muted fw-normal">#{{ event.id }}</span>
+                    {% if event.empty > 0 %}
+                        <span class="badge bg-danger urgency-badge">{{ event.empty }} NEED STAFF</span>
+                    {% endif %}
+                </h5>
+                <p class="text-muted mb-0">
+                    {{ event.date|date:"D, M j, Y h:i A" }} {% if event.location %}@ {{ event.location }}{% endif %}
+                </p>
             </div>
+
             {% if event.empty > 0 %}
-                <button onclick="autoFill('{{ event.id }}')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow">
-                    Auto-Fill {{ event.empty }} Duties
+                <button onclick="autoFill('{{ event.id }}')" class="btn btn-green mt-2 mt-md-0">
+                    ⚡ Auto-Fill {{ event.empty }} Duties
                 </button>
+            {% else %}
+                <span class="badge bg-success fs-6">✅ Fully Staffed</span>
             {% endif %}
         </div>
 
-        <div class="p-6">
-            <p class="mb-4 text-sm">
-                <span class="font-semibold text-red-600">{{ event.at_risk }} At Risk</span> |
-                <span class="font-semibold text-yellow-600">{{ event.empty }} Empty</span> |
-                <span class="font-semibold text-green-600">{{ event.ok }} OK</span> |
-                <span class="font-semibold">{{ event.total_duties }} Total</span>
+        <div class="card-body">
+            <p class="mb-3">
+                <span class="badge bg-danger">🔴 {{ event.at_risk }} At Risk</span>
+                <span class="badge bg-warning text-dark">🟡 {{ event.empty }} Empty</span>
+                <span class="badge bg-success">🟢 {{ event.ok }} OK</span>
+                <span class="badge bg-secondary">📊 {{ event.total_duties }} Total</span>
             </p>
 
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="bg-gray-800 text-white">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-dark">
                         <tr>
-                            <th class="px-3 py-2 text-left w-16">Duty</th>
-                            <th class="px-3 py-2 text-left">Staff</th>
-                            <th class="px-3 py-2 text-left w-40">Role</th>
-                            <th class="px-3 py-2 text-left w-32">Reliability</th>
-                            <th class="px-3 py-2 text-left w-24">Status</th>
-                            <th class="px-3 py-2 text-left w-52">Action</th>
+                            <th style="width: 60px;">Duty</th>
+                            <th>Staff</th>
+                            <th style="width: 150px;">Role</th>
+                            <th style="width: 120px;">Reliability</th>
+                            <th style="width: 100px;">Status</th>
+                            <th style="width: 250px;">Action</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y">
+                    <tbody>
                         {% for d in event.duties %}
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-3 py-2">#{{ d.index }}</td>
-                            <td class="px-3 py-2">
+                        <tr>
+                            <td>#{{ d.index }}</td>
+                            <td>
                                 {% if d.staff %}
-                                    <span class="font-semibold">{{ d.staff }}</span>
-                                    {% if d.conflicts %}
-                                        <br><span class="text-red-600 text-xs">🔴 Conflict: {{ d.conflicts|join:", " }}</span>
+                                    <strong>{{ d.staff }}</strong>
+                                    {% if d.conflicts %}<br><small class="text-danger">🔴 Conflict: {{ d.conflicts|join:", " }}</small>{% endif %}
+                                {% else %}
+                                    <span class="text-muted fst-italic">Unassigned</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ d.role }}</td>
+                            <td>{% if d.score > 0 %}<strong>{{ d.score }}%</strong>{% else %}—{% endif %}</td>
+                            <td>
+                                {% if d.status == 'critical' %}<span class="badge bg-danger">Critical</span>
+                                {% elif d.status == 'warning' %}<span class="badge bg-warning text-dark">Warning</span>
+                                {% else %}<span class="badge bg-success">OK</span>{% endif %}
+                            </td>
+                            <td>
+                                {% if d.assignment_id %}
+                                <div class="d-flex gap-1">
+                                    <!-- Dropdown for Replace -->
+                                    {% if d.candidates %}
+                                    <div class="dropdown">
+                                        <button class="btn btn-green btn-sm dropdown-toggle" type="button" id="replace-{{ d.assignment_id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                            Replace...
+                                        </button>
+                                        <ul class="dropdown-menu" aria-labelledby="replace-{{ d.assignment_id }}">
+                                            {% for r in d.candidates %}
+                                            <li>
+                                                <a class="dropdown-item" href="#" onclick="replaceStaff('{{ d.assignment_id }}', '{{ r.id }}'); return false;">
+                                                    {{ r.name }} - {{ r.score }}%
+                                                </a>
+                                            </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
                                     {% endif %}
-                                {% else %}
-                                    <span class="text-gray-400 italic">Unassigned</span>
+
+                                    <!-- View Details -->
+                                    <a href="{% url 'staff:event_detail' event.id %}" class="btn btn-purple btn-sm">
+                                        View Details
+                                    </a>
+                                </div>
                                 {% endif %}
-                            </td>
-                            <td class="px-3 py-2">{{ d.role }}</td>
-                            <td class="px-3 py-2">
-                                {% if d.score > 0 %}
-                                    <span class="font-bold">{{ d.score }}%</span>
-                                {% else %}
-                                    —
-                                {% endif %}
-                            </td>
-                            <td class="px-3 py-2">
-                                {% if d.status == 'critical' %}
-                                    <span class="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-semibold">Critical</span>
-                                {% elif d.status == 'warning' %}
-                                    <span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-xs font-semibold">Warning</span>
-                                {% else %}
-                                    <span class="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-semibold">OK</span>
-                                {% endif %}
-                            </td>
-                            <td class="px-3 py-2">
-                                <select class="w-full px-2 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" onchange="replaceStaff('{{ d.assignment_id }}', this.value)">
-                                    <option value="">Replace...</option>
-                                    {% for r in d.candidates %}
-                                    <option value="{{ r.id }}">{{ r.name }} - {{ r.score }}%</option>
-                                    {% endfor %}
-                                </select>
                             </td>
                         </tr>
                         {% endfor %}
@@ -107,67 +156,41 @@
         </div>
     </div>
     {% empty %}
-    <div class="bg-white rounded-2xl shadow p-10 text-center text-gray-500">
-        No upcoming events found.
-    </div>
+    <div class="card"><div class="card-body text-center text-muted py-5">No upcoming events found.</div></div>
     {% endfor %}
-
-</div>
-
-<!-- REASSIGN MODAL -->
-<div id="reassignModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-  <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-    <div class="flex justify-between items-center mb-4">
-      <h5 class="text-lg font-bold">Reassign Staff</h5>
-      <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-    </div>
-    <textarea id="reassignReason" class="w-full border border-gray-300 rounded-lg p-2 mb-4" placeholder="Reason for reassignment..." rows="3"></textarea>
-    <div class="flex justify-end gap-3">
-      <button onclick="closeModal()" class="px-4 py-2 border rounded-lg hover:bg-gray-50">Cancel</button>
-      <button id="confirmReassign" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Confirm</button>
-    </div>
-  </div>
 </div>
 
 <script>
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie!== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
-const csrftoken = getCookie('csrftoken');
-
 function replaceStaff(assignmentId, newStaffId) {
     if(!newStaffId) return;
     if(!confirm('Replace staff for this duty?')) return;
-
-    fetch(`/staff/api/assignments/${assignmentId}/reassign/`, {
+    fetch('/staff/api/assignments/' + assignmentId + '/reassign/', {
         method: 'POST',
-        headers: {'X-CSRFToken': csrftoken, 'Content-Type': 'application/json'},
+        headers: {'X-CSRFToken': getCSRFToken(), 'Content-Type': 'application/json'},
         body: JSON.stringify({'new_staff_id': newStaffId, 'reason': 'Quick replace'})
     }).then(r => r.json()).then(data => {
         if(data.success) {
-            alert('Staff replaced!');
-            location.reload();
+            showToast('Staff replaced!', 'bg-success');
+            setTimeout(() => location.reload(), 800);
         } else {
-            alert('Error: ' + data.error);
+            showToast('Error: ' + data.error, 'bg-danger');
         }
     });
 }
 
 function autoFill(eventId) {
-    if(confirm('Auto-fill all empty duties?')) {
-        window.location.href = `/staff/event/${eventId}/auto-fill/`;
+    if(confirm('Auto-fill all empty duties for this event?')) {
+        window.location.href = '/staff/event/' + eventId + '/auto-fill/';
     }
+}
+
+function getCSRFToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+           document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
+}
+
+function showToast(msg, cls) {
+    alert(msg); // simple fallback
 }
 </script>
 {% endblock %}

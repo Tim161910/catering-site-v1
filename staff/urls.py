@@ -4,7 +4,6 @@ from . import views
 app_name = 'staff'
 
 urlpatterns = [
-    path('dashboard/', views.StaffDashboardView.as_view(), name='staff_dashboard'),
     path('login/', views.bamboo_login, name='bamboo_login'),
     path('incident/add/', views.IncidentCreateView.as_view(), name='incident_add'),
     path('', views.StaffListView.as_view(), name='staff_list'),
@@ -52,4 +51,8 @@ urlpatterns = [
     path('slot/<int:slot_id>/delete/', views.DeleteSlotView.as_view(), name='delete_slot'),
     path('dashboard/export-csv/', views.ExportStaffCSVView.as_view(), name='export_staff_csv'),
     path('dashboard/', views.staff_dashboard, name='staff_dashboard'),
+    path('notifications/<int:notification_id>/read/', views.mark_notification_read, name='mark_notification_read'),
+    path('notifications/mark-all-read/', views.mark_all_notifications_read, name='mark_all_notifications_read'),
+    path('assignment/<int:pk>/accept/', views.accept_assignment, name='accept_assignment'),
+    path('assignment/<int:pk>/decline/', views.decline_assignment, name='decline_assignment'),
 ]
