@@ -5,9 +5,9 @@ app_name = 'staff'
 
 urlpatterns = [
     path('incident/add/', views.IncidentCreateView.as_view(), name='incident_add'),
-    path('', views.staff_dashboard, name='staff_dashboard'),
     path('staff-list/', views.StaffListView.as_view(), name='staff_list'),
-    path('dashboard/', views.staff_dashboard, name='staff_dashboard'),
+    path('', views.StaffDashboardView.as_view(), name='staff_dashboard'),
+    path('dashboard/', views.StaffDashboardView.as_view(), name='staff_dashboard_alt'),
     path('create/', views.StaffCreateView.as_view(), name='staff_create'),
     path('tasks/', views.TaskListView.as_view(), name='task_list'),
     path('<int:pk>/update/', views.StaffUpdateView.as_view(), name='staff_update'),
