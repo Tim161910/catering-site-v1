@@ -24,7 +24,7 @@ from django.forms import modelformset_factory
 
 logger = logging.getLogger(__name__)
 
-from .models import Recruitment, Applicant, RolePlay, Incident, Event, Staff, Assignment, Role, RolePlayResponse, InterviewSlot
+from .models import Recruitment, Applicant, RolePlay, Incident, Event, Staff, Assignment, Role, RolePlayResponse, InterviewSlot, Task
 from .forms import RecruitmentForm, ApplicantForm, IncidentForm, EventForm, StaffForm, RolePlayForm, RolePlayResponseForm, InterviewSlotForm
 
 @method_decorator(staff_member_required, name='dispatch')
@@ -857,6 +857,10 @@ def create_assignments_from_template(request, event_id):
     Assignment.objects.bulk_create(assignments)
     messages.success(request, f"Created {len(assignments)} assignments from template")
     return redirect('staff:assignment_list', event_id=event_id)
+
+def bamboo_login(request):
+    """Redirect to Django admin login"""
+    return redirect('/admin/login/')
 
 
     

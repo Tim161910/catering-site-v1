@@ -4,7 +4,6 @@ from . import views
 app_name = 'staff'
 
 urlpatterns = [
-    path('login/', views.bamboo_login, name='bamboo_login'),
     path('incident/add/', views.IncidentCreateView.as_view(), name='incident_add'),
     path('', views.staff_dashboard, name='staff_dashboard'),
     path('staff-list/', views.StaffListView.as_view(), name='staff_list'),

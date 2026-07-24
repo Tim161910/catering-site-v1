@@ -859,6 +859,7 @@ def create_assignments_from_template(request, event_id):
     return redirect('staff:assignment_list', event_id=event_id)
 
 
+
     
     
 
