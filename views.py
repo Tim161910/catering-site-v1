@@ -518,24 +518,24 @@ class EventDeleteView(DeleteView):
             return redirect('staff:event_list')
 
 @method_decorator(staff_member_required, name='dispatch')
-class StaffDashboardView(ListView):
-    model = Staff
-    template_name = 'staff/staff_dashboard.html'
-    context_object_name = 'staff_list'
+class TaskListView(ListView):
+    model = Task
+    template_name = 'staff/task_list.html'
+    context_object_name = 'tasks'
+    paginate_by = 20
 
     def get_queryset(self):
-        return Staff.objects.annotate(
-            events_worked=Count('assignments__event', distinct=True),
-            incident_count=Count('incidents'),
-            no_show=Count('incidents', filter=Q(incidents__incident_type='no_show')),
-        ).order_by('-reliability_score')
+        return Task.objects.all()
 
+@method_decorator(staff_member_required, name='dispatch')
+class StaffDashboardView(TemplateView):
+    template_name = 'staff/staff_dashboard.html'
+    
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        today = timezone.now().date()
-        context['upcoming_events'] = Event.objects.filter(start_time__date__gte=today).order_by('start_time')
+        context['staff_list'] = Staff.objects.all()[:5]  # simple query
+        context['upcoming_events'] = Event.objects.all()[:5]
         return context
-        
 
 @method_decorator(staff_member_required, name='dispatch')
 class IncidentCreateView(CreateView):

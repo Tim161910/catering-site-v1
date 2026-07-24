@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.contrib.auth.models import User
-from django.urls import reverse_lazy, reverse
+from django.urls import reverse_lazy
 from django.shortcuts import get_object_or_404, redirect, render
 from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
 from django.utils import timezone
@@ -12,96 +12,20 @@ from django.views import View
 from django.conf import settings
 from django.core.mail import send_mail
 from django.db import transaction
-from django.db.models import Count, Q, ProtectedError, F, Avg, Value, IntegerField
-from django.db.models.functions import TruncMonth, Coalesce
+from django.db.models import Count, Q, ProtectedError
 import csv
 import logging
 import json
-from datetime import datetime, timedelta
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from datetime import datetime
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.utils.decorators import method_decorator
-from  .forms import StaffFilterForm, StaffForm
-from django.http import Http404
-from django.contrib.auth import login, authenticate
-from django.shortcuts import render, redirect
-from django.contrib.auth.forms import AuthenticationForm
+from django.forms import modelformset_factory
 
 logger = logging.getLogger(__name__)
 
-from django import forms
-from .models import Recruitment, Applicant, RolePlay, Incident, Event, Staff, Assignment, Role, RolePlayResponse, InterviewSlot, ApplicantRolePlay, Notification, StaffUpdateRequest, Task
-from .forms import RecruitmentForm, ApplicantForm, IncidentForm, EventForm, StaffForm, StaffProfileForm, RolePlayForm, RolePlayResponseForm, StaffFilterForm
-
-def bamboo_login(request):
-    if request.method == 'POST':
-        form = AuthenticationForm(request, data=request.POST)
-        if form.is_valid():
-            user = form.get_user()
-            login(request, user)
-            # Check if user has staff profile
-            if hasattr(user, 'staff'):
-                return redirect('staff:staff_dashboard')
-            else:
-                messages.error(request, "No staff profile linked to this account")
-                return redirect('staff:bamboo_login')
-        else:
-            messages.error(request, "Invalid username or password")
-    else:
-        form = AuthenticationForm()
-    return render(request, 'staff/bamboo_login.html', {'form': form})
-
-@login_required
-def staff_dashboard(request):
-    try:
-        staff = request.user.staff
-    except Staff.DoesNotExist:
-        return HttpResponse("ERROR: No staff profile linked to user " + request.user.username)
-
-    # Get ALL assignments for debugging
-    all_assignments = Assignment.objects.filter(staff=staff).select_related('event', 'role')
-    assigned_assignments = all_assignments.filter(status='Assigned').order_by('event__start_time')[:5]
-
-    notifications = Notification.objects.filter(user=request.user, is_read=False).order_by('-created_at')[:5]
-    unread_count = notifications.count()
-
-    from django.db.models.functions import TruncMonth
-    from django.db.models import Avg
-    history = staff.incidents.annotate(month=TruncMonth('reported_on')).values('month').annotate(score=Avg('reliability_impact')).order_by('month')[:6]
-    chart_labels = [h['month'].strftime("%b %Y") for h in history if h['month']]
-    chart_data = [round(h['score'] or 0, 1) for h in history]
-    if not chart_labels: chart_labels = ['No Data']; chart_data = [staff.reliability_score]
-
-    context = {
-        'staff': staff,
-        'assignments': assigned_assignments,
-        'username': request.user.username,
-        'staff_id': staff.id,
-        'all_assignments_count': all_assignments.count(),
-        'assigned_count': assigned_assignments.count(),
-        'notifications': notifications,
-        'unread_count': unread_count,
-        'reliability_score': staff.reliability_score,
-        'chart_labels': json.dumps(chart_labels),
-        'chart_data': json.dumps(chart_data),
-    }
-    return render(request, 'staff/dashboard.html', context)
-
-@login_required
-def accept_assignment(request, pk):
-    assignment = get_object_or_404(Assignment, pk=pk, staff=request.user.staff)
-    assignment.status = 'Accepted'
-    assignment.save()
-    messages.success(request, f'You accepted {assignment.event.title}')
-    return redirect('staff_dashboard')
-
-@login_required  
-def decline_assignment(request, pk):
-    assignment = get_object_or_404(Assignment, pk=pk, staff=request.user.staff)
-    assignment.status = 'Declined'
-    assignment.save()
-    messages.warning(request, f'You declined {assignment.event.title}')
-    return redirect('staff_dashboard')
+from .models import Recruitment, Applicant, RolePlay, Incident, Event, Staff, Assignment, Role, RolePlayResponse, InterviewSlot
+from .forms import RecruitmentForm, ApplicantForm, IncidentForm, EventForm, StaffForm, RolePlayForm, RolePlayResponseForm, InterviewSlotForm
 
 @method_decorator(staff_member_required, name='dispatch')
 class RecruitmentApplicantsView(ListView):
@@ -111,21 +35,6 @@ class RecruitmentApplicantsView(ListView):
 
     def get_queryset(self):
         return Applicant.objects.filter(recruitment_id=self.kwargs['recruitment_id'])
-
-@method_decorator(staff_member_required, name='dispatch')
-class RecruitmentCreateView(CreateView):
-    model = Recruitment
-    form_class = RecruitmentForm
-    template_name = 'staff/recruitment_form.html'
-    success_url = reverse_lazy('staff:recruitment_list')
-
-@method_decorator(staff_member_required, name='dispatch')
-class EditRecruitmentView(UpdateView): # you have this in urls
-    model = Recruitment
-    form_class = RecruitmentForm
-    template_name = 'staff/recruitment_form.html'
-    pk_url_kwarg = 'recruitment_id'
-    success_url = reverse_lazy('staff:recruitment_list')
     
 @method_decorator(staff_member_required, name='dispatch')    
 class RecruitmentListView(LoginRequiredMixin, ListView):
@@ -145,8 +54,11 @@ class RecruitmentUpdateView(UpdateView):
     model = Recruitment
     form_class = RecruitmentForm
     template_name = 'staff/recruitment_form.html'
-    pk_url_kwarg = 'recruitment_id'  # add this
     success_url = reverse_lazy('staff:recruitment_list')
+
+    def form_valid(self, form):
+        messages.success(self.request, "Recruitment updated.")
+        return super().form_valid(form)
 
 @method_decorator(staff_member_required, name='dispatch')
 class RecruitmentDeleteView(DeleteView):
@@ -156,23 +68,10 @@ class RecruitmentDeleteView(DeleteView):
 
     def delete(self, request, *args, **kwargs):
         self.object = self.get_object()
-        self.object.status = 'closed' 
+        self.object.is_closed = True  # this is the only change
         self.object.save()
         messages.success(request, "Recruitment closed.")
         return HttpResponseRedirect(self.success_url)
-
-@method_decorator(staff_member_required, name='dispatch')
-class CloseRecruitmentView(View):
-    def post(self, request, recruitment_id):
-        recruitment = get_object_or_404(Recruitment, pk=recruitment_id)
-        recruitment.status = 'closed'
-        recruitment.save()
-        messages.success(request, f"Recruitment for '{recruitment.position}' closed.")
-        return redirect('staff:recruitment_detail', pk=recruitment_id)
-    
-    def get(self, request, recruitment_id):
-        # In case someone clicks it as a link
-        return self.post(request, recruitment_id)
 
 
 @method_decorator(staff_member_required, name='dispatch')
@@ -256,7 +155,7 @@ class ApplicantDeleteView(DeleteView):
 class ExportApplicantsCSVView(View):
     def get(self, request, recruitment_id):
         recruitment = get_object_or_404(Recruitment, pk=recruitment_id)
-        applicants = recruitment.applicants.all()
+        applicants = recruitment.applicant_set.all()
 
         # Apply filters from query params
         status = request.GET.get('status')
@@ -290,8 +189,8 @@ class ExportApplicantsCSVView(View):
 class SendEmailToApplicantsView(View):
     def get(self, request, recruitment_id):
         recruitment = get_object_or_404(Recruitment, pk=recruitment_id)
-        applicants = recruitment.applicants.all()
-        return render(request, 'staff/send_email_form.html', { # changed this
+        applicants = recruitment.applicant_set.all()
+        return render(request, 'staff/send_emails.html', {
             'recruitment': recruitment,
             'applicants': applicants,
             'total': applicants.count()
@@ -304,6 +203,7 @@ class SendEmailToApplicantsView(View):
         applicant_ids = request.POST.getlist('applicant_ids')
         if applicant_ids:
             applicants = applicants.filter(id__in=applicant_ids)
+
 
         emails_sent = 0
         errors = []
@@ -325,212 +225,111 @@ class SendEmailToApplicantsView(View):
                 logger.error(f'Error sending email to {applicant.name} for recruitment {recruitment.position}: {str(e)}')
                 errors.append(f'Error sending email to {applicant.name}: {str(e)}')
 
-        return render(request, 'staff/emails_sent.html', { # render results instead of redirect
-            'recruitment': recruitment,
-            'emails_sent': emails_sent,
-            'errors': errors
-        })       
+        if errors:
+            for err in errors:
+                messages.error(request, err)
+        if emails_sent:
+            messages.success(request, f'Successfully sent {emails_sent} emails.')
+        
+        return redirect('recruitment:detail', pk=recruitment_id)
 
 @method_decorator(staff_member_required, name='dispatch')    
 class ScheduleInterviewsView(View):
     def get(self, request, recruitment_id):
         recruitment = get_object_or_404(Recruitment, pk=recruitment_id)
-        applicants = recruitment.applicants.all()
-        return render(request, 'staff/schedule_interviews.html', {
-            'recruitment': recruitment, 
-            'applicants': applicants, 
-            'errors':[],
-            'scheduled_applicants': []
-        })
+        applicants = recruitment.applicant_set.all()
+        return render(request, 'staff/schedule_interviews.html', {'recruitment': recruitment, 'applicants': applicants, 'errors':[]})
     
     def post(self, request, recruitment_id):
         recruitment = get_object_or_404(Recruitment, pk=recruitment_id)
         all_applicants = recruitment.applicant_set.all()
         applicant_ids = request.POST.getlist('applicant_ids')
-        
-        errors = []
-        scheduled_applicants = []
-        
         if not applicant_ids:
             errors = ["Please select at least one applicant to schedule an interview."]
-        else:
-            applicants = Applicant.objects.filter(id__in=applicant_ids, recruitment_id=recruitment_id)
-            for applicant in applicants:
-                interview_time_str = request.POST.get(f'interview_time_{applicant.id}')
-                if not interview_time_str:
-                    errors.append(f"Please provide an interview time for {applicant.name}.")
+            return render(request, 'staff/schedule_interviews.html', {'recruitment': recruitment, 'applicants': all_applicants, 'errors': errors})
+        
+        applicants = Applicant.objects.filter(id__in=applicant_ids, recruitment_id=recruitment_id)
+        errors = []
+        scheduled_applicants = []
+        for applicant in applicants:
+            interview_time_str = request.POST.get(f'interview_time_{applicant.id}')
+            if not interview_time_str:
+                errors.append(f"Please provide an interview time for {applicant.name}.")
+                continue
+            try:
+                naive_dt = datetime.strptime(interview_time_str, '%Y-%m-%dT%H:%M')
+                aware_dt = timezone.make_aware(naive_dt, timezone.get_current_timezone())
+
+                if aware_dt < timezone.now():
+                    errors.append(f"Interview time for {applicant.name} cannot be in the past")
                     continue
-                try:
-                    naive_dt = datetime.strptime(interview_time_str, '%Y-%m-%dT%H:%M')
-                    aware_dt = timezone.make_aware(naive_dt, timezone.get_current_timezone())
 
-                    if aware_dt < timezone.now():
-                        errors.append(f"Interview time for {applicant.name} cannot be in the past")
-                        continue
+                applicant.interview_time = aware_dt
+                applicant.save()
+                scheduled_applicants.append(applicant.name)
 
-                    applicant.interview_time = aware_dt
-                    applicant.save()
-                    scheduled_applicants.append(applicant.name)
+            except ValueError:
+                errors.append(f"Invalid interview time format for {applicant.name}. Expected format: YYYY-MM-DDTHH:MM")
 
-                except ValueError:
-                    errors.append(f"Invalid interview time format for {applicant.name}. Expected format: YYYY-MM-DDTHH:MM")
-
-        # Always render with full context
-        return render(request, 'staff/schedule_interviews.html', {
-            'recruitment': recruitment, 
-            'applicants': all_applicants, 
-            'errors': errors,
-            'scheduled_applicants': scheduled_applicants
-        })
+        if errors:
+            return render(request, 'staff/schedule_interviews.html', {'recruitment': recruitment, 'applicants': all_applicants, 'errors': errors})
+        messages.success(request, f"Scheduled {len(scheduled_applicants)} interviews.")
+        return render(request, 'staff/interviews_schedule.html', {'recruitment': recruitment, 'scheduled_applicants': scheduled_applicants})
 
 @method_decorator(staff_member_required, name='dispatch')
 class ManageInterviewSlotsView(View):
-    template_name = 'staff/manage_slots.html'
-
     def get(self, request, recruitment_id):
         recruitment = get_object_or_404(Recruitment, pk=recruitment_id)
-        
-        # Get all slots for this recruitment with booking counts
-        slots = InterviewSlot.objects.filter(recruitment=recruitment).annotate(
-            booked_count=Count('applicants'),
-            available=F('capacity') - Count('applicants')
-        ).order_by('date', 'start_time')
+        applicants = recruitment.applicant_set.all()
 
-        context = {
-            'recruitment': recruitment,
-            'slots': slots,
-            'today': timezone.now().date()
-        }
-        return render(request, self.template_name, context)
+        InterviewSlotFormSet = modelformset_factory(
+            InterviewSlot, 
+            form=InterviewSlotForm, 
+            extra=0  # we don't add blank extras, we use initial
+        )
+
+        # Pre-fill formset with one form per applicant
+        formset = InterviewSlotFormSet(
+            queryset=InterviewSlot.objects.filter(applicant__in=applicants),
+            initial=[{'applicant': a} for a in applicants]
+        )
+        return render(request, 'recruitment/manage_slots.html', {'recruitment': recruitment, 'formset': formset})
 
     def post(self, request, recruitment_id):
         recruitment = get_object_or_404(Recruitment, pk=recruitment_id)
+        applicants = recruitment.applicant_set.all()
 
-        date = request.POST.get('date')
-        start_time = request.POST.get('start_time')
-        end_time = request.POST.get('end_time')
-        capacity = request.POST.get('capacity')
+        InterviewSlotFormSet = modelformset_factory(
+            InterviewSlot, 
+            form=InterviewSlotForm, 
+            extra=0
+        )
 
-        # Basic validation
-        if date and start_time and end_time and capacity:
-            InterviewSlot.objects.create(
-                recruitment=recruitment,
-                date=date,
-                start_time=start_time,
-                end_time=end_time,
-                capacity=capacity
-            )
-            messages.success(request, "Interview slot added.")
-        else:
-            messages.error(request, "Please fill all fields.")
-
-        return redirect('staff:manage_interview_slots', recruitment_id=recruitment_id)
-
-class StaffCreateView(CreateView):
-    model = Staff
-    form_class = StaffForm
-    template_name = 'staff/staff_form.html'
-    success_url = '/staff/'
+        formset = InterviewSlotFormSet(request.POST)  # <- fixed this
+        if formset.is_valid():
+            instances = formset.save(commit=False)
+            for instance in instances:
+                instance.save() # make sure applicant is set
+            messages.success(request, "Interview slots updated.")
+            return redirect('recruitment:detail', pk=recruitment_id)
+        
+        return render(request, 'recruitment/manage_slots.html', {'recruitment': recruitment, 'formset': formset})
 
 class StaffListView(LoginRequiredMixin, ListView):
     model = Staff
     template_name = 'staff/staff_list.html'
-    context_object_name = 'staff_list'
-    paginate_by = 20
+    context_object_name = 'staff_members'
 
-    def get_queryset(self):
-        # Don't loop here. Assume score is updated via signal on Incident save
-        qs = Staff.objects.select_related('role').all()
-
-        search = self.request.GET.get('q') # match your template input name
-        role_id = self.request.GET.get('role')
-        reliability = self.request.GET.get('reliability')
-
-        if search:
-            # Can't do icontains on EncryptedCharField. So only search non-encrypted fields
-            qs = qs.filter(
-                Q(name__icontains=search) |
-                Q(email__icontains=search) |
-                Q(role__name__icontains=search)
-            )
-        
-        if role_id:
-            qs = qs.filter(role_id=role_id)
-
-        # Reliability filter
-        if reliability == 'a_team':
-            qs = qs.filter(reliability_score__gte=90)
-        elif reliability == 'good':
-            qs = qs.filter(reliability_score__gte=80, reliability_score__lt=90)
-        elif reliability == 'watch':
-            qs = qs.filter(reliability_score__gte=70, reliability_score__lt=80)
-        elif reliability == 'warning':
-            qs = qs.filter(reliability_score__lt=70)
-
-        return qs.order_by('-reliability_score', 'name')
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['filter_form'] = StaffFilterForm(self.request.GET)
-        context['roles'] = Role.objects.all() # for role dropdown
-        context['staff_count'] = self.get_queryset().count()
-        return context
-    
-    def get(self, request, *args, **kwargs):
-        if request.GET.get('export') == 'csv':
-            return self.export_to_csv()
-        return super().get(request, *args, **kwargs)
-
-    def export_to_csv(self):
-        queryset = self.get_queryset()
-        response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="staff_list.csv"'
-
-        writer = csv.writer(response)
-        writer.writerow(['Name', 'Role', 'Email', 'Phone', 'WhatsApp', 'Reliability', 'Status'])
-        for staff in queryset:
-            writer.writerow([
-                staff.name,
-                staff.role.name if staff.role else '-',
-                staff.email or '-',
-                str(staff.phone) if staff.phone else '-', # cast EncryptedField to str
-                str(staff.whatsapp) if staff.whatsapp else '-',
-                staff.reliability_score,
-                'Active' if staff.is_active else 'Inactive'
-            ])
-        return response
-
-class StaffDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+class StaffCreateView(LoginRequiredMixin, CreateView):
     model = Staff
-    template_name = 'staff/staff_confirm_delete.html'
+    form_class = StaffForm  # change fields to match your Staff model
+    template_name = 'staff/staff_form.html'
     success_url = reverse_lazy('staff:staff_list')
+
+class StaffDetailView(LoginRequiredMixin, DetailView):
+    model = Staff
+    template_name = 'staff/staff_detail.html'
     context_object_name = 'staff'
-
-    def test_func(self):
-        # Only allow staff/superusers to delete
-        return self.request.user.is_staff 
-
-    def handle_no_permission(self):
-        messages.error(self.request, "You don't have permission to delete staff.")
-        return redirect('staff:staff_list')
-
-    def form_valid(self, form):
-        staff = self.get_object()
-        
-        # 1. Safety: don't delete yourself
-        if staff.user == self.request.user:
-            messages.error(self.request, "You cannot delete yourself.")
-            return redirect('staff:staff_list')
-
-        # 2. Safety: don't delete last admin - FIXED
-        if staff.role and staff.role.name.lower() == 'admin':
-            admin_count = Staff.objects.filter(role__name__iexact='admin').count()
-            if admin_count <= 1:
-                messages.error(self.request, "Cannot delete the last admin.")
-                return redirect('staff:staff_list')
-            
-        messages.success(self.request, f"Staff '{staff.name}' deleted successfully.")
-        return super().form_valid(form)
 
 class StaffUpdateView(LoginRequiredMixin, UpdateView):
     model = Staff
@@ -538,37 +337,20 @@ class StaffUpdateView(LoginRequiredMixin, UpdateView):
     template_name = 'staff/staff_form.html'
     success_url = reverse_lazy('staff:staff_list')
 
-class StaffDetailView(DetailView):
+class StaffDeleteView(LoginRequiredMixin, DeleteView):
     model = Staff
-    template_name = 'staff/staff_detail.html'
-    context_object_name = 'staff'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        staff = self.get_object()
-
-        history = staff.incidents.annotate(
-            month=TruncMonth('created_at')
-        ).values('month').annotate(
-            score=Avg('reliability_impact')  # impact should be +5 for good, -10 for no_show etc
-        ).order_by('month')
-
-        # Convert to lists for the chart
-        context['chart_labels'] = [h['month'].strftime("%b %Y") for h in history if h['month']]
-        context['chart_data'] = [round(h['score'] or 0, 1) for h in history]
-        
-        return context
+    template_name = 'staff/staff_confirm_delete.html'
+    success_url = reverse_lazy('staff:staff_list')
 
 class StaffProfileUpdateView(LoginRequiredMixin, UpdateView):
     model = Staff
-    form_class = StaffProfileForm
+    form_class = StaffForm
     template_name = 'staff/staff_profile_form.html'
 
     def get_object(self, queryset=None):
-        return self.request.user.staff
-
-    def get_success_url(self):
-        return reverse('staff:staff_detail', kwargs={'pk': self.object.pk})
+        staff, created = Staff.objects.get_or_create(user=self.request.user)
+        defaults = {'name': self.request.user.get_full_name() or self.request.user.username, 'email': self.request.user.email}
+        return staff
 
 class SuccessView(TemplateView):
     template_name = 'staff/success.html'
@@ -635,43 +417,7 @@ class RolePlayDetailView(DetailView):
 class RolePlayDeleteView(DeleteView):
     model = RolePlay
     template_name = 'staff/role_play_confirm_delete.html'
-
-    def get_success_url(self):
-        # redirect with flag so list page can show toast
-        return f"{reverse('staff:role_play_list')}?deleted=1"
-
-    def post(self, request, *args, **kwargs):
-        try:
-            return super().post(request, *args, **kwargs)
-        except ProtectedError:
-            # if this roleplay has responses linked, prevent delete
-            return redirect(f"{reverse('staff:role_play_list')}?error=protected")
-
-class ApplicantRolePlayForm(forms.ModelForm):
-    class Meta:
-        model = ApplicantRolePlay
-        fields = ('applicant', 'role_play', 'score')
-        widgets = {
-            'applicant': forms.Select(attrs={
-                'class': 'w-full px-3 py-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white'
-            }),
-            'role_play': forms.Select(attrs={
-                'class': 'w-full px-3 py-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white'
-            }),
-            'score': forms.NumberInput(attrs={
-                'class': 'w-full px-3 py-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500',
-                'min': 0,
-                'max': 100,
-                'placeholder': 'Score out of 100'
-            }),
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['applicant'].empty_label = "Select Applicant"
-        self.fields['role_play'].empty_label = "Select Scenario"
-        self.fields['applicant'].queryset = Applicant.objects.all().order_by('name')  # now defined
-        self.fields['role_play'].queryset = RolePlay.objects.all().order_by('title')  # now defined
+    success_url = reverse_lazy('staff:role_play_list')
     
 class EventListView(ListView):
     model = Event
@@ -686,14 +432,13 @@ class EventListView(ListView):
         return Event.objects.filter(start_time__date__gte=today).order_by('start_time')
 
 @method_decorator(staff_member_required, name='dispatch')
-class EventCreateView(LoginRequiredMixin, CreateView):
+class EventCreateView(CreateView):
     model = Event
     form_class = EventForm
     template_name = 'staff/event_form.html'
     success_url = reverse_lazy('staff:event_list')
 
     def form_valid(self, form):
-        
         with transaction.atomic():
             response = super().form_valid(form)
             event = self.object
@@ -704,7 +449,7 @@ class EventCreateView(LoginRequiredMixin, CreateView):
                 return response
             
             role_ids = list(role_counts.keys())
-            roles = {str(role.id): role for role in Role.objects.filter(id__in=role_ids)}
+            roles = {str(role.id): role for role in Role.objects.filter(id__in=role_ids)} # 1 query to fetch all roles at once
 
             assignments = []
             duty_num = 1
@@ -719,14 +464,14 @@ class EventCreateView(LoginRequiredMixin, CreateView):
                             event=event,
                             duty_number=duty_num,
                             role=role_obj,
-                            status='unassigned', # 👈 FIX 1: should be 'unassigned' not 'assigned' since staff=None
+                            status='assigned',
                             staff=None  # Initially unassigned
                         )
                     )
                     duty_num += 1
+            # Additional logic can be added here if needed
 
             Assignment.objects.bulk_create(assignments)
-            
             messages.success(self.request, f'Created "{event.title}" with {len(assignments)} duty slots. Ready for auto-fill')
             return response
 
@@ -736,59 +481,6 @@ class EventUpdateView(LoginRequiredMixin, UpdateView):
     form_class = EventForm
     template_name = 'staff/event_form.html'  # re-use the same form
     success_url = reverse_lazy('staff:event_list')
-
-    def get_form_kwargs(self):
-     
-        kwargs = super().get_form_kwargs()
-        kwargs['instance'] = self.get_object()
-        return kwargs
-
-    def form_valid(self, form):
-        with transaction.atomic():
-            event = self.object
-    
-            old_assignments = list(event.assignments.all())
-            old_count = len(old_assignments)
-
-            response = super().form_valid(form)
-            
-            new_role_counts = form.get_role_counts()
-
-            event.assignments.filter(staff__isnull=True).delete()
-
-            assigned_counts = {}
-            for a in event.assignments.filter(staff__isnull=False):
-                assigned_counts[a.role_id] = assigned_counts.get(a.role_id, 0) + 1
-
-            roles = {str(role.id): role for role in Role.objects.filter(id__in=new_role_counts.keys())}
-            
-            assignments_to_create = []
-            duty_num = event.assignments.count() + 1 # continue numbering
-
-            for role_id, target_count in new_role_counts.items():
-                role_obj = roles.get(str(role_id))
-                if not role_obj: continue
-
-                already_assigned = assigned_counts.get(int(role_id), 0)
-                needed = target_count - already_assigned # only create the difference
-
-                for _ in range(max(0, needed)):
-                    assignments_to_create.append(
-                        Assignment(
-                            event=event,
-                            duty_number=duty_num,
-                            role=role_obj,
-                            status='unassigned',
-                            staff=None
-                        )
-                    )
-                    duty_num += 1
-            
-            Assignment.objects.bulk_create(assignments_to_create)
-
-            new_total = event.assignments.count()
-            messages.success(self.request, f'Updated "{event.title}". Duties: {old_count} → {new_total}')
-            return response
 
 class EventDetailView(DetailView):
     model = Event
@@ -816,99 +508,52 @@ class EventDetailView(DetailView):
 class EventDeleteView(DeleteView):
     model = Event
     template_name = 'staff/event_confirm_delete.html'
-
-    def get_success_url(self):
-        # redirect with flag so list page can show toast
-        return f"{reverse('staff:event_list')}?deleted=1"
+    success_url = reverse_lazy('staff:event_list')
 
     def post(self, request, *args, **kwargs):
         try:
             return super().post(request, *args, **kwargs)
         except ProtectedError:
-            # redirect with error flag instead of messages
-            return redirect(f"{reverse('staff:event_list')}?error=protected")
+            messages.error(request, "Can't delete event. It has assignments linked to it.")
+            return redirect('staff:event_list')
 
+@method_decorator(staff_member_required, name='dispatch')
 class TaskListView(ListView):
     model = Task
     template_name = 'staff/task_list.html'
     context_object_name = 'tasks'
-    paginate_by = 20  # optional
+    paginate_by = 20
 
     def get_queryset(self):
-        # Show all tasks. You can filter by user later if you want
         return Task.objects.all()
 
 @method_decorator(staff_member_required, name='dispatch')
-class StaffDashboardView(ListView):
-    model = Staff
-    template_name = 'admin/risk_dashboard.html'  # <-- fixed
-    context_object_name = 'staff_list'
-
-    def get_queryset(self):
-        qs = Staff.objects.annotate(
-            events_worked=Count('assignments__event', distinct=True),
-            incident_count=Count('incidents'),
-            no_show=Count('incidents', filter=Q(incidents__incident_type='no_show')),
-            reliability_score_safe=Coalesce('reliability_score', Value(0), output_field=IntegerField())
-        )
-
-        status = self.request.GET.get('status')
-        q = self.request.GET.get('q')
-        sort = self.request.GET.get('sort')
-
-        if status == 'A-Team':
-            qs = qs.filter(reliability_score_safe__gte=90)
-        elif status == 'Standard':
-            qs = qs.filter(reliability_score_safe__gte=60, reliability_score_safe__lt=90)
-        elif status == 'Warning':
-            qs = qs.filter(reliability_score_safe__lt=60)
-
-        if q:
-            qs = qs.filter(
-                Q(name__icontains=q) |
-                Q(role__name__icontains=q) |
-                Q(email__icontains=q) |
-                Q(phone__icontains=q)
-            )
-
-        if sort == 'score':
-            qs = qs.order_by('-reliability_score_safe')
-        elif sort == 'events':
-            qs = qs.order_by('-events_worked')
-        elif sort == 'incidents':
-            qs = qs.order_by('-incident_count')
-        else:
-            qs = qs.order_by('-reliability_score_safe')
-
-        return qs
-
+class StaffDashboardView(TemplateView):
+    template_name = 'staff/staff_dashboard.html'
+    
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        today = timezone.now().date()
-        context['upcoming_events'] = Event.objects.filter(start_time__date__gte=today).order_by('start_time')
-        context['risky_staff'] = Staff.objects.filter(reliability_score__lt=80).order_by('reliability_score')
+        context['staff_list'] = Staff.objects.all()[:5]  # simple query
+        context['upcoming_events'] = Event.objects.all()[:5]
         return context
-    
+
 @method_decorator(staff_member_required, name='dispatch')
 class IncidentCreateView(CreateView):
     model = Incident
     form_class = IncidentForm
     template_name = 'staff/incident_form.html'
+    success_url = reverse_lazy('staff:staff_dashboard')
 
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        # match the ?staff=1 from staff_detail.html button
-        kwargs['staff_id'] = self.request.GET.get('staff')  
-        return kwargs
-
-    def get_success_url(self):
-        # redirect back to the staff profile instead of dashboard
-        return reverse('staff:staff_detail', kwargs={'pk': self.object.staff.pk})
+    def get_initial(self):
+        initial = super().get_initial()
+        staff_id = self.request.GET.get('staff_id')
+        if staff_id:
+            initial['staff'] = get_object_or_404(Staff, pk=staff_id)
+        return initial
     
 @require_POST
 @csrf_exempt
 @login_required
-@staff_member_required
 def create_assignment(request, pk):
     """
     AJAX endpoint to create an assignment for a specific event.
@@ -923,20 +568,15 @@ def create_assignment(request, pk):
         if not staff_id or not role_id or not duty_number:
             return JsonResponse({'success': False, 'error': 'Staff, Role and Duty Number are required.'}, status=400)
 
-        # Prevent double booking same staff on same duty
         if Assignment.objects.filter(event=event, staff_id=staff_id, status='assigned', duty_number=duty_number).exists():
             return JsonResponse({'success': False, 'error': 'Staff already assigned to this duty number.'}, status=400)
 
-        # Prevent same duty_number + role having 2 people
-        if Assignment.objects.filter(event=event, role_id=role_id, duty_number=duty_number, status='assigned').exists():
-            return JsonResponse({'success': False, 'error': 'This duty slot is already filled.'}, status=400)
-
-        role_obj = get_object_or_404(Role, id=role_id)
+        role_obj = get_object_or_404(Role, id=role_id) # get Role object based on role_id
         assignment = Assignment.objects.create(
             event=event,
             staff_id=staff_id,
             duty_number=duty_number,
-            role=role_obj,
+            role=role_obj, # pass Role object
             status='assigned'
         )
 
@@ -946,14 +586,11 @@ def create_assignment(request, pk):
             'role_name': role_obj.name,
             'duty_number': assignment.duty_number
         })
-    except json.JSONDecodeError:
-        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=400)  
-
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+        
 @require_POST
 @login_required
-@staff_member_required
 @csrf_exempt
 def reassign_assignment(request, assignment_id):
     try:
@@ -961,45 +598,34 @@ def reassign_assignment(request, assignment_id):
         new_staff_id = data.get('new_staff_id')
         reason = data.get('reason', '').strip()
 
-        if not new_staff_id:
-            return JsonResponse({'success': False, 'error': 'No staff selected'}, status=400)
+        old_assignment = get_object_or_404(Assignment, id=assignment_id, status='assigned')
 
-        old_assignment = get_object_or_404(Assignment, id=assignment_id)
-
-        if old_assignment.status == 'dropped':
-            return JsonResponse({'success': False, 'error': 'This assignment was already dropped'}, status=400)
-
-        # Check if new staff is already assigned to THIS event on ANY duty
         if old_assignment.event.assignments.filter(staff_id=new_staff_id, status='assigned').exists():
             return JsonResponse({'success': False, 'error': 'Staff already assigned to this event'}, status=400)
 
-        with transaction.atomic():
-            # Drop old assignment
-            old_assignment.status = 'dropped'
-            old_assignment.reassignment_reason = reason
-            old_assignment.save(update_fields=['status', 'reassignment_reason'])
+        # Drop old assignment and reason
+        old_assignment.status = 'dropped'
+        old_assignment.reassignment_reason = reason
+        old_assignment.save(update_fields=['status', 'reassignment_reason'])
 
-            # Create new assignment for same duty
-            new_assignment = Assignment.objects.create(
-                event=old_assignment.event,
-                staff_id=new_staff_id,
-                duty_number=old_assignment.duty_number,
-                role=old_assignment.role, 
-                status='assigned'
-            )
+        # Create new assignment for same duty
+        new_assignment = Assignment.objects.create(
+            event=old_assignment.event,
+            staff_id=new_staff_id,
+            duty_number=old_assignment.duty_number,
+            role=old_assignment.role, 
+            status='assigned'
+        )
 
         return JsonResponse({
             'success': True,
-            'new_staff': new_assignment.staff.name or new_assignment.staff.email,
+            'new_staff': new_assignment.staff.name,
             'duty': new_assignment.duty_number
         })
-    except json.JSONDecodeError:
-        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
 @login_required
-@staff_member_required
 @require_POST
 def replace_staff(request, assignment_id):
     assignment = get_object_or_404(Assignment, id=assignment_id)
@@ -1009,11 +635,8 @@ def replace_staff(request, assignment_id):
         return JsonResponse({'success': False, 'error': 'No staff selected'}, status=400)
     
     new_staff = get_object_or_404(Staff, id=new_staff_id)
-    
-    # Check if staff already assigned to this event
     if assignment.event.assignments.filter(staff=new_staff, status='assigned').exists():
         return JsonResponse({'success': False, 'error': 'Staff already assigned to this event'}, status=400)
-    
     old_staff_name = assignment.staff.name if assignment.staff else 'Empty'
 
     assignment.staff = new_staff
@@ -1021,11 +644,10 @@ def replace_staff(request, assignment_id):
     assignment.reassigned_at = timezone.now()
     assignment.reassigned_by = request.user
     assignment.reassignment_reason = request.POST.get('reason', 'Replaced via dashboard')
-    assignment.save(update_fields=['staff', 'status', 'reassigned_at', 'reassigned_by', 'reassignment_reason'])
+    assignment.save()
 
     return JsonResponse({
         'success': True,
-        'old_staff': old_staff_name,
         'new_staff': new_staff.name,
         'new_score': new_staff.reliability_score
     })
@@ -1039,71 +661,7 @@ class AssignmentListView(ListView):
     def get_queryset(self):
         event_id = self.kwargs['event_id']
         return Assignment.objects.filter(event_id=event_id).select_related('staff', 'role')
-
-@login_required
-@staff_member_required
-def assign_staff(request, assignment_id):
-    assignment = get_object_or_404(Assignment, id=assignment_id)
-    event = assignment.event
     
-    if request.method == 'POST':
-        staff_id = request.POST.get('staff')
-        if not staff_id:
-            messages.error(request, 'Please select a staff member')
-        else:
-            assignment.staff_id = staff_id
-            assignment.status = 'assigned'
-            assignment.save()
-            
-            messages.success(request, f'Staff assigned to {assignment.role.name}')
-            
-            # Create in-app notification for the assigned staff
-            assignment_link = reverse('staff:assignment_list', args=[event.id])
-            Notification.objects.create(
-                user=assignment.staff.user,
-                message=f"You've been assigned as {assignment.role.name} for '{event.title}'",
-                related_event=event,
-                related_assignment=assignment
-            )
-
-            # NEW: Send email to staff
-            try:
-                event_time = timezone.localtime(event.start_time).strftime("%A, %b %d at %I:%M %p") # shows Lagos time
-                send_mail(
-                    subject=f'New Assignment: {event.title}',
-                    message=f'''Hi {assignment.staff.name},
-
-You have been assigned as {assignment.role.name} for "{event.title}"
-
-Date: {event_time}
-Location: {event.location}
-
-Please log in to your dashboard to Accept or Decline.
-{request.build_absolute_uri(assignment_link)}
-
-Best,
-Bamboo Staff Team
-''',
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[assignment.staff.email],
-                    fail_silently=False
-                )
-            except Exception as e:
-                logger.error(f"Failed to send assignment email to {assignment.staff.email}: {e}")
-            
-            return redirect('staff:assignment_list', event_id=event.id)
-    
-    # staff already assigned to this event
-    assigned_staff_ids = event.assignments.values_list('staff_id', flat=True)
-    available_staff = Staff.objects.filter(is_active=True).exclude(id__in=assigned_staff_ids)
-    
-    context = {
-        'assignment': assignment,
-        'event': event,
-        'available_staff': available_staff,
-    }
-    return render(request, 'staff/assign_staff.html', context)
-
 @login_required
 @staff_member_required
 def event_status(request):
@@ -1114,7 +672,7 @@ def event_status(request):
 
     today = timezone.now().date()
 
-    # Dashboard card stats
+    # Dashboard card stats - use start_time__date instead of date
     total_events = Event.objects.count()
     upcoming_events = Event.objects.filter(start_time__date__gte=today).count()
     past_events = Event.objects.filter(start_time__date__lt=today).count()
@@ -1123,12 +681,13 @@ def event_status(request):
         start_time__month=today.month
     ).count()
 
+
     print(f">>> Total events from DB: {total_events}")
     print(f">>> Upcoming: {upcoming_events}, Past: {past_events}, This Month: {this_month}")
 
     event_data = []
 
-    # Get Upcoming events with assignments
+    # Get Upcoming events with assignments - order by start_time
     events = Event.objects.filter(start_time__date__gte=today).prefetch_related(
         'assignments__staff',
         'assignments__role'
@@ -1137,87 +696,63 @@ def event_status(request):
     for event in events:
         duties = []
         at_risk = 0
-        empty = 0
-        ok = 0
 
-        # Include ALL assignments 
-        assignments = event.assignments.all() 
-        # FIX: Only count staff who actually Accepted
-        assigned_staff_ids = assignments.filter(status='Accepted').values_list('staff_id', flat=True)
+        assignments = event.assignments.filter(status='assigned')
+        assigned_staff_ids = assignments.values_list('staff_id', flat=True)
 
         for a in assignments:
-            if a.staff and a.status == 'Accepted': # also check status here
-                score = getattr(a.staff, 'reliability_score', 100)
-                staff_name = a.staff.name or a.staff.email
-            elif a.staff and a.status == 'Declined':
-                score = 0
-                staff_name = f"{a.staff.name} (Declined)" # show they declined
-                empty += 1 # treat as empty slot
-            else:
-                score = 0
-                staff_name = None
-                empty += 1
+            score = getattr(a.staff, 'reliability_score', 100)
 
             if score < 50:
-                status = 'critical'
+                status = 'Critical'
                 at_risk += 1
             elif score < 75:
-                status = 'warning'
+                status = 'Warning'
                 at_risk += 1
             else:
-                status = 'ok'
-                if a.staff and a.status == 'Accepted':
-                    ok += 1
+                status = 'OK'
 
             if a.role:
                 replacements = Staff.objects.filter(
-                    role=a.role, 
-                    is_active=True,
+                    role=a.role, # FIXED: use the Role object, not .name
+                    is_active= True,
                     reliability_score__gte=90
                 ).exclude(
                     id__in=assigned_staff_ids
                 ).order_by('-reliability_score')[:5]
-                # format for template
-                candidates = [{'id': s.id, 'name': s.name or s.email, 'score': s.reliability_score} for s in replacements]
             else:
-                candidates = []
+                replacements = Staff.objects.none()  # No role, so no replacement
 
             duties.append({
                 'assignment_id': a.id,
-                'index': a.duty_number,
-                'staff': staff_name,
+                'duty_number': a.duty_number,
+                'staff': a.staff,
                 'role': a.role.name if a.role else 'No Role',
                 'score': score,
                 'status': status,
-                'candidates': candidates,  
-                'conflicts': [] 
+                'replacements': replacements
             })
 
-        event_data.append({
-            'id': event.id,
-            'title': event.title,
-            'date': event.start_time,
-            'location': event.location,
-            'duties': duties,
-            'total_duties': len(duties),
-            'at_risk': at_risk,
-            'empty': empty,
-            'ok': ok,
-        })
+        if duties:
+            event_data.append({
+                'event': event,
+                'duties': duties,
+                'total_duties': len(duties),
+                'at_risk': at_risk
+            })
 
-    stats = {
-        'total_events': total_events,
-        'upcoming': upcoming_events,
-        'this_month': this_month,
-        'past': past_events,
-    }
+    recent_events = Event.objects.order_by('-start_time')[:5]
 
     context = {
-        'stats': stats,
+        'total_events': total_events,
+        'upcoming_events': upcoming_events,
+        'this_month': this_month,
+        'past_events': past_events,
+        'recent_events': recent_events,
         'events': event_data
     }
     return render(request, 'staff/event_status.html', context)
-
+    
 @login_required
 def auto_fill_roster(request, event_id):
     event = get_object_or_404(Event, id=event_id)
@@ -1225,7 +760,7 @@ def auto_fill_roster(request, event_id):
     # Find empty or dropped assignments
     empty_assignments = event.assignments.filter(
         Q(staff__isnull=True) | Q(status='dropped')
-    ).select_related('role', 'event')
+    ).select_related('role')
 
     filled_count = 0
     skipped_roles = []
@@ -1248,65 +783,26 @@ def auto_fill_roster(request, event_id):
             assign.status = 'assigned'
             assign.save()
             filled_count += 1
-
-            # Send email + in-app notification to auto-assigned staff
-            try:
-                event_time = timezone.localtime(event.start_time).strftime("%A, %b %d at %I:%M %p")
-                assignment_link = reverse('staff:staff_dashboard')
-                
-                # 1. In-app notification
-                Notification.objects.create(
-                    user=candidate.user,
-                    message=f"You've been auto-assigned as {assign.role.name} for '{event.title}'",
-                    related_event=event,
-                    related_assignment=assign
-                )
-
-                # 2. Email notification
-                send_mail(
-                    subject=f'Auto-Assignment: {event.title}',
-                    message=f'''Hi {candidate.name},
-
-The system has assigned you as {assign.role.name} for "{event.title}"
-
-Date: {event_time}
-Location: {event.location}
-
-Please log in to Accept or Decline this assignment:
-{request.build_absolute_uri(assignment_link)}
-
-Best,
-Bamboo Staff Team
-''',
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[candidate.email],
-                    fail_silently=False
-                )
-            except Exception as e:
-                logger.error(f"Failed to notify auto-assigned staff {candidate.email}: {e}")
-
         else:
             if assign.role and assign.role.name not in skipped_roles:
                 skipped_roles.append(assign.role.name)
 
-    # Only 1 set of messages here
     if filled_count:
         messages.success(request, f"Auto-filled {filled_count} duties for {event.title}.")
     if skipped_roles:
-        messages.warning(request, f"No available staff for roles: {', '.join(skipped_roles)}")
+        messages.warning(request, f"No available staff for roles: {','.join(skipped_roles)}")
     if not filled_count and not skipped_roles:
         messages.info(request, f"{event.title} has no empty duties to fill.")
 
-    request.session['last_auto_fill'] = timezone.now().isoformat()
     return redirect('staff:event_status')
 
-@staff_member_required
+
 def auto_fill_event(event):
     """Auto-fill empty or dropped assignments for a single Event instance.
     Returns the number of duties filled."""
     empty_assignments = event.assignments.filter(
         Q(staff__isnull=True) | Q(status='dropped')
-    ).select_related('role', 'event')  # added 'event' to avoid extra query
+    ).select_related('role')
 
     filled_count = 0
     for assign in empty_assignments:
@@ -1326,80 +822,17 @@ def auto_fill_event(event):
             assign.save()
             filled_count += 1
 
-            # Notify auto-assigned staff
-            try:
-                event_time = timezone.localtime(event.start_time).strftime("%A, %b %d at %I:%M %p")
-                assignment_link = reverse('staff:staff_dashboard')
-                
-                # 1. In-app notification
-                Notification.objects.create(
-                    user=candidate.user,
-                    message=f"You've been auto-assigned as {assign.role.name} for '{event.title}'",
-                    related_event=event,
-                    related_assignment=assign
-                )
-
-                # 2. Email notification
-                send_mail(
-                    subject=f'Auto-Assignment: {event.title}',
-                    message=f'''Hi {candidate.name},
-
-The system has assigned you as {assign.role.name} for "{event.title}"
-
-Date: {event_time}
-Location: {event.location}
-
-Please log in to Accept or Decline:
-{assignment_link}
-
-Best,
-Bamboo Staff Team
-''',
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[candidate.email],
-                    fail_silently=False
-                )
-            except Exception as e:
-                logger.error(f"Failed to notify auto-assigned staff {candidate.email}: {e}")
-
     return filled_count
-
-@staff_member_required
-def auto_fill_event_view(request, event_id):
-    """Called from the Auto-Fill button on each event card"""
-    event = get_object_or_404(Event, id=event_id)
-    filled = auto_fill_event(event)  # reuse your existing helper
-
-    if filled > 0:
-        messages.success(request, f"Auto-filled {filled} duties for {event.title}")
-    else:
-        messages.info(request, f"No empty duties found or no available staff for {event.title}")
-        
-    return redirect('staff:event_status')
 
 @staff_member_required
 def auto_fill_all_events(request):
     today = timezone.now().date()
     events = Event.objects.filter(start_time__date__gte=today)
-    
     total_filled = 0
-    events_updated = 0
-    
     for event in events:
-        filled = auto_fill_event(event)  # make sure this helper exists and returns int
-        if filled > 0:
-            events_updated += 1
+        filled = auto_fill_event(event)
         total_filled += filled
-
-    # Better messaging
-    if total_filled > 0:
-        messages.success(request, f"Bulk auto-fill complete. {total_filled} duties filled across {events_updated} events.")
-    else:
-        messages.info(request, "No empty duties found to auto-fill.")
-
-    # Save timestamp for the template
-    request.session['last_auto_fill'] = timezone.now().isoformat()
-    
+    messages.success(request, f"Auto-filled all upcoming events")
     return redirect('staff:event_status')
 
 @staff_member_required
@@ -1411,11 +844,7 @@ def create_assignments_from_template(request, event_id):
         messages.error(request, "No template provided")
         return redirect('staff:assignment_list', event_id=event_id)
 
-    try:
-        role_counts = json.loads(template)  # expects {"1": 2, "3": 1} = role_id: count
-    except json.JSONDecodeError:
-        messages.error(request, "Invalid template format")
-        return redirect('staff:assignment_list', event_id=event_id)
+    role_counts = json.loads(template)  # expects {"1": 2, "3": 1} = role_id: count
     
     assignments = []
     duty_num = event.assignments.count() + 1
@@ -1425,144 +854,21 @@ def create_assignments_from_template(request, event_id):
             assignments.append(Assignment(event=event, role=role, duty_number=duty_num, status='assigned'))
             duty_num += 1
     
-    if assignments:
-        Assignment.objects.bulk_create(assignments)
-        messages.success(request, f"Created {len(assignments)} assignments from template")
-    else:
-        messages.warning(request, "Template had no roles")
-
+    Assignment.objects.bulk_create(assignments)
+    messages.success(request, f"Created {len(assignments)} assignments from template")
     return redirect('staff:assignment_list', event_id=event_id)
 
-@staff_member_required
-@require_POST
-@csrf_exempt
-def update_assignment_role(request, assignment_id):
-    """
-    AJAX endpoint to update the role for an assignment
-    """
-    try:
-        data = json.loads(request.body)
-        new_role_id = data.get('role_id')
 
-        if not new_role_id:
-            return JsonResponse({'success': False, 'error': 'No role_id provided'}, status=400)
+    
+    
 
-        assignment = get_object_or_404(Assignment, id=assignment_id)
-        new_role = get_object_or_404(Role, id=new_role_id, is_active=True) # only allow active roles
+    
 
-        if assignment.role_id == new_role_id:
-            return JsonResponse({'success': True, 'role_name': new_role.name, 'message': 'No change'})
+    
+        
+     
+    
+    
 
-        assignment.role = new_role
-        assignment.save(update_fields=['role']) # only update role field
 
-        return JsonResponse({
-            'success': True,
-            'role_name': new_role.name
-        })
-    except json.JSONDecodeError:
-        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
-def apply_to_recruitment(request, recruitment_id):
-    recruitment = get_object_or_404(Recruitment, pk=recruitment_id, status='open')
-
-    if request.method == 'POST':
-        form = ApplicantForm(request.POST, request.FILES)
-        if form.is_valid():
-            applicant = form.save(commit=False)
-            applicant.recruitment = recruitment
-            applicant.save()
-            messages.success(request, f"Application submitted for {recruitment.position}!")
-            return redirect('staff:recruitment_detail', recruitment_id=recruitment_id)
-    else:
-        form = ApplicantForm()
-
-    return render(request, 'staff/application_form.html', {
-        'form': form, 
-        'recruitment': recruitment
-    })
-
-class SlotApplicantsView(View):
-    def get(self, request, slot_id):
-        slot = get_object_or_404(InterviewSlot, pk=slot_id)
-        applicants = slot.applicants.all()  # use slot.applications.all() if you set related_name
-        return render(request, 'staff/slot_applicants.html', {'slot': slot, 'applicants': applicants})
-
-class DeleteSlotView(View):
-    def get(self, request, slot_id):
-        slot = get_object_or_404(InterviewSlot, pk=slot_id)
-        recruitment_id = slot.recruitment.id
-        slot.delete()
-        messages.success(request, "Interview slot deleted.")
-        return redirect('staff:manage_interview_slots', recruitment_id=recruitment_id)
-
-@method_decorator(staff_member_required, name='dispatch')
-class ExportStaffCSVView(View):
-    def get(self, request):
-        # Reuse the same filtering logic from StaffDashboardView
-        qs = Staff.objects.annotate(
-            events_worked=Count('assignments__event', distinct=True),
-            incident_count=Count('incidents'),
-            no_show=Count('incidents', filter=Q(incidents__incident_type='no_show')),
-        )
-
-        # Apply same filters as dashboard
-        status = request.GET.get('status')
-        q = request.GET.get('q')
-        sort = request.GET.get('sort')
-
-        if status == 'A-Team':
-            qs = qs.filter(reliability_score__gte=90)
-        elif status == 'Standard':
-            qs = qs.filter(reliability_score__gte=60, reliability_score__lt=90)
-        elif status == 'Warning':
-            qs = qs.filter(reliability_score__lt=60)
-
-        if q:
-            qs = qs.filter(Q(name__icontains=q) | Q(role__icontains=q))
-
-        if sort == 'score':
-            qs = qs.order_by('-reliability_score')
-        elif sort == 'events':
-            qs = qs.order_by('-events_worked')
-        elif sort == 'incidents':
-            qs = qs.order_by('-incident_count')
-
-        # Create CSV response
-        response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="staff_report.csv"'
-
-        writer = csv.writer(response)
-        writer.writerow(['Name', 'Role', 'Events', 'Incidents', 'No Shows', 'Reliability Score', 'Status'])
-
-        for staff in qs:
-            status = (
-                'A-Team' if staff.reliability_score >= 90 
-                else 'Standard' if staff.reliability_score >= 60 
-                else 'Warning'
-            )
-            writer.writerow([
-                staff.name,
-                staff.role,
-                staff.events_worked,
-                staff.incident_count,
-                staff.no_show,
-                f'{staff.reliability_score}%',
-                status
-            ])
-        return response
-
-@require_POST
-@login_required
-def mark_notification_read(request, notification_id):
-    notification = get_object_or_404(Notification, id=notification_id, user=request.user)
-    notification.is_read = True
-    notification.save()
-    return JsonResponse({'success': True})
-
-@login_required
-def mark_all_notifications_read(request):
-    request.user.notifications.filter(is_read=False).update(is_read=True)
-    return redirect(request.META.get('HTTP_REFERER', reverse('staff:event_list')))
