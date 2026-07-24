@@ -858,9 +858,7 @@ def create_assignments_from_template(request, event_id):
     messages.success(request, f"Created {len(assignments)} assignments from template")
     return redirect('staff:assignment_list', event_id=event_id)
 
-def bamboo_login(request):
-    """Redirect to Django admin login"""
-    return redirect('/admin/login/')
+
 
 
     

@@ -61,6 +61,18 @@ class RecruitmentUpdateView(UpdateView):
         return super().form_valid(form)
 
 @method_decorator(staff_member_required, name='dispatch')
+class RecruitmentCreateView(LoginRequiredMixin, CreateView):
+    model = Recruitment
+    form_class = RecruitmentForm
+    template_name = 'staff/recruitment_form.html'
+    success_url = reverse_lazy('staff:recruitment_list')
+
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        messages.success(self.request, "Recruitment created.")
+        return super().form_valid(form)
+
+@method_decorator(staff_member_required, name='dispatch')
 class RecruitmentDeleteView(DeleteView):
     model = Recruitment
     success_url = reverse_lazy('staff:recruitment_list')
