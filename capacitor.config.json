@@ -1,0 +1,9 @@
+{
+  "appId": "com.bamboo.staff",
+  "appName": "Bamboo Staff",
+  "webDir": "staticfiles",
+  "server": {
+    "url": "https://catering-app-rnam.onrender.com",
+    "cleartext": true
+  }
+}
