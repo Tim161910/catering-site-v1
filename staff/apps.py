@@ -8,7 +8,8 @@ class StaffConfig(AppConfig):
     def ready(self):
         import staff.signals  # keep this for reliability auto-update
         
-        if os.environ.get('RENDER'):
+        # Only create superuser when running the server, not during migrate/collectstatic
+        if os.environ.get('RENDER') and os.environ.get('RUN_MAIN') == 'true':
             from django.contrib.auth import get_user_model
             User = get_user_model()
             
@@ -22,10 +23,8 @@ class StaffConfig(AppConfig):
             )
             
             if created:
-                # Only set password if we just created the user
                 user.set_password(password)
                 user.save()
                 print(f"Superuser {username} created with password")
             else:
-                # User already exists. Do nothing so we don't overwrite their password
                 print(f"Superuser {username} already exists. Skipping password reset.")
