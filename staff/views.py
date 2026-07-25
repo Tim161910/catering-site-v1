@@ -364,6 +364,31 @@ class StaffProfileUpdateView(LoginRequiredMixin, UpdateView):
         defaults = {'name': self.request.user.get_full_name() or self.request.user.username, 'email': self.request.user.email}
         return staff
 
+@method_decorator([login_required, staff_member_required], name='dispatch')
+class ExportStaffCSVView(View):
+    """
+    Export staff list to CSV
+    """
+    def get(self, request):
+        response = HttpResponse(content_type='text/csv; charset=utf-8')
+        response['Content-Disposition'] = 'attachment; filename="staff_export.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow(['Name', 'Role', 'Reliability Score', 'Phone', 'Email', 'Active'])
+
+        staff = Staff.objects.all().select_related('role')
+        for s in staff:
+            writer.writerow([
+                s.name, 
+                s.role.name if hasattr(s, 'role') and s.role else '', 
+                getattr(s, 'reliability_score', 100),
+                getattr(s, 'phone', ''),
+                getattr(s, 'email', ''),
+                'Yes' if s.is_active else 'No'
+            ])
+
+        return response
+
 class SuccessView(TemplateView):
     template_name = 'staff/success.html'
 
@@ -677,7 +702,92 @@ class AssignmentListView(ListView):
 @login_required
 @staff_member_required
 def event_status(request):
-    return HttpResponse("Staff page is LIVE. Backend connected ✅")
+    """
+    Admin dashboard showing event staffing risks and replacement options
+    """
+    print(">>>NEW EVENT_STATUS IS RUNNING")
+
+    today = timezone.now().date()
+
+    # Dashboard card stats - MUST match template: stats.total_events etc
+    stats = {
+        'total_events': Event.objects.count(),
+        'upcoming': Event.objects.filter(start_time__date__gte=today).count(),
+        'past': Event.objects.filter(start_time__date__lt=today).count(),
+        'this_month': Event.objects.filter(
+            start_time__year=today.year,
+            start_time__month=today.month
+        ).count(),
+    }
+
+    event_data = []
+    events = Event.objects.filter(start_time__date__gte=today).prefetch_related(
+        'assignments__staff',
+        'assignments__role'
+    ).order_by('start_time')
+
+    for event in events:
+        duties = []
+        at_risk = 0
+        empty = 0
+        assignments = event.assignments.filter(status='assigned')
+        assigned_staff_ids = assignments.values_list('staff_id', flat=True)
+
+        for a in assignments:
+            if a.staff is None:
+                score = 0
+                status = 'warning'  # lowercase to match template
+                empty += 1
+            else:
+                score = getattr(a.staff, 'reliability_score', 100)
+                if score < 50:
+                    status = 'critical'  # lowercase
+                    at_risk += 1
+                elif score < 75:
+                    status = 'warning'   # lowercase
+                    at_risk += 1
+                else:
+                    status = 'ok'        # lowercase
+
+            if a.role:
+                replacements = Staff.objects.filter(
+                    role=a.role,
+                    is_active=True,
+                    reliability_score__gte=90
+                ).exclude(id__in=assigned_staff_ids).order_by('-reliability_score')[:5]
+            else:
+                replacements = Staff.objects.none()
+
+            duties.append({
+                'assignment_id': a.id,
+                'index': a.duty_number,
+                'staff': a.staff.name if a.staff else None,
+                'role': a.role.name if a.role else 'No Role',
+                'score': score,
+                'status': status,
+                'candidates': replacements
+            })
+
+        event_data.append({
+            'id': event.id,
+            'title': event.title,
+            'date': event.start_time,
+            'location': event.location,
+            'duties': duties,
+            'total_duties': len(duties),
+            'at_risk': at_risk,
+            'empty': empty,
+            'ok': len(duties) - at_risk - empty
+        })
+
+    recent_events = Event.objects.order_by('-start_time')[:5]
+
+    context = {
+        'stats': stats,  # <-- this is what was missing
+        'recent_events': recent_events,
+        'events': event_data
+    }
+    return render(request, 'staff/event_status.html', context)
 
 @login_required
 def auto_fill_roster(request, event_id):
@@ -783,19 +893,3 @@ def create_assignments_from_template(request, event_id):
     Assignment.objects.bulk_create(assignments)
     messages.success(request, f"Created {len(assignments)} assignments from template")
     return redirect('staff:assignment_list', event_id=event_id)
-
-
-
-    
-    
-
-    
-
-    
-        
-     
-    
-    
-
-
-
