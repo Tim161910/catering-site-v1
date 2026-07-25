@@ -684,7 +684,7 @@ def event_status(request):
 
     today = timezone.now().date()
 
-    # Dashboard card stats - use start_time__date instead of date
+    # Dashboard card stats
     total_events = Event.objects.count()
     upcoming_events = Event.objects.filter(start_time__date__gte=today).count()
     past_events = Event.objects.filter(start_time__date__lt=today).count()
@@ -693,13 +693,9 @@ def event_status(request):
         start_time__month=today.month
     ).count()
 
-
-    print(f">>> Total events from DB: {total_events}")
-    print(f">>> Upcoming: {upcoming_events}, Past: {past_events}, This Month: {this_month}")
-
     event_data = []
 
-    # Get Upcoming events with assignments - order by start_time
+    # Get Upcoming events with assignments
     events = Event.objects.filter(start_time__date__gte=today).prefetch_related(
         'assignments__staff',
         'assignments__role'
@@ -708,50 +704,58 @@ def event_status(request):
     for event in events:
         duties = []
         at_risk = 0
+        empty = 0
 
         assignments = event.assignments.filter(status='assigned')
         assigned_staff_ids = assignments.values_list('staff_id', flat=True)
 
         for a in assignments:
-            score = getattr(a.staff, 'reliability_score', 100)
-
-            if score < 50:
-                status = 'Critical'
-                at_risk += 1
-            elif score < 75:
-                status = 'Warning'
-                at_risk += 1
+            if a.staff is None:
+                score = 0
+                status = 'Empty'
+                empty += 1
             else:
-                status = 'OK'
+                score = getattr(a.staff, 'reliability_score', 100)
+
+                if score < 50:  # <-- moved inside else
+                    status = 'Critical'
+                    at_risk += 1
+                elif score < 75:
+                    status = 'Warning'
+                    at_risk += 1
+                else:
+                    status = 'OK'
 
             if a.role:
                 replacements = Staff.objects.filter(
-                    role=a.role, # FIXED: use the Role object, not .name
-                    is_active= True,
+                    role=a.role,
+                    is_active=True,
                     reliability_score__gte=90
-                ).exclude(
-                    id__in=assigned_staff_ids
-                ).order_by('-reliability_score')[:5]
+                ).exclude(id__in=assigned_staff_ids).order_by('-reliability_score')[:5]
             else:
-                replacements = Staff.objects.none()  # No role, so no replacement
+                replacements = Staff.objects.none()
 
             duties.append({
                 'assignment_id': a.id,
-                'duty_number': a.duty_number,
-                'staff': a.staff,
-                'role': a.role.name if a.role else 'No Role',
+                'index': a.duty_number,
+                'staff': a.staff.name if a.staff else None,
+                'role': a.role.name if a.role else 'No Role',  # small fix: check a.staff for name
                 'score': score,
                 'status': status,
-                'replacements': replacements
+                'candidates': replacements
             })
 
-        if duties:
-            event_data.append({
-                'event': event,
-                'duties': duties,
-                'total_duties': len(duties),
-                'at_risk': at_risk
-            })
+        event_data.append({
+            'id': event.id,
+            'title': event.title,
+            'date': event.start_time,
+            'location': event.location,
+            'duties': duties,
+            'total_duties': len(duties),
+            'at_risk': at_risk,
+            'empty': empty,
+            'ok': len(duties) - at_risk - empty
+        })
 
     recent_events = Event.objects.order_by('-start_time')[:5]
 
