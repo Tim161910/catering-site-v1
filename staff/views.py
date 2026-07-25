@@ -684,18 +684,18 @@ def event_status(request):
 
     today = timezone.now().date()
 
-    # Dashboard card stats
-    total_events = Event.objects.count()
-    upcoming_events = Event.objects.filter(start_time__date__gte=today).count()
-    past_events = Event.objects.filter(start_time__date__lt=today).count()
-    this_month = Event.objects.filter(
-        start_time__year=today.year,
-        start_time__month=today.month
-    ).count()
+    # Dashboard card stats - MUST match template: stats.total_events etc
+    stats = {
+        'total_events': Event.objects.count(),
+        'upcoming': Event.objects.filter(start_time__date__gte=today).count(),
+        'past': Event.objects.filter(start_time__date__lt=today).count(),
+        'this_month': Event.objects.filter(
+            start_time__year=today.year,
+            start_time__month=today.month
+        ).count(),
+    }
 
     event_data = []
-
-    # Get Upcoming events with assignments
     events = Event.objects.filter(start_time__date__gte=today).prefetch_related(
         'assignments__staff',
         'assignments__role'
@@ -705,26 +705,24 @@ def event_status(request):
         duties = []
         at_risk = 0
         empty = 0
-
         assignments = event.assignments.filter(status='assigned')
         assigned_staff_ids = assignments.values_list('staff_id', flat=True)
 
         for a in assignments:
             if a.staff is None:
                 score = 0
-                status = 'Empty'
+                status = 'warning'  # lowercase to match template
                 empty += 1
             else:
                 score = getattr(a.staff, 'reliability_score', 100)
-
-                if score < 50:  # <-- moved inside else
-                    status = 'Critical'
+                if score < 50:
+                    status = 'critical'  # lowercase
                     at_risk += 1
                 elif score < 75:
-                    status = 'Warning'
+                    status = 'warning'   # lowercase
                     at_risk += 1
                 else:
-                    status = 'OK'
+                    status = 'ok'        # lowercase
 
             if a.role:
                 replacements = Staff.objects.filter(
@@ -739,7 +737,7 @@ def event_status(request):
                 'assignment_id': a.id,
                 'index': a.duty_number,
                 'staff': a.staff.name if a.staff else None,
-                'role': a.role.name if a.role else 'No Role',  # small fix: check a.staff for name
+                'role': a.role.name if a.role else 'No Role',
                 'score': score,
                 'status': status,
                 'candidates': replacements
@@ -760,10 +758,7 @@ def event_status(request):
     recent_events = Event.objects.order_by('-start_time')[:5]
 
     context = {
-        'total_events': total_events,
-        'upcoming_events': upcoming_events,
-        'this_month': this_month,
-        'past_events': past_events,
+        'stats': stats,  # <-- this is what was missing
         'recent_events': recent_events,
         'events': event_data
     }

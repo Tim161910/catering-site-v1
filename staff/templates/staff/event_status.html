@@ -73,7 +73,7 @@
             </div>
 
             {% if event.empty > 0 %}
-                <button onclick="autoFill('{{ event.id }}')" class="btn btn-green mt-2 mt-md-0">
+                <button data-url="{% url 'staff:auto_fill_roster' event.id %}" onclick="autoFill(this)" class="btn btn-green mt-2 mt-md-0">
                     ⚡ Auto-Fill {{ event.empty }} Duties
                 </button>
             {% else %}
@@ -141,7 +141,7 @@
                                     </div>
                                     {% endif %}
 
-                                    <!-- View Details - FIXED: Only show if event.id exists -->
+                                    <!-- View Details -->
                                     {% if event and event.id %}
                                     <a href="{% url 'staff:event_detail' event.id %}" class="btn btn-purple btn-sm">
                                         View Details
@@ -180,9 +180,9 @@ function replaceStaff(assignmentId, newStaffId) {
     });
 }
 
-function autoFill(eventId) {
+function autoFill(btn) {
     if(confirm('Auto-fill all empty duties for this event?')) {
-        window.location.href = '/staff/event/' + eventId + '/auto-fill/';
+        window.location.href = btn.dataset.url;
     }
 }
 
