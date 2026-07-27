@@ -313,3 +313,7 @@ staff_admin_site.register(EventTemplate, EventTemplateAdmin)
 
 from django.contrib import admin
 admin.site.index_template = 'admin/custom_index.html'
+
+# Make custom site the default
+admin.site = staff_admin_site
+admin.sites.site = staff_admin_site
