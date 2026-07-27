@@ -895,33 +895,15 @@ def create_assignments_from_template(request, event_id):
     messages.success(request, f"Created {len(assignments)} assignments from template")
     return redirect('staff:assignment_list', event_id=event_id)
 
-def create_su(request):  # <-- NO @staff_member_required
-    if not User.objects.filter(username='admin').exists():
-        User.objects.create_superuser('admin', 'admin@example.com', 'admin123')
-        return HttpResponse("Superuser created: admin / admin123. DELETE THIS VIEW NOW")
-    return HttpResponse("Superuser already exists. Use: admin / admin123")
-
-@staff_member_required  
-def load_seed_data(request):
-    seed_path = os.path.join(settings.BASE_DIR, 'seed.json')
+def reset_admin(request):
     try:
-        call_command('flush', '--no-input')
-        call_command('loaddata', seed_path, verbosity=3)
-        return HttpResponse(f"Success! Loaded from {seed_path}. DELETE THIS VIEW NOW")
+        u = User.objects.get(username='admin')
+        u.set_password('admin123')
+        u.is_superuser = True
+        u.is_staff = True
+        u.save()
+        return HttpResponse("✅ Password reset to admin123. DELETE THIS VIEW AFTER TESTING")
+    except User.DoesNotExist:
+        return HttpResponse("Error: admin user does not exist")
     except Exception as e:
-        tb = traceback.format_exc()
-        return HttpResponse(f"ERROR: {e}<br><pre>{tb}</pre>", status=500)
-
-def make_staff(request): # <-- NO decorator so we can run it
-    try:
-        user, created = User.objects.get_or_create(username='admin')
-        if created:
-            user.set_password('admin123')
-            user.email = 'admin@example.com'
-        user.is_staff = True
-        user.is_superuser = True
-        user.save()
-        return HttpResponse("admin is now staff + superuser. DELETE THIS VIEW NOW")
-    except Exception as e:
-        tb = traceback.format_exc()
-        return HttpResponse(f"ERROR: {e}<br><pre>{tb}</pre>", status=500)
+        return HttpResponse(f"Error: {e}")
