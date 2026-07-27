@@ -905,5 +905,3 @@ def reset_admin(request):
         return HttpResponse("✅ Password reset to admin123. DELETE THIS VIEW AFTER TESTING")
     except User.DoesNotExist:
         return HttpResponse("Error: admin user does not exist")
-    except Exception as e:
-        return HttpResponse(f"Error: {e}")
