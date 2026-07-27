@@ -1,0 +1,2659 @@
+SETTINGS LOADING...
+[
+{
+  "model": "staff.role",
+  "pk": 1,
+  "fields": {
+    "name": "Catering Lead",
+    "slug": "catering-lead"
+  }
+},
+{
+  "model": "staff.role",
+  "pk": 2,
+  "fields": {
+    "name": "Chief Cook",
+    "slug": "chief-cook"
+  }
+},
+{
+  "model": "staff.role",
+  "pk": 3,
+  "fields": {
+    "name": "Senior Cook",
+    "slug": "senior-cook"
+  }
+},
+{
+  "model": "staff.role",
+  "pk": 4,
+  "fields": {
+    "name": "Server",
+    "slug": "server"
+  }
+},
+{
+  "model": "staff.role",
+  "pk": 5,
+  "fields": {
+    "name": "Chef",
+    "slug": "chef"
+  }
+},
+{
+  "model": "staff.role",
+  "pk": 6,
+  "fields": {
+    "name": "Cook",
+    "slug": "cook"
+  }
+},
+{
+  "model": "staff.role",
+  "pk": 7,
+  "fields": {
+    "name": "Waiter",
+    "slug": "waiter"
+  }
+},
+{
+  "model": "staff.role",
+  "pk": 8,
+  "fields": {
+    "name": "Bartender",
+    "slug": "bartender"
+  }
+},
+{
+  "model": "staff.role",
+  "pk": 10,
+  "fields": {
+    "name": "Supervisor",
+    "slug": "supervisor"
+  }
+},
+{
+  "model": "staff.role",
+  "pk": 11,
+  "fields": {
+    "name": "Driver",
+    "slug": "driver"
+  }
+},
+{
+  "model": "staff.staff",
+  "pk": 1,
+  "fields": {
+    "user": null,
+    "name": "Adam Smith",
+    "email": "asmith@example.com",
+    "phone": "+2348045378946",
+    "whatsapp": "234801234768",
+    "role": 6,
+    "is_active": true,
+    "address": "gAAAAABqQk6PZkZQetyc2MWzAbD6CDYiYmhafXTFwKjCteVL3lesVVgQRe2ZF6lqGz_NUUHpoHlhtocMkpdRDiC3EQTI21wJjA==",
+    "next_of_kin": "gAAAAABqQk6PrYUjNx2KEIhZZXp2SzPMuGNdjs-0xMKFPBbebdX1OnvL5qbQKzNvwgZpzmANEphFb0c0aQrf_D_oWrRZyZle_A==",
+    "emergency_contact_name": "TBD",
+    "emergency_contact_phone": "gAAAAABqQk6PNx7dpmZNzRwAzYZV4Xg_aKtKCXwjJBgoFuc_pLuYsS8iRCSFrkBw_gjx1rDTyfJ9nw0B2TcuYORqJn4IydDXWQ==",
+    "reliability_score": 100,
+    "reliability_notes": null
+  }
+},
+{
+  "model": "staff.staff",
+  "pk": 2,
+  "fields": {
+    "user": null,
+    "name": "Joe Coker",
+    "email": "jcoker@example.com",
+    "phone": "",
+    "whatsapp": "",
+    "role": 3,
+    "is_active": true,
+    "address": "gAAAAABqQk6PZkZQetyc2MWzAbD6CDYiYmhafXTFwKjCteVL3lesVVgQRe2ZF6lqGz_NUUHpoHlhtocMkpdRDiC3EQTI21wJjA==",
+    "next_of_kin": "gAAAAABqQk6PrYUjNx2KEIhZZXp2SzPMuGNdjs-0xMKFPBbebdX1OnvL5qbQKzNvwgZpzmANEphFb0c0aQrf_D_oWrRZyZle_A==",
+    "emergency_contact_name": "TBD",
+    "emergency_contact_phone": "gAAAAABqQk6PNx7dpmZNzRwAzYZV4Xg_aKtKCXwjJBgoFuc_pLuYsS8iRCSFrkBw_gjx1rDTyfJ9nw0B2TcuYORqJn4IydDXWQ==",
+    "reliability_score": 100,
+    "reliability_notes": null
+  }
+},
+{
+  "model": "staff.staff",
+  "pk": 3,
+  "fields": {
+    "user": null,
+    "name": "Tom Sawyer",
+    "email": "tsawyer@example.com",
+    "phone": "+2346012345678",
+    "whatsapp": "2346012345678",
+    "role": 4,
+    "is_active": true,
+    "address": "gAAAAABqQk6PZkZQetyc2MWzAbD6CDYiYmhafXTFwKjCteVL3lesVVgQRe2ZF6lqGz_NUUHpoHlhtocMkpdRDiC3EQTI21wJjA==",
+    "next_of_kin": "gAAAAABqQk6PrYUjNx2KEIhZZXp2SzPMuGNdjs-0xMKFPBbebdX1OnvL5qbQKzNvwgZpzmANEphFb0c0aQrf_D_oWrRZyZle_A==",
+    "emergency_contact_name": "TBD",
+    "emergency_contact_phone": "gAAAAABqQk6PNx7dpmZNzRwAzYZV4Xg_aKtKCXwjJBgoFuc_pLuYsS8iRCSFrkBw_gjx1rDTyfJ9nw0B2TcuYORqJn4IydDXWQ==",
+    "reliability_score": 85,
+    "reliability_notes": null
+  }
+},
+{
+  "model": "staff.staff",
+  "pk": 4,
+  "fields": {
+    "user": null,
+    "name": "Bamboo Staff",
+    "email": "btamara@example.com",
+    "phone": "+2349062345678",
+    "whatsapp": "234809567432",
+    "role": 1,
+    "is_active": true,
+    "address": "Test Add",
+    "next_of_kin": "Test Kin1",
+    "emergency_contact_name": "Test KinA",
+    "emergency_contact_phone": "+23405678945",
+    "reliability_score": 100,
+    "reliability_notes": ""
+  }
+},
+{
+  "model": "staff.staff",
+  "pk": 5,
+  "fields": {
+    "user": null,
+    "name": "Tola Badmos",
+    "email": "tbadmos@example.com",
+    "phone": "2347021234567",
+    "whatsapp": "2347012345678",
+    "role": 7,
+    "is_active": true,
+    "address": "gAAAAABqQk6PZkZQetyc2MWzAbD6CDYiYmhafXTFwKjCteVL3lesVVgQRe2ZF6lqGz_NUUHpoHlhtocMkpdRDiC3EQTI21wJjA==",
+    "next_of_kin": "gAAAAABqQk6PrYUjNx2KEIhZZXp2SzPMuGNdjs-0xMKFPBbebdX1OnvL5qbQKzNvwgZpzmANEphFb0c0aQrf_D_oWrRZyZle_A==",
+    "emergency_contact_name": "TBD",
+    "emergency_contact_phone": "gAAAAABqQk6PNx7dpmZNzRwAzYZV4Xg_aKtKCXwjJBgoFuc_pLuYsS8iRCSFrkBw_gjx1rDTyfJ9nw0B2TcuYORqJn4IydDXWQ==",
+    "reliability_score": 100,
+    "reliability_notes": null
+  }
+},
+{
+  "model": "staff.staff",
+  "pk": 6,
+  "fields": {
+    "user": null,
+    "name": "David Johnson",
+    "email": "djohnson@example.com",
+    "phone": "",
+    "whatsapp": "",
+    "role": 1,
+    "is_active": true,
+    "address": "gAAAAABqQk6PZkZQetyc2MWzAbD6CDYiYmhafXTFwKjCteVL3lesVVgQRe2ZF6lqGz_NUUHpoHlhtocMkpdRDiC3EQTI21wJjA==",
+    "next_of_kin": "gAAAAABqQk6PrYUjNx2KEIhZZXp2SzPMuGNdjs-0xMKFPBbebdX1OnvL5qbQKzNvwgZpzmANEphFb0c0aQrf_D_oWrRZyZle_A==",
+    "emergency_contact_name": "TBD",
+    "emergency_contact_phone": "gAAAAABqQk6PNx7dpmZNzRwAzYZV4Xg_aKtKCXwjJBgoFuc_pLuYsS8iRCSFrkBw_gjx1rDTyfJ9nw0B2TcuYORqJn4IydDXWQ==",
+    "reliability_score": 100,
+    "reliability_notes": null
+  }
+},
+{
+  "model": "staff.staff",
+  "pk": 7,
+  "fields": {
+    "user": null,
+    "name": "Bob Grappy",
+    "email": "bgrappy@example.com",
+    "phone": "",
+    "whatsapp": "",
+    "role": 6,
+    "is_active": true,
+    "address": "gAAAAABqQk6PZkZQetyc2MWzAbD6CDYiYmhafXTFwKjCteVL3lesVVgQRe2ZF6lqGz_NUUHpoHlhtocMkpdRDiC3EQTI21wJjA==",
+    "next_of_kin": "gAAAAABqQk6PrYUjNx2KEIhZZXp2SzPMuGNdjs-0xMKFPBbebdX1OnvL5qbQKzNvwgZpzmANEphFb0c0aQrf_D_oWrRZyZle_A==",
+    "emergency_contact_name": "TBD",
+    "emergency_contact_phone": "gAAAAABqQk6PNx7dpmZNzRwAzYZV4Xg_aKtKCXwjJBgoFuc_pLuYsS8iRCSFrkBw_gjx1rDTyfJ9nw0B2TcuYORqJn4IydDXWQ==",
+    "reliability_score": 100,
+    "reliability_notes": null
+  }
+},
+{
+  "model": "staff.staff",
+  "pk": 9,
+  "fields": {
+    "user": null,
+    "name": "John Grab",
+    "email": "jgrab@example.com",
+    "phone": "+2347021234567",
+    "whatsapp": "2347021234567",
+    "role": 1,
+    "is_active": true,
+    "address": "gAAAAABqQk6PZkZQetyc2MWzAbD6CDYiYmhafXTFwKjCteVL3lesVVgQRe2ZF6lqGz_NUUHpoHlhtocMkpdRDiC3EQTI21wJjA==",
+    "next_of_kin": "gAAAAABqQk6PrYUjNx2KEIhZZXp2SzPMuGNdjs-0xMKFPBbebdX1OnvL5qbQKzNvwgZpzmANEphFb0c0aQrf_D_oWrRZyZle_A==",
+    "emergency_contact_name": "TBD",
+    "emergency_contact_phone": "gAAAAABqQk6PNx7dpmZNzRwAzYZV4Xg_aKtKCXwjJBgoFuc_pLuYsS8iRCSFrkBw_gjx1rDTyfJ9nw0B2TcuYORqJn4IydDXWQ==",
+    "reliability_score": 100,
+    "reliability_notes": null
+  }
+},
+{
+  "model": "staff.staff",
+  "pk": 10,
+  "fields": {
+    "user": null,
+    "name": "Emily Baker",
+    "email": "ebaker@example.com",
+    "phone": "+2347031234567",
+    "whatsapp": "2347031234567",
+    "role": 3,
+    "is_active": true,
+    "address": "gAAAAABqQk6PZkZQetyc2MWzAbD6CDYiYmhafXTFwKjCteVL3lesVVgQRe2ZF6lqGz_NUUHpoHlhtocMkpdRDiC3EQTI21wJjA==",
+    "next_of_kin": "gAAAAABqQk6PrYUjNx2KEIhZZXp2SzPMuGNdjs-0xMKFPBbebdX1OnvL5qbQKzNvwgZpzmANEphFb0c0aQrf_D_oWrRZyZle_A==",
+    "emergency_contact_name": "TBD",
+    "emergency_contact_phone": "gAAAAABqQk6PNx7dpmZNzRwAzYZV4Xg_aKtKCXwjJBgoFuc_pLuYsS8iRCSFrkBw_gjx1rDTyfJ9nw0B2TcuYORqJn4IydDXWQ==",
+    "reliability_score": 100,
+    "reliability_notes": null
+  }
+},
+{
+  "model": "staff.staff",
+  "pk": 11,
+  "fields": {
+    "user": null,
+    "name": "Maria Terry",
+    "email": "mterry@example.com",
+    "phone": "+2348012345679",
+    "whatsapp": "2348012345679",
+    "role": 3,
+    "is_active": true,
+    "address": "gAAAAABqQk6PZkZQetyc2MWzAbD6CDYiYmhafXTFwKjCteVL3lesVVgQRe2ZF6lqGz_NUUHpoHlhtocMkpdRDiC3EQTI21wJjA==",
+    "next_of_kin": "gAAAAABqQk6PrYUjNx2KEIhZZXp2SzPMuGNdjs-0xMKFPBbebdX1OnvL5qbQKzNvwgZpzmANEphFb0c0aQrf_D_oWrRZyZle_A==",
+    "emergency_contact_name": "TBD",
+    "emergency_contact_phone": "gAAAAABqQk6PNx7dpmZNzRwAzYZV4Xg_aKtKCXwjJBgoFuc_pLuYsS8iRCSFrkBw_gjx1rDTyfJ9nw0B2TcuYORqJn4IydDXWQ==",
+    "reliability_score": 100,
+    "reliability_notes": null
+  }
+},
+{
+  "model": "staff.staff",
+  "pk": 12,
+  "fields": {
+    "user": null,
+    "name": "David Mark",
+    "email": "dmark@example.com",
+    "phone": "+2348021234567",
+    "whatsapp": "2348021234567",
+    "role": 6,
+    "is_active": true,
+    "address": "gAAAAABqQk6PZkZQetyc2MWzAbD6CDYiYmhafXTFwKjCteVL3lesVVgQRe2ZF6lqGz_NUUHpoHlhtocMkpdRDiC3EQTI21wJjA==",
+    "next_of_kin": "gAAAAABqQk6PrYUjNx2KEIhZZXp2SzPMuGNdjs-0xMKFPBbebdX1OnvL5qbQKzNvwgZpzmANEphFb0c0aQrf_D_oWrRZyZle_A==",
+    "emergency_contact_name": "TBD",
+    "emergency_contact_phone": "gAAAAABqQk6PNx7dpmZNzRwAzYZV4Xg_aKtKCXwjJBgoFuc_pLuYsS8iRCSFrkBw_gjx1rDTyfJ9nw0B2TcuYORqJn4IydDXWQ==",
+    "reliability_score": 100,
+    "reliability_notes": null
+  }
+},
+{
+  "model": "staff.staff",
+  "pk": 13,
+  "fields": {
+    "user": null,
+    "name": "Alex Kind",
+    "email": "akind@example.com",
+    "phone": "+23480234216789",
+    "whatsapp": "2348023416789",
+    "role": 6,
+    "is_active": true,
+    "address": "gAAAAABqQk6PZkZQetyc2MWzAbD6CDYiYmhafXTFwKjCteVL3lesVVgQRe2ZF6lqGz_NUUHpoHlhtocMkpdRDiC3EQTI21wJjA==",
+    "next_of_kin": "gAAAAABqQk6PrYUjNx2KEIhZZXp2SzPMuGNdjs-0xMKFPBbebdX1OnvL5qbQKzNvwgZpzmANEphFb0c0aQrf_D_oWrRZyZle_A==",
+    "emergency_contact_name": "TBD",
+    "emergency_contact_phone": "gAAAAABqQk6PNx7dpmZNzRwAzYZV4Xg_aKtKCXwjJBgoFuc_pLuYsS8iRCSFrkBw_gjx1rDTyfJ9nw0B2TcuYORqJn4IydDXWQ==",
+    "reliability_score": 100,
+    "reliability_notes": null
+  }
+},
+{
+  "model": "staff.staff",
+  "pk": 14,
+  "fields": {
+    "user": null,
+    "name": "Sam  Bays",
+    "email": "sbays@example.com",
+    "phone": "+23480398765412",
+    "whatsapp": "23480398765412",
+    "role": 6,
+    "is_active": true,
+    "address": "gAAAAABqQk6PZkZQetyc2MWzAbD6CDYiYmhafXTFwKjCteVL3lesVVgQRe2ZF6lqGz_NUUHpoHlhtocMkpdRDiC3EQTI21wJjA==",
+    "next_of_kin": "gAAAAABqQk6PrYUjNx2KEIhZZXp2SzPMuGNdjs-0xMKFPBbebdX1OnvL5qbQKzNvwgZpzmANEphFb0c0aQrf_D_oWrRZyZle_A==",
+    "emergency_contact_name": "TBD",
+    "emergency_contact_phone": "gAAAAABqQk6PNx7dpmZNzRwAzYZV4Xg_aKtKCXwjJBgoFuc_pLuYsS8iRCSFrkBw_gjx1rDTyfJ9nw0B2TcuYORqJn4IydDXWQ==",
+    "reliability_score": 100,
+    "reliability_notes": null
+  }
+},
+{
+  "model": "staff.staff",
+  "pk": 15,
+  "fields": {
+    "user": null,
+    "name": "Rachel Abey",
+    "email": "rabey@example.com",
+    "phone": "+23480409678234",
+    "whatsapp": "23480409678234",
+    "role": 5,
+    "is_active": true,
+    "address": "gAAAAABqQk6PZkZQetyc2MWzAbD6CDYiYmhafXTFwKjCteVL3lesVVgQRe2ZF6lqGz_NUUHpoHlhtocMkpdRDiC3EQTI21wJjA==",
+    "next_of_kin": "gAAAAABqQk6PrYUjNx2KEIhZZXp2SzPMuGNdjs-0xMKFPBbebdX1OnvL5qbQKzNvwgZpzmANEphFb0c0aQrf_D_oWrRZyZle_A==",
+    "emergency_contact_name": "TBD",
+    "emergency_contact_phone": "gAAAAABqQk6PNx7dpmZNzRwAzYZV4Xg_aKtKCXwjJBgoFuc_pLuYsS8iRCSFrkBw_gjx1rDTyfJ9nw0B2TcuYORqJn4IydDXWQ==",
+    "reliability_score": 100,
+    "reliability_notes": null
+  }
+},
+{
+  "model": "staff.staff",
+  "pk": 16,
+  "fields": {
+    "user": null,
+    "name": "Mike Upah",
+    "email": "mupah@example.com",
+    "phone": "+2348037892345",
+    "whatsapp": "2348037892345",
+    "role": 5,
+    "is_active": true,
+    "address": "gAAAAABqQk6PZkZQetyc2MWzAbD6CDYiYmhafXTFwKjCteVL3lesVVgQRe2ZF6lqGz_NUUHpoHlhtocMkpdRDiC3EQTI21wJjA==",
+    "next_of_kin": "gAAAAABqQk6PrYUjNx2KEIhZZXp2SzPMuGNdjs-0xMKFPBbebdX1OnvL5qbQKzNvwgZpzmANEphFb0c0aQrf_D_oWrRZyZle_A==",
+    "emergency_contact_name": "TBD",
+    "emergency_contact_phone": "gAAAAABqQk6PNx7dpmZNzRwAzYZV4Xg_aKtKCXwjJBgoFuc_pLuYsS8iRCSFrkBw_gjx1rDTyfJ9nw0B2TcuYORqJn4IydDXWQ==",
+    "reliability_score": 45,
+    "reliability_notes": null
+  }
+},
+{
+  "model": "staff.staff",
+  "pk": 17,
+  "fields": {
+    "user": null,
+    "name": "Tom Miany",
+    "email": "tmiany@example.com",
+    "phone": "gAAAAABqQfZCH6vnzANHqsLoxZBU2RhTYcLrk_8D47JKshGPdWQnLH8_zcIw3Or-DW2g0W0aNx02IC3asBuzlf7XdeOpHx4Z_w==",
+    "whatsapp": "gAAAAABqQfZCRhud5xeshwzJEkqNtFFmXlR93SMTvcAL_0j2BynRHhkApt5ACVQ0qVnR09BsHLnThfmdN2pIIS8-PmHd7goLvg==",
+    "role": 4,
+    "is_active": true,
+    "address": "gAAAAABqQfZCcc7jdf294Y_y5vII5P7onXRRgwyWnvPJq5FuL-H2lV2srNCnoOcR-xwrj2QEU1IyHb-8lsUndXv4ef6HhNHDxw==",
+    "next_of_kin": "gAAAAABqQk6PrYUjNx2KEIhZZXp2SzPMuGNdjs-0xMKFPBbebdX1OnvL5qbQKzNvwgZpzmANEphFb0c0aQrf_D_oWrRZyZle_A==",
+    "emergency_contact_name": "TBD",
+    "emergency_contact_phone": "gAAAAABqQk6PNx7dpmZNzRwAzYZV4Xg_aKtKCXwjJBgoFuc_pLuYsS8iRCSFrkBw_gjx1rDTyfJ9nw0B2TcuYORqJn4IydDXWQ==",
+    "reliability_score": 100,
+    "reliability_notes": ""
+  }
+},
+{
+  "model": "staff.staff",
+  "pk": 18,
+  "fields": {
+    "user": null,
+    "name": "Liam Cane",
+    "email": "lcane@example.com",
+    "phone": "gAAAAABqQfYiwVC7bYNWvv2YEXdqh0pkFA9tLE7BvXQbGC6XNaCcH3971AteUhKFREqBRH3wbcHPjJys5aN2-_-T7krwuas90A==",
+    "whatsapp": "gAAAAABqQfYiiZr9oquJlq94ooEnqzk4VXUaT2qpLuQc-78hofyynsjNMeg-_62Myu5iCVzkBN7D1Y5TsPnKCTDcKPstfFmosw==",
+    "role": 4,
+    "is_active": true,
+    "address": "gAAAAABqQfYiq71saQPenSQERTj62dx5Pq5tXo687sWWD0qxur-CbS-lt5J2sMufLP4Lp75jtoJhRX07J9-XOl3ts420h1EoZA==",
+    "next_of_kin": "gAAAAABqQk6PrYUjNx2KEIhZZXp2SzPMuGNdjs-0xMKFPBbebdX1OnvL5qbQKzNvwgZpzmANEphFb0c0aQrf_D_oWrRZyZle_A==",
+    "emergency_contact_name": "TBD",
+    "emergency_contact_phone": "gAAAAABqQk6PNx7dpmZNzRwAzYZV4Xg_aKtKCXwjJBgoFuc_pLuYsS8iRCSFrkBw_gjx1rDTyfJ9nw0B2TcuYORqJn4IydDXWQ==",
+    "reliability_score": 100,
+    "reliability_notes": ""
+  }
+},
+{
+  "model": "staff.staff",
+  "pk": 19,
+  "fields": {
+    "user": null,
+    "name": "Jane King",
+    "email": "jking@example.com",
+    "phone": "+2346081234567",
+    "whatsapp": "2346081234567",
+    "role": 7,
+    "is_active": true,
+    "address": "gAAAAABqQk6PZkZQetyc2MWzAbD6CDYiYmhafXTFwKjCteVL3lesVVgQRe2ZF6lqGz_NUUHpoHlhtocMkpdRDiC3EQTI21wJjA==",
+    "next_of_kin": "gAAAAABqQk6PrYUjNx2KEIhZZXp2SzPMuGNdjs-0xMKFPBbebdX1OnvL5qbQKzNvwgZpzmANEphFb0c0aQrf_D_oWrRZyZle_A==",
+    "emergency_contact_name": "TBD",
+    "emergency_contact_phone": "gAAAAABqQk6PNx7dpmZNzRwAzYZV4Xg_aKtKCXwjJBgoFuc_pLuYsS8iRCSFrkBw_gjx1rDTyfJ9nw0B2TcuYORqJn4IydDXWQ==",
+    "reliability_score": 100,
+    "reliability_notes": null
+  }
+},
+{
+  "model": "staff.staff",
+  "pk": 20,
+  "fields": {
+    "user": null,
+    "name": "Ava Bails",
+    "email": "abails@example.com",
+    "phone": "+2345067894321",
+    "whatsapp": "2345067894321",
+    "role": 4,
+    "is_active": true,
+    "address": "gAAAAABqQk6PZkZQetyc2MWzAbD6CDYiYmhafXTFwKjCteVL3lesVVgQRe2ZF6lqGz_NUUHpoHlhtocMkpdRDiC3EQTI21wJjA==",
+    "next_of_kin": "gAAAAABqQk6PrYUjNx2KEIhZZXp2SzPMuGNdjs-0xMKFPBbebdX1OnvL5qbQKzNvwgZpzmANEphFb0c0aQrf_D_oWrRZyZle_A==",
+    "emergency_contact_name": "TBD",
+    "emergency_contact_phone": "gAAAAABqQk6PNx7dpmZNzRwAzYZV4Xg_aKtKCXwjJBgoFuc_pLuYsS8iRCSFrkBw_gjx1rDTyfJ9nw0B2TcuYORqJn4IydDXWQ==",
+    "reliability_score": 100,
+    "reliability_notes": null
+  }
+},
+{
+  "model": "staff.staff",
+  "pk": 21,
+  "fields": {
+    "user": null,
+    "name": "Bob Goater",
+    "email": "bgoater@example.com",
+    "phone": "+23450790876432",
+    "whatsapp": "23450790876432",
+    "role": 4,
+    "is_active": true,
+    "address": "gAAAAABqQk6PZkZQetyc2MWzAbD6CDYiYmhafXTFwKjCteVL3lesVVgQRe2ZF6lqGz_NUUHpoHlhtocMkpdRDiC3EQTI21wJjA==",
+    "next_of_kin": "gAAAAABqQk6PrYUjNx2KEIhZZXp2SzPMuGNdjs-0xMKFPBbebdX1OnvL5qbQKzNvwgZpzmANEphFb0c0aQrf_D_oWrRZyZle_A==",
+    "emergency_contact_name": "TBD",
+    "emergency_contact_phone": "gAAAAABqQk6PNx7dpmZNzRwAzYZV4Xg_aKtKCXwjJBgoFuc_pLuYsS8iRCSFrkBw_gjx1rDTyfJ9nw0B2TcuYORqJn4IydDXWQ==",
+    "reliability_score": 100,
+    "reliability_notes": null
+  }
+},
+{
+  "model": "staff.staff",
+  "pk": 22,
+  "fields": {
+    "user": null,
+    "name": "Sophia Doug",
+    "email": "sdoug@example.com",
+    "phone": "+2346057890234",
+    "whatsapp": "2346057890234",
+    "role": 4,
+    "is_active": true,
+    "address": "gAAAAABqQk6PZkZQetyc2MWzAbD6CDYiYmhafXTFwKjCteVL3lesVVgQRe2ZF6lqGz_NUUHpoHlhtocMkpdRDiC3EQTI21wJjA==",
+    "next_of_kin": "gAAAAABqQk6PrYUjNx2KEIhZZXp2SzPMuGNdjs-0xMKFPBbebdX1OnvL5qbQKzNvwgZpzmANEphFb0c0aQrf_D_oWrRZyZle_A==",
+    "emergency_contact_name": "TBD",
+    "emergency_contact_phone": "gAAAAABqQk6PNx7dpmZNzRwAzYZV4Xg_aKtKCXwjJBgoFuc_pLuYsS8iRCSFrkBw_gjx1rDTyfJ9nw0B2TcuYORqJn4IydDXWQ==",
+    "reliability_score": 100,
+    "reliability_notes": null
+  }
+},
+{
+  "model": "staff.staff",
+  "pk": 23,
+  "fields": {
+    "user": null,
+    "name": "Mia Bart",
+    "email": "mbart@example.com",
+    "phone": "+234605908712345",
+    "whatsapp": "23460590871234",
+    "role": 8,
+    "is_active": true,
+    "address": "gAAAAABqQk6PZkZQetyc2MWzAbD6CDYiYmhafXTFwKjCteVL3lesVVgQRe2ZF6lqGz_NUUHpoHlhtocMkpdRDiC3EQTI21wJjA==",
+    "next_of_kin": "gAAAAABqQk6PrYUjNx2KEIhZZXp2SzPMuGNdjs-0xMKFPBbebdX1OnvL5qbQKzNvwgZpzmANEphFb0c0aQrf_D_oWrRZyZle_A==",
+    "emergency_contact_name": "TBD",
+    "emergency_contact_phone": "gAAAAABqQk6PNx7dpmZNzRwAzYZV4Xg_aKtKCXwjJBgoFuc_pLuYsS8iRCSFrkBw_gjx1rDTyfJ9nw0B2TcuYORqJn4IydDXWQ==",
+    "reliability_score": 100,
+    "reliability_notes": null
+  }
+},
+{
+  "model": "staff.staff",
+  "pk": 24,
+  "fields": {
+    "user": null,
+    "name": "Jake Brew",
+    "email": "jbrew@example.com",
+    "phone": "+234705908764321",
+    "whatsapp": "234705908764321",
+    "role": 8,
+    "is_active": true,
+    "address": "gAAAAABqQk6PZkZQetyc2MWzAbD6CDYiYmhafXTFwKjCteVL3lesVVgQRe2ZF6lqGz_NUUHpoHlhtocMkpdRDiC3EQTI21wJjA==",
+    "next_of_kin": "gAAAAABqQk6PrYUjNx2KEIhZZXp2SzPMuGNdjs-0xMKFPBbebdX1OnvL5qbQKzNvwgZpzmANEphFb0c0aQrf_D_oWrRZyZle_A==",
+    "emergency_contact_name": "TBD",
+    "emergency_contact_phone": "gAAAAABqQk6PNx7dpmZNzRwAzYZV4Xg_aKtKCXwjJBgoFuc_pLuYsS8iRCSFrkBw_gjx1rDTyfJ9nw0B2TcuYORqJn4IydDXWQ==",
+    "reliability_score": 100,
+    "reliability_notes": null
+  }
+},
+{
+  "model": "staff.staff",
+  "pk": 25,
+  "fields": {
+    "user": null,
+    "name": "Leo Mix",
+    "email": "lmix@example.com",
+    "phone": "gAAAAABqQ0bujARwv5scAwBPzVwsc9XzUEEy0jIkPSap5Ne1AS_kVkTe_Txa8bcMl4XjUVo1LUqh9NpQNn6d26PUxZ4f7_RKtw==",
+    "whatsapp": "gAAAAABqQ0bu15vtgBlcqJle6OvosihCwGK5h8kbDzjtLFDXjOd4Wx2xDVlI84MyWizIpsxmCyzVRCRsO69bLIvB2Z3Zaz_vug==",
+    "role": 8,
+    "is_active": true,
+    "address": "gAAAAABqQ0bupsbTbqKZXI27igDJl65HYeysgpf4o3s7SCbIbZb4cBtVVwPsgRgl5haJ9Al9jPakS8bdlJ0BQcv4EaI53h3ryA==",
+    "next_of_kin": "gAAAAABqQ0buYpgBhcIS9uuf4bX38O1HNXJII5bE-wnCIjAVChVONverkPl8jFYoZDfuxtUpWxwHmUD71YO09NPs7gvM7K56KA==",
+    "emergency_contact_name": "Test C",
+    "emergency_contact_phone": "gAAAAABqQ0buHDPOrUqNQ4eXjFoZLzd6_BJTcgs97PWec28OduKhVpehWq7DTU0Iu5drAN8mGw102_qGuMBiV8U78Ca_gMwPJA==",
+    "reliability_score": 100,
+    "reliability_notes": ""
+  }
+},
+{
+  "model": "staff.staff",
+  "pk": 26,
+  "fields": {
+    "user": null,
+    "name": "Gordon Martin",
+    "email": "dmartin@example.com",
+    "phone": "gAAAAABqQ0Z-50sdY4A_256dA_PIDZUT2pzNFgg_IF612g3CK3x8P6Rn8r11cwD8QWvJHWLeaYN1XXt01a4gZjlzvMSOpDP91Q==",
+    "whatsapp": "gAAAAABqQ0Z-QDzEiTEJm_hq-exYNhL_V7QOj0bY-xHYjw_cB9hpwgSG3x2adyfLW2zgnKqo-RJ_6z8PHghkKlMrfF1GR2e67g==",
+    "role": 2,
+    "is_active": true,
+    "address": "gAAAAABqQ0Z-JEl827JYLmpu7brEOLCAT7aBHTNW73tA13ixWXZem7u-jb8u9lyY_R5QMlzjnoN3dL0qlx7vK6rd1AM9tHMmkg==",
+    "next_of_kin": "gAAAAABqQ0Z-UGen_4hurA3wR9qOYptQQy1sNy0zeB8yxmcu9DkPE12ofiyNjKsUoBm9A6kGbT8h96Yq8ETo9HPDTy8VpvwxQw==",
+    "emergency_contact_name": "Test V",
+    "emergency_contact_phone": "gAAAAABqQ0Z-y6VBgGJdd_18AQPaLONzaSrroemk6dcFe2SgvPb-rXrZOUxpB61Lrx2VchxHM0GmgnEMEnEDESZxrsLwX3GN_w==",
+    "reliability_score": 100,
+    "reliability_notes": ""
+  }
+},
+{
+  "model": "staff.staff",
+  "pk": 27,
+  "fields": {
+    "user": null,
+    "name": "Tom Shitu",
+    "email": "tshittu@example.com",
+    "phone": "gAAAAABqQ0YuX6vNdq4-HnC7GmIUXlaMlY3mrGWCdwf66n5Xcjv6ZZC8m3UsYzCkQ27RDzdjIoYUAp1M72tadhPSjL9mAP0G8A==",
+    "whatsapp": "gAAAAABqQ0YueRRluouD8xuqzKNgf7u-0uPmTuA_F31GMlyN9Gpf95hqbwiLnxFt5KMqPDumLiXqldetoBStyd3KpmDaKjnXwg==",
+    "role": 2,
+    "is_active": true,
+    "address": "gAAAAABqQ0Yul2t0S0_lb-E2MKcZ9HFXPR_H3HDI2IMdD4njXqetxMpujWu64vItbr84lxIHbWUFXc9ol2j4SRx_XmZU_D6rPw==",
+    "next_of_kin": "gAAAAABqQ0YuSiB8zsrn_ytHhnkTk3PFiA2zC9kyfsg5aKtPmjOJCTfO_vA2XZMSu7mXcTTIubnaKDHG0NxT0rBslAsykHH0RA==",
+    "emergency_contact_name": "Test D",
+    "emergency_contact_phone": "gAAAAABqQ0YuJZCmF2VR3zDbDk6Yf7rLWJ4s_nJWRq7DUw8e_74R6COE9zGCJ0ZkOuXPHeIpY0tRnU0PvJWozS3UhWnnA76GvA==",
+    "reliability_score": 100,
+    "reliability_notes": ""
+  }
+},
+{
+  "model": "staff.staff",
+  "pk": 28,
+  "fields": {
+    "user": null,
+    "name": "Sarah Lane",
+    "email": null,
+    "phone": "gAAAAABqQ0XNK0gE17_93jE2fakJCzq0ly1KutjQzd49nJh1AGhz-B1kpoCEHjonBGWaIXqqHSMBVkwq6YU5ptKBTXoRcUc1nw==",
+    "whatsapp": "gAAAAABqQ0XNb15ktqRG6s6_0BxvwK7fVUs4qkTWPWMtAw-RUKw2EJm4BoDJeK1yamAGA31iufkjW7neX3-L-2_WODl6i82gwA==",
+    "role": 7,
+    "is_active": true,
+    "address": "gAAAAABqQ0XNCL7gNwmYNwam69__KubdGQw5lqvyKUbPXdrBhzLyVKi5HV2FhOtsnLllhhCf-HNtuwxX4IToXQ3I4w-fjZ6_ZtrjrSaFOuxyxAFS4VspR6Q=",
+    "next_of_kin": "gAAAAABqQ0XNN9gdwY0CIfIJVa4x1phY_nGremuk81ciYhK2SuyrV314BYGwPf-xDSE3cElznh_BeRto-5Q7J2j3WJRqVY077Q==",
+    "emergency_contact_name": "Test A",
+    "emergency_contact_phone": "gAAAAABqQ0XNnEHG85tY_CTxa0x-qUKtoQ9reubxTtLh-oNbX33VoOh1vxul-uyHMAOXhB4JWjm3N2ePSqM4pzh_wdXra7X70Q==",
+    "reliability_score": 95,
+    "reliability_notes": ""
+  }
+},
+{
+  "model": "staff.staff",
+  "pk": 29,
+  "fields": {
+    "user": null,
+    "name": "Test User",
+    "email": "test@test.com",
+    "phone": "gAAAAABqQ0W2b1AqTxaW8gULjX80qoaYHSNlanpomyLd9_CYlCfl5s_WO8v8LGHnjMxa0c5XRpS9bYxGOeLdFDlYko0oZhlKJg==",
+    "whatsapp": "gAAAAABqQ0W22V-hFYYlDnG9lihpL-DIWq8DGZdQKD-mwdrFk3RzjD6CdOgOg18pfTUrBaTWW1cv-N3nNnTDEceiW5iFHn1gTw==",
+    "role": 7,
+    "is_active": true,
+    "address": "gAAAAABqQ0W2qDuZvp-O-U2YN88l4rz73HpfhLTLaNwpavj7pNKQZFdTqKwD0ZCxBf46t-9FIEPfX1qj0m_3GHcsFRRU8VDZiVCF0QOT5mtmpyyGUv7SfpU=",
+    "next_of_kin": "gAAAAABqQ0W2EhWAQUccYQf9uc40H13xQzCwr_jX0uZvg3ORt60L_-7puZkq1WlQRLlVCm7tlaui8IVUq1bHX4Lds8qfOAJJjg==",
+    "emergency_contact_name": "Test Test",
+    "emergency_contact_phone": "gAAAAABqQ0W2yuG0UPF4KJUGEo-ytzzPAVzxHrQP8m2zXdmBZzB3L_aSIxazKnJyeuZxV0tunkuyTR64fY9hbt7VLh-xHl22cw==",
+    "reliability_score": 100,
+    "reliability_notes": "Demonstrate reliable qualities so far"
+  }
+},
+{
+  "model": "staff.staff",
+  "pk": 30,
+  "fields": {
+    "user": 1,
+    "name": "Bamboo",
+    "email": "",
+    "phone": "",
+    "whatsapp": "",
+    "role": null,
+    "is_active": true,
+    "address": "",
+    "next_of_kin": "",
+    "emergency_contact_name": "",
+    "emergency_contact_phone": "",
+    "reliability_score": 100,
+    "reliability_notes": null
+  }
+},
+{
+  "model": "staff.staff",
+  "pk": 31,
+  "fields": {
+    "user": 4,
+    "name": "admin",
+    "email": "admin@example.com",
+    "phone": "",
+    "whatsapp": "",
+    "role": null,
+    "is_active": true,
+    "address": "",
+    "next_of_kin": "",
+    "emergency_contact_name": "",
+    "emergency_contact_phone": "",
+    "reliability_score": 100,
+    "reliability_notes": null
+  }
+},
+{
+  "model": "staff.event",
+  "pk": 10,
+  "fields": {
+    "title": "Test Event",
+    "description": "",
+    "start_time": "2026-07-10T12:00:00Z",
+    "end_time": null,
+    "location": "Ikeja",
+    "client_name": "Test All",
+    "template": 1
+  }
+},
+{
+  "model": "staff.event",
+  "pk": 11,
+  "fields": {
+    "title": "Test Old School Gala Nite",
+    "description": "",
+    "start_time": "2026-07-18T18:00:00Z",
+    "end_time": null,
+    "location": "Abeokuta",
+    "client_name": "Test Man",
+    "template": 1
+  }
+},
+{
+  "model": "staff.event",
+  "pk": 13,
+  "fields": {
+    "title": "Test Party",
+    "description": "",
+    "start_time": "2026-07-29T23:00:00Z",
+    "end_time": null,
+    "location": "Ijebu",
+    "client_name": "Test All",
+    "template": 7
+  }
+},
+{
+  "model": "staff.event",
+  "pk": 16,
+  "fields": {
+    "title": "Test Wedding A",
+    "description": "",
+    "start_time": "2026-07-08T17:00:00Z",
+    "end_time": "2026-07-08T23:00:00Z",
+    "location": "",
+    "client_name": "",
+    "template": null
+  }
+},
+{
+  "model": "staff.event",
+  "pk": 17,
+  "fields": {
+    "title": "Test Birthday",
+    "description": "",
+    "start_time": "2026-07-08T17:00:00Z",
+    "end_time": "2026-07-08T23:00:00Z",
+    "location": "",
+    "client_name": "",
+    "template": null
+  }
+},
+{
+  "model": "staff.event",
+  "pk": 18,
+  "fields": {
+    "title": "Test Event X",
+    "description": "",
+    "start_time": "2026-07-25T17:00:00Z",
+    "end_time": "2026-07-25T23:00:00Z",
+    "location": "Ondo",
+    "client_name": "Test Woman",
+    "template": 1
+  }
+},
+{
+  "model": "staff.event",
+  "pk": 19,
+  "fields": {
+    "title": "Test Event X 2",
+    "description": "",
+    "start_time": "2026-07-30T11:00:00Z",
+    "end_time": "2026-07-30T17:00:00Z",
+    "location": "Lagos HQ",
+    "client_name": "",
+    "template": null
+  }
+},
+{
+  "model": "staff.issuetype",
+  "pk": 1,
+  "fields": {
+    "name": "No Show",
+    "weight_percent": 40,
+    "counts_against_staff": true
+  }
+},
+{
+  "model": "staff.issuetype",
+  "pk": 2,
+  "fields": {
+    "name": "Lateness",
+    "weight_percent": 15,
+    "counts_against_staff": true
+  }
+},
+{
+  "model": "staff.issuetype",
+  "pk": 3,
+  "fields": {
+    "name": "Misconduct",
+    "weight_percent": 30,
+    "counts_against_staff": true
+  }
+},
+{
+  "model": "staff.issuetype",
+  "pk": 4,
+  "fields": {
+    "name": "Unauthorized absence",
+    "weight_percent": 35,
+    "counts_against_staff": true
+  }
+},
+{
+  "model": "staff.issuetype",
+  "pk": 5,
+  "fields": {
+    "name": "Sick leave",
+    "weight_percent": 0,
+    "counts_against_staff": false
+  }
+},
+{
+  "model": "staff.issuetype",
+  "pk": 6,
+  "fields": {
+    "name": "Financial Mismanagement",
+    "weight_percent": 45,
+    "counts_against_staff": true
+  }
+},
+{
+  "model": "staff.incident",
+  "pk": 10,
+  "fields": {
+    "staff": 3,
+    "event": 10,
+    "issue_type": 2,
+    "incident_type": null,
+    "reliability_impact": null,
+    "notes": "",
+    "resolved": false,
+    "description": "",
+    "reported_on": "2026-07-17T16:49:23.896Z"
+  }
+},
+{
+  "model": "staff.incident",
+  "pk": 11,
+  "fields": {
+    "staff": 16,
+    "event": 10,
+    "issue_type": 1,
+    "incident_type": null,
+    "reliability_impact": null,
+    "notes": "",
+    "resolved": false,
+    "description": "",
+    "reported_on": "2026-07-22T05:14:59.311Z"
+  }
+},
+{
+  "model": "staff.incident",
+  "pk": 12,
+  "fields": {
+    "staff": 16,
+    "event": 17,
+    "issue_type": 2,
+    "incident_type": null,
+    "reliability_impact": null,
+    "notes": "",
+    "resolved": false,
+    "description": "",
+    "reported_on": "2026-07-22T05:16:39.955Z"
+  }
+},
+{
+  "model": "staff.eventtemplate",
+  "pk": 1,
+  "fields": {
+    "name": "Corporate Team Meeting Dinner",
+    "description": "",
+    "is_active": true,
+    "created_at": "2026-05-25T12:39:24.106Z",
+    "default_location": "",
+    "default_duration_hours": 1,
+    "required_staff_count": 1,
+    "notes": ""
+  }
+},
+{
+  "model": "staff.eventtemplate",
+  "pk": 3,
+  "fields": {
+    "name": "Wedding Reception",
+    "description": "",
+    "is_active": true,
+    "created_at": "2026-06-05T18:13:29.388Z",
+    "default_location": "",
+    "default_duration_hours": 1,
+    "required_staff_count": 1,
+    "notes": ""
+  }
+},
+{
+  "model": "staff.eventtemplate",
+  "pk": 5,
+  "fields": {
+    "name": "Funeral Reception Party",
+    "description": "",
+    "is_active": true,
+    "created_at": "2026-06-30T07:08:57.335Z",
+    "default_location": "",
+    "default_duration_hours": 1,
+    "required_staff_count": 1,
+    "notes": ""
+  }
+},
+{
+  "model": "staff.eventtemplate",
+  "pk": 6,
+  "fields": {
+    "name": "Coronation Ceremony Party",
+    "description": "",
+    "is_active": true,
+    "created_at": "2026-06-30T07:33:44.234Z",
+    "default_location": "",
+    "default_duration_hours": 1,
+    "required_staff_count": 1,
+    "notes": ""
+  }
+},
+{
+  "model": "staff.eventtemplate",
+  "pk": 7,
+  "fields": {
+    "name": "Test Graduation Ceremony Template",
+    "description": "",
+    "is_active": true,
+    "created_at": "2026-07-08T06:51:03.081Z",
+    "default_location": "",
+    "default_duration_hours": 1,
+    "required_staff_count": 1,
+    "notes": ""
+  }
+},
+{
+  "model": "staff.eventtemplaterole",
+  "pk": 1,
+  "fields": {
+    "template": 1,
+    "role": 1,
+    "count": 1
+  }
+},
+{
+  "model": "staff.eventtemplaterole",
+  "pk": 8,
+  "fields": {
+    "template": 1,
+    "role": 2,
+    "count": 1
+  }
+},
+{
+  "model": "staff.eventtemplaterole",
+  "pk": 9,
+  "fields": {
+    "template": 1,
+    "role": 5,
+    "count": 1
+  }
+},
+{
+  "model": "staff.eventtemplaterole",
+  "pk": 10,
+  "fields": {
+    "template": 1,
+    "role": 6,
+    "count": 2
+  }
+},
+{
+  "model": "staff.eventtemplaterole",
+  "pk": 11,
+  "fields": {
+    "template": 1,
+    "role": 7,
+    "count": 2
+  }
+},
+{
+  "model": "staff.eventtemplaterole",
+  "pk": 12,
+  "fields": {
+    "template": 1,
+    "role": 8,
+    "count": 1
+  }
+},
+{
+  "model": "staff.eventtemplaterole",
+  "pk": 13,
+  "fields": {
+    "template": 3,
+    "role": 4,
+    "count": 2
+  }
+},
+{
+  "model": "staff.eventtemplaterole",
+  "pk": 14,
+  "fields": {
+    "template": 3,
+    "role": 3,
+    "count": 2
+  }
+},
+{
+  "model": "staff.eventtemplaterole",
+  "pk": 15,
+  "fields": {
+    "template": 3,
+    "role": 6,
+    "count": 3
+  }
+},
+{
+  "model": "staff.eventtemplaterole",
+  "pk": 16,
+  "fields": {
+    "template": 3,
+    "role": 7,
+    "count": 3
+  }
+},
+{
+  "model": "staff.eventtemplaterole",
+  "pk": 17,
+  "fields": {
+    "template": 3,
+    "role": 5,
+    "count": 1
+  }
+},
+{
+  "model": "staff.eventtemplaterole",
+  "pk": 18,
+  "fields": {
+    "template": 5,
+    "role": 10,
+    "count": 1
+  }
+},
+{
+  "model": "staff.eventtemplaterole",
+  "pk": 19,
+  "fields": {
+    "template": 5,
+    "role": 1,
+    "count": 2
+  }
+},
+{
+  "model": "staff.eventtemplaterole",
+  "pk": 20,
+  "fields": {
+    "template": 5,
+    "role": 3,
+    "count": 3
+  }
+},
+{
+  "model": "staff.eventtemplaterole",
+  "pk": 21,
+  "fields": {
+    "template": 5,
+    "role": 6,
+    "count": 4
+  }
+},
+{
+  "model": "staff.eventtemplaterole",
+  "pk": 22,
+  "fields": {
+    "template": 5,
+    "role": 4,
+    "count": 4
+  }
+},
+{
+  "model": "staff.eventtemplaterole",
+  "pk": 23,
+  "fields": {
+    "template": 5,
+    "role": 7,
+    "count": 4
+  }
+},
+{
+  "model": "staff.eventtemplaterole",
+  "pk": 24,
+  "fields": {
+    "template": 5,
+    "role": 8,
+    "count": 4
+  }
+},
+{
+  "model": "staff.eventtemplaterole",
+  "pk": 25,
+  "fields": {
+    "template": 5,
+    "role": 11,
+    "count": 1
+  }
+},
+{
+  "model": "staff.eventtemplaterole",
+  "pk": 26,
+  "fields": {
+    "template": 6,
+    "role": 10,
+    "count": 2
+  }
+},
+{
+  "model": "staff.eventtemplaterole",
+  "pk": 27,
+  "fields": {
+    "template": 6,
+    "role": 1,
+    "count": 2
+  }
+},
+{
+  "model": "staff.eventtemplaterole",
+  "pk": 28,
+  "fields": {
+    "template": 6,
+    "role": 2,
+    "count": 2
+  }
+},
+{
+  "model": "staff.eventtemplaterole",
+  "pk": 29,
+  "fields": {
+    "template": 6,
+    "role": 3,
+    "count": 2
+  }
+},
+{
+  "model": "staff.eventtemplaterole",
+  "pk": 30,
+  "fields": {
+    "template": 6,
+    "role": 6,
+    "count": 5
+  }
+},
+{
+  "model": "staff.eventtemplaterole",
+  "pk": 31,
+  "fields": {
+    "template": 6,
+    "role": 4,
+    "count": 6
+  }
+},
+{
+  "model": "staff.eventtemplaterole",
+  "pk": 32,
+  "fields": {
+    "template": 7,
+    "role": 1,
+    "count": 1
+  }
+},
+{
+  "model": "staff.eventtemplaterole",
+  "pk": 33,
+  "fields": {
+    "template": 7,
+    "role": 3,
+    "count": 1
+  }
+},
+{
+  "model": "staff.eventtemplaterole",
+  "pk": 34,
+  "fields": {
+    "template": 7,
+    "role": 6,
+    "count": 2
+  }
+},
+{
+  "model": "staff.eventtemplaterole",
+  "pk": 35,
+  "fields": {
+    "template": 7,
+    "role": 7,
+    "count": 1
+  }
+},
+{
+  "model": "staff.eventtemplaterole",
+  "pk": 36,
+  "fields": {
+    "template": 7,
+    "role": 8,
+    "count": 1
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 37,
+  "fields": {
+    "staff": 15,
+    "event": 10,
+    "duty_number": 1,
+    "role": 5,
+    "status": "assigned",
+    "date_assigned": "2026-06-29T06:26:29.337Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 38,
+  "fields": {
+    "staff": 7,
+    "event": 10,
+    "duty_number": 2,
+    "role": 6,
+    "status": "assigned",
+    "date_assigned": "2026-06-29T06:26:29.350Z",
+    "notes": "",
+    "reassignment_reason": "Replaced via dashboard",
+    "reassigned_at": "2026-06-29T09:05:57.432Z",
+    "reassigned_by": 2
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 39,
+  "fields": {
+    "staff": 13,
+    "event": 10,
+    "duty_number": 3,
+    "role": 6,
+    "status": "assigned",
+    "date_assigned": "2026-06-29T06:26:29.351Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 40,
+  "fields": {
+    "staff": 14,
+    "event": 10,
+    "duty_number": 4,
+    "role": 6,
+    "status": "assigned",
+    "date_assigned": "2026-06-29T06:26:29.352Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 41,
+  "fields": {
+    "staff": 2,
+    "event": 10,
+    "duty_number": 5,
+    "role": 3,
+    "status": "assigned",
+    "date_assigned": "2026-06-29T06:26:29.364Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 42,
+  "fields": {
+    "staff": 10,
+    "event": 10,
+    "duty_number": 6,
+    "role": 3,
+    "status": "assigned",
+    "date_assigned": "2026-06-29T06:26:29.365Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 43,
+  "fields": {
+    "staff": 19,
+    "event": 10,
+    "duty_number": 7,
+    "role": 7,
+    "status": "assigned",
+    "date_assigned": "2026-06-29T06:26:29.367Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 44,
+  "fields": {
+    "staff": 29,
+    "event": 10,
+    "duty_number": 8,
+    "role": 7,
+    "status": "assigned",
+    "date_assigned": "2026-06-29T06:26:29.368Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 45,
+  "fields": {
+    "staff": 28,
+    "event": 10,
+    "duty_number": 9,
+    "role": 7,
+    "status": "assigned",
+    "date_assigned": "2026-06-29T06:26:29.371Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 46,
+  "fields": {
+    "staff": 3,
+    "event": 10,
+    "duty_number": 10,
+    "role": 4,
+    "status": "assigned",
+    "date_assigned": "2026-06-29T06:26:29.380Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 47,
+  "fields": {
+    "staff": 5,
+    "event": 10,
+    "duty_number": 11,
+    "role": 7,
+    "status": "assigned",
+    "date_assigned": "2026-06-29T06:26:29.381Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 48,
+  "fields": {
+    "staff": 23,
+    "event": 11,
+    "duty_number": 1,
+    "role": 8,
+    "status": "assigned",
+    "date_assigned": "2026-06-29T09:03:07.122Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 49,
+  "fields": {
+    "staff": 6,
+    "event": 11,
+    "duty_number": 2,
+    "role": 1,
+    "status": "assigned",
+    "date_assigned": "2026-06-29T09:03:07.133Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 50,
+  "fields": {
+    "staff": 15,
+    "event": 11,
+    "duty_number": 3,
+    "role": 5,
+    "status": "assigned",
+    "date_assigned": "2026-06-29T09:03:07.137Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 51,
+  "fields": {
+    "staff": 26,
+    "event": 11,
+    "duty_number": 4,
+    "role": 2,
+    "status": "assigned",
+    "date_assigned": "2026-06-29T09:03:07.139Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 52,
+  "fields": {
+    "staff": 7,
+    "event": 11,
+    "duty_number": 5,
+    "role": 6,
+    "status": "assigned",
+    "date_assigned": "2026-06-29T09:03:07.151Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 53,
+  "fields": {
+    "staff": 14,
+    "event": 11,
+    "duty_number": 6,
+    "role": 6,
+    "status": "assigned",
+    "date_assigned": "2026-06-29T09:03:07.153Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 54,
+  "fields": {
+    "staff": 19,
+    "event": 11,
+    "duty_number": 7,
+    "role": 7,
+    "status": "assigned",
+    "date_assigned": "2026-06-29T09:03:07.221Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 55,
+  "fields": {
+    "staff": 29,
+    "event": 11,
+    "duty_number": 8,
+    "role": 7,
+    "status": "assigned",
+    "date_assigned": "2026-06-29T09:03:07.235Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 56,
+  "fields": {
+    "staff": 23,
+    "event": 13,
+    "duty_number": 1,
+    "role": 8,
+    "status": "assigned",
+    "date_assigned": "2026-07-08T07:22:46.064Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 58,
+  "fields": {
+    "staff": 13,
+    "event": 13,
+    "duty_number": 3,
+    "role": 6,
+    "status": "assigned",
+    "date_assigned": "2026-07-08T07:22:46.158Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 59,
+  "fields": {
+    "staff": 14,
+    "event": 13,
+    "duty_number": 4,
+    "role": 6,
+    "status": "assigned",
+    "date_assigned": "2026-07-08T07:22:46.159Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 60,
+  "fields": {
+    "staff": 10,
+    "event": 13,
+    "duty_number": 5,
+    "role": 3,
+    "status": "assigned",
+    "date_assigned": "2026-07-08T07:22:46.193Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 61,
+  "fields": {
+    "staff": 5,
+    "event": 13,
+    "duty_number": 6,
+    "role": 7,
+    "status": "assigned",
+    "date_assigned": "2026-07-08T07:22:46.224Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 64,
+  "fields": {
+    "staff": 2,
+    "event": 16,
+    "duty_number": 1,
+    "role": 5,
+    "status": "assigned",
+    "date_assigned": "2026-07-08T11:14:00.007Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 65,
+  "fields": {
+    "staff": 2,
+    "event": 17,
+    "duty_number": 1,
+    "role": 5,
+    "status": "assigned",
+    "date_assigned": "2026-07-08T11:15:03.976Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 66,
+  "fields": {
+    "staff": 23,
+    "event": 18,
+    "duty_number": 1,
+    "role": 8,
+    "status": "assigned",
+    "date_assigned": "2026-07-20T06:55:44.694Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 68,
+  "fields": {
+    "staff": 15,
+    "event": 18,
+    "duty_number": 3,
+    "role": 5,
+    "status": "assigned",
+    "date_assigned": "2026-07-20T06:55:44.710Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 69,
+  "fields": {
+    "staff": 26,
+    "event": 18,
+    "duty_number": 4,
+    "role": 2,
+    "status": "assigned",
+    "date_assigned": "2026-07-20T06:55:44.714Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 70,
+  "fields": {
+    "staff": 1,
+    "event": 18,
+    "duty_number": 5,
+    "role": 6,
+    "status": "assigned",
+    "date_assigned": "2026-07-20T06:55:44.720Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 71,
+  "fields": {
+    "staff": 7,
+    "event": 18,
+    "duty_number": 6,
+    "role": 6,
+    "status": "assigned",
+    "date_assigned": "2026-07-20T06:55:44.722Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 72,
+  "fields": {
+    "staff": 5,
+    "event": 18,
+    "duty_number": 7,
+    "role": 7,
+    "status": "assigned",
+    "date_assigned": "2026-07-20T06:55:44.725Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 73,
+  "fields": {
+    "staff": 19,
+    "event": 18,
+    "duty_number": 8,
+    "role": 7,
+    "status": "assigned",
+    "date_assigned": "2026-07-20T06:55:44.726Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.assignment",
+  "pk": 75,
+  "fields": {
+    "staff": 16,
+    "event": 19,
+    "duty_number": 4,
+    "role": 4,
+    "status": "assigned",
+    "date_assigned": "2026-07-22T05:19:04.470Z",
+    "notes": "",
+    "reassignment_reason": null,
+    "reassigned_at": null,
+    "reassigned_by": null
+  }
+},
+{
+  "model": "staff.roleplay",
+  "pk": 1,
+  "fields": {
+    "scenario": "Late Delivery\r\n\r\nYou are part of a catering team that is to deliver the set of meals ordered for the corporate event on 29/05/2026. The Butcher to deliver the beef, chicken has not show up. We have no update of when he will turn up. As the Catering Lead, demonstrate what you will do so we can meet and exceed client expectation.",
+    "role": "Catering Lead",
+    "description": "In the team, you have the another Catering Lead, Senior Cook, Drivers, Servers, Cooks.\r\nYou are to demonstrate your communication and teamwork skills.",
+    "expected_outcome": "Effective Communication\r\nTeamwork\r\nPersonal Initiative\r\nAbility to work under pressure"
+  }
+},
+{
+  "model": "staff.roleplay",
+  "pk": 2,
+  "fields": {
+    "scenario": "It 17:30hours on Friday evening, the catering event is in 30 minutes for 200 guests. The Chef didn't show up. One of main supplier is run late. The client called to say that the guests are waiting for the service. Demonstrate your actions working with the team of Catering Lead, Senior Cooks, Cooks, Waiters, Servers, Manager and drivers",
+    "role": "Catering Lead",
+    "description": "The candidate is expected to demonstrate how to lead the team under pressure in delivering expected results whilst resolving potential confusion",
+    "expected_outcome": "Effective communication\r\nTeamwork\r\nWorking under pressure"
+  }
+},
+{
+  "model": "staff.roleplayresponse",
+  "pk": 1,
+  "fields": {
+    "roleplay": 1,
+    "staff": 28,
+    "action": "1. Call the butcher immediately for ETA. If no response, activate backup supplier list.\r\n2. Brief the other Catering Lead and Senior Cook - we pivot to vegetarian/chicken dishes we have in stock.\r\n3. Inform client contact now about delay and present Plan B menu options to manage expectations.\r\n4. Reassign Drivers to pickup from backup supplier while Cooks start prepping sides.\r\n5. Document everything for incident report.",
+    "submitted_at": "2026-05-29T12:57:39.513Z"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 1,
+  "fields": {
+    "action_time": "2026-05-18T13:45:38.519Z",
+    "user": 1,
+    "content_type": 16,
+    "object_id": "1",
+    "object_repr": "Catering Lead",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 2,
+  "fields": {
+    "action_time": "2026-05-18T13:45:54.319Z",
+    "user": 1,
+    "content_type": 16,
+    "object_id": "2",
+    "object_repr": "Chief Cook",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 3,
+  "fields": {
+    "action_time": "2026-05-18T13:46:01.503Z",
+    "user": 1,
+    "content_type": 16,
+    "object_id": "3",
+    "object_repr": "Senior Cook",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 4,
+  "fields": {
+    "action_time": "2026-05-18T13:46:08.830Z",
+    "user": 1,
+    "content_type": 16,
+    "object_id": "4",
+    "object_repr": "Server",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 5,
+  "fields": {
+    "action_time": "2026-05-18T13:46:23.896Z",
+    "user": 1,
+    "content_type": 16,
+    "object_id": "5",
+    "object_repr": "Chef",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 6,
+  "fields": {
+    "action_time": "2026-05-18T13:46:37.591Z",
+    "user": 1,
+    "content_type": 16,
+    "object_id": "6",
+    "object_repr": "Cook",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 7,
+  "fields": {
+    "action_time": "2026-05-18T13:46:53.119Z",
+    "user": 1,
+    "content_type": 16,
+    "object_id": "7",
+    "object_repr": "Waiter",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 8,
+  "fields": {
+    "action_time": "2026-05-18T13:47:10.035Z",
+    "user": 1,
+    "content_type": 16,
+    "object_id": "8",
+    "object_repr": "Bartender",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 9,
+  "fields": {
+    "action_time": "2026-05-18T13:48:40.486Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "1",
+    "object_repr": "Adam Smith (Cook)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 10,
+  "fields": {
+    "action_time": "2026-05-18T13:55:05.560Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "2",
+    "object_repr": "Joe Coker (Senior Cook)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 11,
+  "fields": {
+    "action_time": "2026-05-18T13:55:52.778Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "3",
+    "object_repr": "Tom Sawyer (Server)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 12,
+  "fields": {
+    "action_time": "2026-05-18T13:56:46.733Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "4",
+    "object_repr": "Bolu Tomara (Catering Lead)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 13,
+  "fields": {
+    "action_time": "2026-05-18T13:57:40.773Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "5",
+    "object_repr": "Tola Badmos (Waiter)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 14,
+  "fields": {
+    "action_time": "2026-05-18T13:59:19.600Z",
+    "user": 1,
+    "content_type": 11,
+    "object_id": "1",
+    "object_repr": "Wedding Reception (2026-05-16)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 15,
+  "fields": {
+    "action_time": "2026-05-18T13:59:59.928Z",
+    "user": 1,
+    "content_type": 11,
+    "object_id": "2",
+    "object_repr": "Corporate Gala (2026-05-20)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 16,
+  "fields": {
+    "action_time": "2026-05-18T14:01:07.410Z",
+    "user": 1,
+    "content_type": 11,
+    "object_id": "3",
+    "object_repr": "Funeral Reception Party (2026-05-22)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 17,
+  "fields": {
+    "action_time": "2026-05-18T14:01:57.693Z",
+    "user": 1,
+    "content_type": 10,
+    "object_id": "1",
+    "object_repr": "Duty 1: Bolu Tomara @ Wedding Reception [assigned]",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 18,
+  "fields": {
+    "action_time": "2026-05-18T14:02:42.910Z",
+    "user": 1,
+    "content_type": 10,
+    "object_id": "2",
+    "object_repr": "Duty 3: Joe Coker @ Wedding Reception [assigned]",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 19,
+  "fields": {
+    "action_time": "2026-05-18T14:03:17.818Z",
+    "user": 1,
+    "content_type": 10,
+    "object_id": "3",
+    "object_repr": "Duty 6: Tola Badmos @ Wedding Reception [assigned]",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 20,
+  "fields": {
+    "action_time": "2026-05-18T14:06:17.227Z",
+    "user": 1,
+    "content_type": 14,
+    "object_id": "1",
+    "object_repr": "No Show - 40%",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 21,
+  "fields": {
+    "action_time": "2026-05-18T14:06:45.176Z",
+    "user": 1,
+    "content_type": 14,
+    "object_id": "2",
+    "object_repr": "Lateness - 15%",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 22,
+  "fields": {
+    "action_time": "2026-05-18T14:07:14.004Z",
+    "user": 1,
+    "content_type": 14,
+    "object_id": "3",
+    "object_repr": "Misconduct - 30%",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 23,
+  "fields": {
+    "action_time": "2026-05-18T14:07:57.504Z",
+    "user": 1,
+    "content_type": 14,
+    "object_id": "4",
+    "object_repr": "Unauthorized absence - 35%",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 24,
+  "fields": {
+    "action_time": "2026-05-18T14:08:26.379Z",
+    "user": 1,
+    "content_type": 14,
+    "object_id": "5",
+    "object_repr": "Sick leave - 0%",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 25,
+  "fields": {
+    "action_time": "2026-05-18T14:09:32.714Z",
+    "user": 1,
+    "content_type": 12,
+    "object_id": "1",
+    "object_repr": "Bolu Tomara - No Show",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 26,
+  "fields": {
+    "action_time": "2026-05-18T14:10:56.715Z",
+    "user": 1,
+    "content_type": 12,
+    "object_id": "2",
+    "object_repr": "Tola Badmos - Lateness",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 27,
+  "fields": {
+    "action_time": "2026-05-18T14:11:48.921Z",
+    "user": 1,
+    "content_type": 10,
+    "object_id": "4",
+    "object_repr": "Duty 1: Bolu Tomara @ Corporate Gala [assigned]",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 28,
+  "fields": {
+    "action_time": "2026-05-18T14:12:18.432Z",
+    "user": 1,
+    "content_type": 10,
+    "object_id": "5",
+    "object_repr": "Duty 3: Adam Smith @ Corporate Gala [assigned]",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 29,
+  "fields": {
+    "action_time": "2026-05-18T18:00:53.531Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "6",
+    "object_repr": "David Johnson (Catering Lead)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 30,
+  "fields": {
+    "action_time": "2026-05-18T18:04:01.335Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "7",
+    "object_repr": "Bob Grappy (Cook)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 31,
+  "fields": {
+    "action_time": "2026-05-18T18:18:31.768Z",
+    "user": 1,
+    "content_type": 10,
+    "object_id": "4",
+    "object_repr": "Duty 1: Bolu Tomara @ Corporate Gala [assigned]",
+    "action_flag": 3,
+    "change_message": ""
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 32,
+  "fields": {
+    "action_time": "2026-05-18T18:19:57.522Z",
+    "user": 1,
+    "content_type": 11,
+    "object_id": "2",
+    "object_repr": "Corporate Gala (2026-05-20)",
+    "action_flag": 2,
+    "change_message": "[]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 33,
+  "fields": {
+    "action_time": "2026-05-19T05:35:05.362Z",
+    "user": 1,
+    "content_type": 12,
+    "object_id": "3",
+    "object_repr": "Adam Smith - Unauthorized absence",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 34,
+  "fields": {
+    "action_time": "2026-05-19T05:36:12.512Z",
+    "user": 1,
+    "content_type": 12,
+    "object_id": "4",
+    "object_repr": "Adam Smith - Lateness",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 35,
+  "fields": {
+    "action_time": "2026-05-19T05:37:54.454Z",
+    "user": 1,
+    "content_type": 10,
+    "object_id": "6",
+    "object_repr": "Duty 4: Adam Smith @ Wedding Reception [assigned]",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 36,
+  "fields": {
+    "action_time": "2026-05-19T05:38:28.802Z",
+    "user": 1,
+    "content_type": 10,
+    "object_id": "7",
+    "object_repr": "Duty 5: Adam Smith @ Corporate Gala [assigned]",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 37,
+  "fields": {
+    "action_time": "2026-05-19T05:39:31.595Z",
+    "user": 1,
+    "content_type": 10,
+    "object_id": "8",
+    "object_repr": "Duty 5: Adam Smith @ Funeral Reception Party [assigned]",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 38,
+  "fields": {
+    "action_time": "2026-05-19T05:40:17.494Z",
+    "user": 1,
+    "content_type": 10,
+    "object_id": "7",
+    "object_repr": "Duty 5: Adam Smith @ Corporate Gala [assigned]",
+    "action_flag": 3,
+    "change_message": ""
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 39,
+  "fields": {
+    "action_time": "2026-05-19T10:38:33.811Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "1",
+    "object_repr": "Adam Smith (Cook)",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Phone\", \"Whatsapp\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 40,
+  "fields": {
+    "action_time": "2026-05-19T10:38:40.776Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "1",
+    "object_repr": "Adam Smith (Cook)",
+    "action_flag": 2,
+    "change_message": "[]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 41,
+  "fields": {
+    "action_time": "2026-05-19T10:41:37.239Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "8",
+    "object_repr": "Tola Badmos (Waiter)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 42,
+  "fields": {
+    "action_time": "2026-05-19T10:42:19.407Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "5",
+    "object_repr": "Tola Badmos (Waiter)",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Phone\", \"Whatsapp\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 43,
+  "fields": {
+    "action_time": "2026-05-19T10:42:31.690Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "8",
+    "object_repr": "Tola Badmos (Waiter)",
+    "action_flag": 3,
+    "change_message": ""
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 44,
+  "fields": {
+    "action_time": "2026-05-19T10:43:43.545Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "3",
+    "object_repr": "Tom Sawyer (Server)",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Phone\", \"Whatsapp\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 45,
+  "fields": {
+    "action_time": "2026-05-25T09:54:37.168Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "9",
+    "object_repr": "John Grab (Catering Lead)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 46,
+  "fields": {
+    "action_time": "2026-05-25T09:56:38.851Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "10",
+    "object_repr": "Emily Baker (Senior Cook)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 47,
+  "fields": {
+    "action_time": "2026-05-25T09:58:33.130Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "11",
+    "object_repr": "Maria Terry (Senior Cook)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 48,
+  "fields": {
+    "action_time": "2026-05-25T10:01:27.740Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "12",
+    "object_repr": "David Mark (Cook)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 49,
+  "fields": {
+    "action_time": "2026-05-25T10:02:59.479Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "13",
+    "object_repr": "Alex Kind (Cook)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 50,
+  "fields": {
+    "action_time": "2026-05-25T10:04:56.959Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "14",
+    "object_repr": "Sam  Bays (Cook)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 51,
+  "fields": {
+    "action_time": "2026-05-25T10:06:35.983Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "15",
+    "object_repr": "Rachel Abey (Chef)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 52,
+  "fields": {
+    "action_time": "2026-05-25T10:11:37.219Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "16",
+    "object_repr": "Mike Upah (Chef)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 53,
+  "fields": {
+    "action_time": "2026-05-25T10:13:13.598Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "17",
+    "object_repr": "Tom Miany (Waiter)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 54,
+  "fields": {
+    "action_time": "2026-05-25T10:14:45.510Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "18",
+    "object_repr": "Liam Cane (Waiter)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 55,
+  "fields": {
+    "action_time": "2026-05-25T10:16:29.636Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "19",
+    "object_repr": "Jane King (Waiter)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 56,
+  "fields": {
+    "action_time": "2026-05-25T10:18:00.558Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "20",
+    "object_repr": "Ava Bails (Server)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 57,
+  "fields": {
+    "action_time": "2026-05-25T10:19:30.370Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "21",
+    "object_repr": "Bob Goater (Server)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 58,
+  "fields": {
+    "action_time": "2026-05-25T10:20:51.646Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "22",
+    "object_repr": "Sophia Doug (Server)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 59,
+  "fields": {
+    "action_time": "2026-05-25T10:25:02.179Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "23",
+    "object_repr": "Mia Bart (Bartender)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 60,
+  "fields": {
+    "action_time": "2026-05-25T10:26:14.361Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "24",
+    "object_repr": "Jake Brew (Bartender)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 61,
+  "fields": {
+    "action_time": "2026-05-25T10:27:20.713Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "25",
+    "object_repr": "Leo Mix (Bartender)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 62,
+  "fields": {
+    "action_time": "2026-05-25T10:33:04.087Z",
+    "user": 1,
+    "content_type": 11,
+    "object_id": "4",
+    "object_repr": "Corporate Team Meeting Dinner (2026-05-28)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 63,
+  "fields": {
+    "action_time": "2026-05-25T10:34:15.726Z",
+    "user": 1,
+    "content_type": 11,
+    "object_id": "5",
+    "object_repr": "Naming Ceremony Party (2026-05-23)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 64,
+  "fields": {
+    "action_time": "2026-05-25T10:36:02.102Z",
+    "user": 1,
+    "content_type": 11,
+    "object_id": "6",
+    "object_repr": "Graduation Ceremony Party (2026-06-03)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 65,
+  "fields": {
+    "action_time": "2026-05-25T12:39:24.114Z",
+    "user": 1,
+    "content_type": 19,
+    "object_id": "1",
+    "object_repr": "Corporate Team Meeting Dinner",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}, {\"added\": {\"name\": \"event template role\", \"object\": \"Corporate Team Meeting Dinner: 1 x Catering Lead\"}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 66,
+  "fields": {
+    "action_time": "2026-05-25T12:42:31.541Z",
+    "user": 1,
+    "content_type": 19,
+    "object_id": "2",
+    "object_repr": "Graduation Ceremony Party",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}, {\"added\": {\"name\": \"event template role\", \"object\": \"Graduation Ceremony Party: 2 x Chief Cook\"}}, {\"added\": {\"name\": \"event template role\", \"object\": \"Graduation Ceremony Party: 2 x Senior Cook\"}}, {\"added\": {\"name\": \"event template role\", \"object\": \"Graduation Ceremony Party: 3 x Cook\"}}, {\"added\": {\"name\": \"event template role\", \"object\": \"Graduation Ceremony Party: 1 x Chef\"}}, {\"added\": {\"name\": \"event template role\", \"object\": \"Graduation Ceremony Party: 4 x Server\"}}, {\"added\": {\"name\": \"event template role\", \"object\": \"Graduation Ceremony Party: 2 x Catering Lead\"}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 67,
+  "fields": {
+    "action_time": "2026-05-25T12:44:13.119Z",
+    "user": 1,
+    "content_type": 19,
+    "object_id": "1",
+    "object_repr": "Corporate Team Meeting Dinner",
+    "action_flag": 2,
+    "change_message": "[{\"added\": {\"name\": \"event template role\", \"object\": \"Corporate Team Meeting Dinner: 2 x Chief Cook\"}}, {\"added\": {\"name\": \"event template role\", \"object\": \"Corporate Team Meeting Dinner: 1 x Chef\"}}, {\"added\": {\"name\": \"event template role\", \"object\": \"Corporate Team Meeting Dinner: 3 x Cook\"}}, {\"added\": {\"name\": \"event template role\", \"object\": \"Corporate Team Meeting Dinner: 3 x Waiter\"}}, {\"added\": {\"name\": \"event template role\", \"object\": \"Corporate Team Meeting Dinner: 1 x Bartender\"}}, {\"changed\": {\"name\": \"event template role\", \"object\": \"Corporate Team Meeting Dinner: 2 x Catering Lead\", \"fields\": [\"Count\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 68,
+  "fields": {
+    "action_time": "2026-05-25T13:32:20.797Z",
+    "user": 1,
+    "content_type": 11,
+    "object_id": "7",
+    "object_repr": "Test Dinner (2026-05-30)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 69,
+  "fields": {
+    "action_time": "2026-05-25T13:40:44.378Z",
+    "user": 1,
+    "content_type": 18,
+    "object_id": "26",
+    "object_repr": "Gordon Martin (Chief Cook)",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 70,
+  "fields": {
+    "action_time": "2026-05-25T13:42:09.794Z",
+    "user": 1,
