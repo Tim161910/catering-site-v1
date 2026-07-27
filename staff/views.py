@@ -911,3 +911,9 @@ def load_seed_data(request):
     except Exception as e:
         tb = traceback.format_exc()
         return HttpResponse(f"ERROR: {e}<br><pre>{tb}</pre>", status=500)
+
+def make_staff(request):  # NO decorator
+    user = User.objects.get(username='admin')
+    user.is_staff = True
+    user.save()
+    return HttpResponse("admin is now staff. DELETE THIS VIEW NOW")
