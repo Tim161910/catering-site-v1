@@ -896,12 +896,24 @@ def create_assignments_from_template(request, event_id):
     return redirect('staff:assignment_list', event_id=event_id)
 
 def reset_admin(request):
-    try:
-        u = User.objects.get(username='admin')
-        u.set_password('admin123')
-        u.is_superuser = True
-        u.is_staff = True
-        u.save()
-        return HttpResponse("✅ Password reset to admin123. DELETE THIS VIEW AFTER TESTING")
-    except User.DoesNotExist:
-        return HttpResponse("Error: admin user does not exist")
+    from django.contrib.auth.models import User
+    from django.http import HttpResponse
+    
+    # If admin exists, update it. If not, create it
+    user, created = User.objects.get_or_create(
+        username='admin',
+        defaults={
+            'email': 'admin@example.com',
+            'is_staff': True,
+            'is_superuser': True
+        }
+    )
+    user.set_password('admin123')
+    user.is_staff = True
+    user.is_superuser = True
+    user.save()
+    
+    if created:
+        return HttpResponse("✅ Admin CREATED. Username: admin, Password: admin123. DELETE THIS VIEW AFTER TESTING")
+    else:
+        return HttpResponse("✅ Admin UPDATED. Username: admin, Password: admin123. DELETE THIS VIEW AFTER TESTING")
