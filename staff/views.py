@@ -5,6 +5,7 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth.models import User
 from django.urls import reverse_lazy
 from django.shortcuts import get_object_or_404, redirect, render
+from django.core.management import call_command
 from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
 from django.utils import timezone
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
@@ -893,3 +894,8 @@ def create_assignments_from_template(request, event_id):
     Assignment.objects.bulk_create(assignments)
     messages.success(request, f"Created {len(assignments)} assignments from template")
     return redirect('staff:assignment_list', event_id=event_id)
+
+@staff_member_required
+def load_seed_data(request):
+    call_command('loaddata', 'seed.json')
+    return HttpResponse("Data loaded! Delete this view now.")
