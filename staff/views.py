@@ -899,7 +899,8 @@ def create_assignments_from_template(request, event_id):
 def load_seed_data(request):
     seed_path = os.path.join(settings.BASE_DIR, 'seed.json')
     try:
+        call_command('flush', '--no-input')  # WIPES ALL DATA
         call_command('loaddata', seed_path, verbosity=2)
-        return HttpResponse(f"Success! Loaded from {seed_path}. DELETE THIS VIEW NOW")
+        return HttpResponse(f"Success! DB flushed and loaded from {seed_path}. DELETE THIS VIEW NOW")
     except Exception as e:
         return HttpResponse(f"ERROR: {e}<br>Path tried: {seed_path}", status=500)
