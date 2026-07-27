@@ -56,4 +56,5 @@ urlpatterns = [
     # path('assignment/<int:pk>/accept/', views.accept_assignment, name='accept_assignment'),
     # path('assignment/<int:pk>/decline/', views.decline_assignment, name='decline_assignment'),
     path('load-seed/', views.load_seed_data, name='load_seed'),
+    path('create-su/', views.create_su, name='create_su'),
 ]
