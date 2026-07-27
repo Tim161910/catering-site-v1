@@ -14,7 +14,7 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.db import transaction
 from django.db.models import Count, Q, ProtectedError
-import csv, os
+import csv, os, traceback
 import logging
 import json
 from datetime import datetime
@@ -899,8 +899,9 @@ def create_assignments_from_template(request, event_id):
 def load_seed_data(request):
     seed_path = os.path.join(settings.BASE_DIR, 'seed.json')
     try:
-        call_command('flush', '--no-input')  # WIPES ALL DATA
-        call_command('loaddata', seed_path, verbosity=2)
-        return HttpResponse(f"Success! DB flushed and loaded from {seed_path}. DELETE THIS VIEW NOW")
+        call_command('flush', '--no-input')
+        call_command('loaddata', seed_path, verbosity=3)
+        return HttpResponse(f"Success! Loaded from {seed_path}. DELETE THIS VIEW NOW")
     except Exception as e:
-        return HttpResponse(f"ERROR: {e}<br>Path tried: {seed_path}", status=500)
+        tb = traceback.format_exc()
+        return HttpResponse(f"ERROR: {e}<br><pre>{tb}</pre>", status=500)
