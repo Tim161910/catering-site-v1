@@ -9,8 +9,8 @@
             <p class="text-indigo-100">{{ staff_list.count }} team members</p>
         </div>
         <div class="flex gap-3">
-            <a href="?export=csv" class="bg-white text-indigo-600 px-4 py-2 rounded-lg font-semibold">📥 Export CSV</a>
-            <a href="{% url 'staff:create' %}" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-semibold">+ Add Staff</a>
+          <a href="{% url 'staff:export_staff_csv' %}" class="bg-white text-indigo-600 px-4 py-2 rounded-lg font-semibold">📥 Export CSV</a>
+          <a href="{% url 'staff:staff_create' %}" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-semibold">+ Add Staff</a>
         </div>
     </div>
 
@@ -53,13 +53,13 @@
                     {{ staff.email|default:"-" }}<br>
                     {{ staff.phone|default:"-" }}
                   </td>
-                  <td class="p-3 text-center font-bold">
-                    {% if staff.reliability >= 90 %}
-                      <span class="text-green-600">🟢 A-Team {{ staff.reliability }}%</span>
-                    {% elif staff.reliability >= 60 %}
-                      <span class="text-blue-600">🔵 Standard {{ staff.reliability }}%</span>
+                  <td class="p-3 text-center font-bold">     
+                    {% if staff.reliability_score >= 90 %}
+                      <span class="text-green-600">🟢 A-Team {{ staff.reliability_score }}%</span>
+                    {% elif staff.reliability_score >= 60 %}
+                      <span class="text-blue-600">🔵 Standard {{ staff.reliability_score }}%</span>
                     {% else %}
-                      <span class="text-red-600">🔴 Warning {{ staff.reliability }}%</span>
+                      <span class="text-red-600">🔴 Warning {{ staff.reliability_score }}%</span>
                     {% endif %}
                   </td>
                   <td class="p-3 text-center">

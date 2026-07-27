@@ -331,7 +331,17 @@ class ManageInterviewSlotsView(View):
 class StaffListView(LoginRequiredMixin, ListView):
     model = Staff
     template_name = 'staff/staff_list.html'
-    context_object_name = 'staff_members'
+    context_object_name = 'staff_list' # <- CHANGE THIS from 'staff_members'
+
+    def get_queryset(self):
+        q = self.request.GET.get('q', '')
+        qs = Staff.objects.all().select_related('role')
+        if q:
+            qs = qs.filter(
+                Q(name__icontains=q) | 
+                Q(email__icontains=q)
+            )
+        return qs
 
 class StaffCreateView(LoginRequiredMixin, CreateView):
     model = Staff
