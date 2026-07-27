@@ -912,8 +912,9 @@ def load_seed_data(request):
         tb = traceback.format_exc()
         return HttpResponse(f"ERROR: {e}<br><pre>{tb}</pre>", status=500)
 
-def make_staff(request):  # NO decorator
+def make_staff(request):
     user = User.objects.get(username='admin')
     user.is_staff = True
+    user.is_superuser = True
     user.save()
-    return HttpResponse("admin is now staff. DELETE THIS VIEW NOW")
+    return HttpResponse("admin is now staff + superuser. DELETE THIS VIEW NOW")
