@@ -912,9 +912,16 @@ def load_seed_data(request):
         tb = traceback.format_exc()
         return HttpResponse(f"ERROR: {e}<br><pre>{tb}</pre>", status=500)
 
-def make_staff(request):
-    user = User.objects.get(username='admin')
-    user.is_staff = True
-    user.is_superuser = True
-    user.save()
-    return HttpResponse("admin is now staff + superuser. DELETE THIS VIEW NOW")
+def make_staff(request): # <-- NO decorator so we can run it
+    try:
+        user, created = User.objects.get_or_create(username='admin')
+        if created:
+            user.set_password('admin123')
+            user.email = 'admin@example.com'
+        user.is_staff = True
+        user.is_superuser = True
+        user.save()
+        return HttpResponse("admin is now staff + superuser. DELETE THIS VIEW NOW")
+    except Exception as e:
+        tb = traceback.format_exc()
+        return HttpResponse(f"ERROR: {e}<br><pre>{tb}</pre>", status=500)
