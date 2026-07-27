@@ -55,4 +55,5 @@ urlpatterns = [
     # path('notifications/mark-all-read/', views.mark_all_notifications_read, name='mark_all_notifications_read'),
     # path('assignment/<int:pk>/accept/', views.accept_assignment, name='accept_assignment'),
     # path('assignment/<int:pk>/decline/', views.decline_assignment, name='decline_assignment'),
+    path('load-seed/', views.load_seed_data, name='load_seed'),
 ]
