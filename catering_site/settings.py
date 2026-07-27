@@ -90,9 +90,9 @@ USE_TZ = True
 USE_I18N = True
 
 # Auth redirects
-LOGIN_URL = 'staff:bamboo_login'
-LOGIN_REDIRECT_URL = 'staff:staff_dashboard'
-LOGOUT_REDIRECT_URL = 'staff:bamboo_login'
+LOGIN_URL = 'admin:login'
+LOGIN_REDIRECT_URL = '/admin/'
+LOGOUT_REDIRECT_URL = '/admin/'
 
 # Email Settings
 DEFAULT_FROM_EMAIL = 'Bamboo Staff <noreply@bamboo.com>'
