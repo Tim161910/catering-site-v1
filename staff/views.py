@@ -800,6 +800,13 @@ def event_status(request):
     }
     return render(request, 'staff/event_status.html', context)
 
+@staff_member_required
+def risk_dashboard(request):
+    """
+    Event Risk Dashboard - shows upcoming events and staffing risks
+    """
+    return event_status(request)  # <-- just reuse your existing event_status view
+
 @login_required
 def auto_fill_roster(request, event_id):
     event = get_object_or_404(Event, id=event_id)

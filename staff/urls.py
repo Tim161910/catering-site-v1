@@ -4,6 +4,7 @@ from . import views
 app_name = 'staff'
 
 urlpatterns = [
+    path('risk-dashboard/', views.risk_dashboard, name='risk-dashboard'),  # <-- added comma here
     path('incident/add/', views.IncidentCreateView.as_view(), name='incident_add'),
     path('staff-list/', views.StaffListView.as_view(), name='staff_list'),
     path('', views.StaffDashboardView.as_view(), name='staff_dashboard'),
