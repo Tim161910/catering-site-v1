@@ -215,7 +215,7 @@ class StaffSite(admin.AdminSite):
             'app_label': 'dashboard',
             'models': [{
                 'name': 'Event Risk Dashboard',
-                'admin_url': '/staff/risk-dashboard/',
+                'admin_url': '/admin/risk-dashboard/',
                 'view_only': True
             }]
         })
