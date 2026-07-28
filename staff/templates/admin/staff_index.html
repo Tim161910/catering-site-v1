@@ -1,0 +1,17 @@
+<!-- STAFF ADMIN OVERRIDE IS LOADING -->
+{% extends "admin/index.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="module" style="background:#f8f9fa; border-left:4px solid #79aec8; padding:15px; margin-bottom:20px;">
+        <h2>📊 Event Risk Dashboard</h2>
+        <p>Monitor upcoming events and staff reliability</p>
+        <a href="{% url 'staff_admin:risk-dashboard' %}" class="button" style="background:#79aec8; color:white; padding:10px 15px; text-decoration:none; border-radius:4px;">
+            Open Event Risk Dashboard
+        </a>
+    </div>
+
+    {{ block.super }}
+</div>
+{% endblock %}

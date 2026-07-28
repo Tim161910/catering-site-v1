@@ -199,17 +199,32 @@ class RoleAdmin(admin.ModelAdmin):
 
 class StaffSite(admin.AdminSite):
     site_header = "Catering Operations"
-    index_title = "Event Risk Dashboard"
+    site_title = "Catering Admin"
+    index_title = "Dashboard"
+    index_template = "admin/staff_index.html"  # <-- shows the blue box
 
     def each_context(self, request):
         context = super().each_context(request)
-        context['event_status_url'] = '/staff/event-status/'  # <-- changed to app URL
+        context['event_status_url'] = '/staff/event-status/'
         return context
+
+    def get_app_list(self, request): # <-- puts link at top of app list
+        app_list = super().get_app_list(request)
+        app_list.insert(0, {
+            'name': 'Staff Manager',
+            'app_label': 'dashboard',
+            'models': [{
+                'name': 'Event Risk Dashboard',
+                'admin_url': '/staff/risk-dashboard/',
+                'view_only': True
+            }]
+        })
+        return app_list
 
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
-            path('risk-dashboard/', self.admin_view(self.risk_dashboard_view), name='risk-dashboard'), # <-- ADD THIS
+            path('risk-dashboard/', self.admin_view(self.risk_dashboard_view), name='risk-dashboard'),
             path('auto-fill-roster/<int:event_id>/', self.admin_view(self.auto_fill_roster), name='auto-fill-roster'),
             path('replace-staff/<int:assignment_id>/', self.admin_view(self.replace_staff), name='replace-staff'),
         ]
@@ -238,25 +253,12 @@ class StaffSite(admin.AdminSite):
     def auto_fill_event(self, event):
         empty_duties = event.assignments.filter(staff__isnull=True, status='assigned').select_related('role')
         filled_count = 0
-
         for duty in empty_duties:
-            candidates = Staff.objects.filter(
-                role=duty.role,
-                is_active=True,
-                reliability_score__gte=75
-            ).exclude(
-                id__in=event.assignments.filter(staff__isnull=False).values_list('staff_id', flat=True)
-            )
-
+            candidates = Staff.objects.filter(role=duty.role, is_active=True, reliability_score__gte=75).exclude(id__in=event.assignments.filter(staff__isnull=False).values_list('staff_id', flat=True))
             for candidate in candidates:
                 conflicts = False
                 if event.start_time and event.end_time:
-                    conflicts = Assignment.objects.filter(
-                        staff=candidate,
-                        event__start_time__lt=event.end_time,
-                        event__end_time__gt=event.start_time
-                    ).exclude(event=event).exists()
-
+                    conflicts = Assignment.objects.filter(staff=candidate, event__start_time__lt=event.end_time, event__end_time__gt=event.start_time).exclude(event=event).exists()
                 if not conflicts:
                     duty.staff = candidate
                     if hasattr(duty, 'start_time') and hasattr(duty, 'end_time'):
@@ -267,33 +269,24 @@ class StaffSite(admin.AdminSite):
                         duty.save(update_fields=['staff'])
                     filled_count += 1
                     break
-
         return filled_count
     
     def auto_fill_roster(self, request, event_id):
         event = get_object_or_404(Event, id=event_id)
         filled_count = self.auto_fill_event(event)
         messages.success(request, f"Auto-filled {filled_count} duties for event '{event.title}'.")
-        return redirect('/staff/event-status/')  # <-- changed to app URL
-        
+        return redirect('/staff/event-status/')
 
     @csrf_exempt
     def replace_staff(self, request, assignment_id):
         assignment = get_object_or_404(Assignment, id=assignment_id)
         new_staff = get_object_or_404(Staff, id=request.POST.get('new_staff_id'))
         event = assignment.event
-
         conflicts = False
         if event.start_time and event.end_time:
-            conflicts = Assignment.objects.filter(
-                staff=new_staff,
-                event__start_time__lt=event.end_time,
-                event__end_time__gt=event.start_time
-            ).exclude(event=event).exists()
-
+            conflicts = Assignment.objects.filter(staff=new_staff, event__start_time__lt=event.end_time, event__end_time__gt=event.start_time).exclude(event=event).exists()
         if conflicts:
             return JsonResponse({'success': False, 'error': 'Staff has a conflicting booking'})
-
         assignment.staff = new_staff
         assignment.save(update_fields=['staff'])
         return JsonResponse({'success': True})
@@ -317,12 +310,10 @@ class InterviewSlotAdmin(admin.ModelAdmin):
 # Activate custom admin site
 staff_admin_site = StaffSite(name='staff_admin')
 
-# Register to your CUSTOM admin site
+# Register all models to custom site
 staff_admin_site.register(Applicant, ApplicantAdmin)
 staff_admin_site.register(Recruitment, RecruitmentAdmin)
 staff_admin_site.register(InterviewSlot, InterviewSlotAdmin)
-
-# Register all models to custom site
 staff_admin_site.register(Staff, StaffAdmin)
 staff_admin_site.register(RolePlayResponse, RolePlayResponseAdmin)
 staff_admin_site.register(Event, EventAdmin)
@@ -332,9 +323,7 @@ staff_admin_site.register(Assignment, AssignmentAdmin)
 staff_admin_site.register(Role, RoleAdmin)
 staff_admin_site.register(EventTemplate, EventTemplateAdmin)
 
-from django.contrib import admin
-admin.site.index_template = 'admin/custom_index.html'
-
-# Make custom site the default
-admin.site = staff_admin_site
-admin.sites.site = staff_admin_site
+# DELETE these 3 lines:
+# admin.site.index_template = 'admin/custom_index.html'
+# admin.site = staff_admin_site
+# admin.sites.site = staff_admin_site
