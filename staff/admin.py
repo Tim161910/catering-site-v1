@@ -2,11 +2,11 @@ from django.contrib import admin, messages
 from django.urls import path, reverse_lazy
 from django.template.response import TemplateResponse
 from django.utils import timezone
-from datetime import timedelta
+from datetime import datetime, timedelta
 from .models import RolePlayResponse, Staff, Event, IssueType, Incident, Assignment, Role, EventTemplate, EventTemplateRole, Applicant, Recruitment, InterviewSlot
 from django.utils.html import format_html, mark_safe
 from django.db import transaction
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
@@ -199,6 +199,7 @@ class RoleAdmin(admin.ModelAdmin):
 
 class StaffSite(admin.AdminSite):
     site_header = "Catering Operations"
+    index_title = "Event Risk Dashboard"
 
     def each_context(self, request):
         context = super().each_context(request)
@@ -208,11 +209,31 @@ class StaffSite(admin.AdminSite):
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
-            # path('event-status/', self.admin_view(self.event_status_view), name='event-status'),  <-- DELETED
+            path('risk-dashboard/', self.admin_view(self.risk_dashboard_view), name='risk-dashboard'), # <-- ADD THIS
             path('auto-fill-roster/<int:event_id>/', self.admin_view(self.auto_fill_roster), name='auto-fill-roster'),
             path('replace-staff/<int:assignment_id>/', self.admin_view(self.replace_staff), name='replace-staff'),
         ]
         return custom_urls + urls
+
+    def risk_dashboard_view(self, request):
+        today = datetime.now()
+        upcoming_events = Event.objects.filter(
+            start_time__gte=today, 
+            start_time__lte=today + timedelta(days=14)
+        ).prefetch_related('assignments__staff', 'assignments__staff__role').order_by('start_time')
+
+        risky_staff = Staff.objects.filter(
+            reliability_score__lt=80, 
+            is_active=True
+        ).select_related('role').order_by('reliability_score')
+
+        context = dict(
+            self.each_context(request),
+            upcoming_events=upcoming_events,
+            risky_staff=risky_staff,
+            title="Event Risk Dashboard"
+        )
+        return render(request, "admin/risk_dashboard.html", context)
 
     def auto_fill_event(self, event):
         empty_duties = event.assignments.filter(staff__isnull=True, status='assigned').select_related('role')
