@@ -30,10 +30,10 @@
                         <a href="{% url 'staff:recruitment_applicants' recruitment_id=recruitment.id %}" class="btn btn-outline-info btn-sm">Applications</a>
                         
                         {% if recruitment.status == 'Open' %}
-                             <a href="{% url 'staff:close_recruitment' recruitment_id=recruitment.id %}" class="btn btn-outline-warning btn-sm">Close</a>
-                             <a href="{% url 'staff:export_applicants_csv' recruitment_id=recruitment.id %}" class="btn btn-outline-secondary btn-sm">Export CSV</a>
+                            {# <a href="{% url 'staff:close_recruitment' recruitment_id=recruitment.id %}" class="btn btn-outline-warning btn-sm">Close</a> #}            
+                            <a href="{% url 'staff:export_applicants_csv' recruitment_id=recruitment.id %}" class="btn btn-outline-secondary btn-sm">Export CSV</a>
                         {% else %}
-                             <a href="{% url 'staff:reopen_recruitment' recruitment_id=recruitment.id %}" class="btn btn-outline-success btn-sm">Reopen</a>
+                            {# <a href="{% url 'staff:reopen_recruitment' recruitment_id=recruitment.id %}" class="btn btn-outline-success btn-sm">Reopen</a> #}
                         {% endif %}
                         
                         <a href="{% url 'staff:recruitment_update' recruitment_id=recruitment.id %}" class="btn btn-outline-primary btn-sm">Edit</a>

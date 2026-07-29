@@ -3,219 +3,48 @@ from django.urls import path, reverse_lazy
 from django.template.response import TemplateResponse
 from django.utils import timezone
 from datetime import datetime, timedelta
-from .models import RolePlayResponse, Staff, Event, IssueType, Incident, Assignment, Role, EventTemplate, EventTemplateRole, Applicant, Recruitment, InterviewSlot
 from django.utils.html import format_html, mark_safe
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
-from .forms import StaffForm
+from.forms import StaffForm
+
+from.models import (
+    Role, EventTemplate, EventTemplateRole, Event,
+    Staff, StaffUpdateLog, StaffUpdateRequest, StaffUpdateApproval,
+    IssueType, Incident, Rule, Flag,
+    Assignment, Task,
+    Recruitment, InterviewSlot, Applicant, Interview, RolePlay, ApplicantRolePlay, RolePlayResponse,
+    Meeting, Expense, LeaveRequest,
+    Notification,
+)
 
 today = timezone.now().date()
 
-class EventTemplateRoleInline(admin.TabularInline):
-    model = EventTemplateRole
-    extra = 1
-    autocomplete_fields = ['role']
-    min_num = 0
-
-class EventTemplateAdmin(admin.ModelAdmin):
-    list_display = ['name', 'is_active', 'role_summary', 'event_count', 'created_at']
-    list_filter = ['is_active']
-    search_fields = ['name']
-    inlines = [EventTemplateRoleInline]
-    list_editable = ['is_active']
-
-    def role_summary(self, obj):
-        roles = obj.template_roles.select_related('role').all()
-        if not roles:
-            return mark_safe('<span style="color: #999;">No roles</span>')
-        return ", ".join([f"{tr.count}× {tr.role.name}" for tr in roles])
-    role_summary.short_description = 'Staffing'
-
-    def event_count(self, obj):
-        return obj.event_set.count()
-    event_count.short_description = 'Events Using'
-
-from django.utils.html import format_html  # <-- add this import at top of admin.py
-
-class StaffAdmin(admin.ModelAdmin):
-    form = StaffForm
-    list_display = ('name', 'role', 'phone', 'reliability_badge', 'is_active') # <-- changed here
-    list_filter = ('role', 'is_active', 'reliability_score')
-    search_fields = ('name', 'email', 'phone')
-    readonly_fields = ('reliability_score',) # <-- make it readonly so signal controls it
-    fieldsets = (
-        ('Basic Info', {'fields': ('name', 'email', 'role', 'is_active')}),
-        ('Contact', {'fields': ('phone', 'whatsapp', 'address')}),
-        ('Emergency Contact', {'fields': ('next_of_kin', 'emergency_contact_name', 'emergency_contact_phone')}),
-        ('Performance', {'fields': ('reliability_score', 'reliability_notes')}),
-    )
-
-    def save_model(self, request, obj, form, change):
-        super().save_model(request, obj, form, change)
-
-    @admin.display(description='Reliability', ordering='reliability_score')
-    def reliability_badge(self, obj):
-        score = obj.reliability_score
-        if score >= 90:
-            color = '#28a745'  # green
-            emoji = '🟢'
-        elif score >= 75:
-            color = '#ffc107'  # yellow
-            emoji = '🟡'
-        else:
-            color = '#dc3545'  # red  
-            emoji = '🔴'
-        return format_html(
-            '<span style="color: {}; font-weight: 600;">{} {}%</span>',
-            color, emoji, score
-        )
-    def get_urls(self):
-        urls = super().get_urls()
-        custom_urls = [
-            path('risk-dashboard/', self.admin_site.admin_view(self.risk_dashboard), name='risk-dashboard'),
-        ]
-        return custom_urls + urls
-
-    def risk_dashboard(self, request):
-        # Staff with low reliability
-        risky_staff = Staff.objects.filter(reliability_score__lt=80, is_active=True).order_by('reliability_score')
-
-        # Events in next 14 days
-        upcoming_events = Event.objects.filter(
-            start_time__gte=timezone.now(),
-            start_time__lte=timezone.now() + timedelta(days=14)
-        ).prefetch_related('assignments__staff', 'assignments__role')  # Use 'assignments' not 'assignment_set'
-
-        context = dict(
-            self.admin_site.each_context(request),
-            risky_staff=risky_staff,
-            upcoming_events=upcoming_events,
-            title="Event Risk Dashboard"
-        )
-        return TemplateResponse(request, "admin/risk_dashboard.html", context)
-
-class RolePlayResponseAdmin(admin.ModelAdmin):
-    list_display = ['staff', 'roleplay', 'submitted_at']
-    list_filter = ['submitted_at', 'roleplay__role']
-    search_fields = ['staff__name', 'action']
-
-class EventAdmin(admin.ModelAdmin):
-    list_display = ['title', 'start_time', 'client_name', 'template', 'assignment_count', 'location']
-    list_filter = ['start_time', 'template']
-    search_fields = ['title', 'client_name']
-    autocomplete_fields = ['template']
-
-    def save_model(self, request, obj, form, change):
-        is_new = obj.pk is None
-        super().save_model(request, obj, form, change)
-
-        # Only clone + auto-fill when creating AND template is set AND no duties exist yet
-        if is_new and obj.template and not Assignment.objects.filter(event=obj).exists():
-            duty_num = 1
-            created = 0
-            for tr in obj.template.template_roles.all():
-                for _ in range(tr.count):
-                    Assignment.objects.create(
-                        event=obj,
-                        role=tr.role,
-                        duty_number=duty_num,
-                        status='assigned',
-                        staff=None
-                    )
-                    duty_num += 1
-                    created += 1
-            
-            # Auto-fill after cloning
-            empty_duties = obj.assignments.filter(staff__isnull=True, status='assigned').select_related('role')
-            filled_count = 0
-            for duty in empty_duties:
-                assigned_staff_ids = obj.assignments.filter(staff__isnull=False).values_list('staff_id', flat=True)
-                candidate = Staff.objects.filter(
-                    role=duty.role,
-                    is_active=True,
-                    reliability_score__gte=75
-                ).exclude(id__in=assigned_staff_ids).order_by('-reliability_score').first()
-                if candidate:
-                    duty.staff = candidate
-                    duty.save(update_fields=['staff'])
-                    filled_count += 1
-            messages.success(request, f"Created {created} duties from template and auto-filled {filled_count}.")
-
-            
-    def assignment_count(self, obj):
-        total = obj.assignments.count()
-        filled = obj.assignments.filter(staff__isnull=False, status='assigned').count()
-        return format_html('{}/{} filled', filled, total)
-    assignment_count.short_description = 'Duties'
-
-class IssueTypeAdmin(admin.ModelAdmin):
-    list_display = ['name', 'weight_percent', 'counts_against_staff']
-    list_editable = ['weight_percent', 'counts_against_staff']
-    
-class IncidentAdmin(admin.ModelAdmin):
-    list_display = ['staff', 'event', 'issue_type', 'incident_type', 'reliability_impact', 'resolved', 'reported_on']
-    list_filter = ['issue_type', 'incident_type', 'reliability_impact', 'resolved', 'reported_on']
-    search_fields = ['staff__name', 'incident_type', 'notes', 'description']
-    list_editable = ['resolved'] 
-    readonly_fields = ['reported_on']
-    autocomplete_fields = ['staff', 'event'] # makes dropdowns faster
-    
-    fieldsets = (
-        ('Basic Info', {
-            'fields': ('staff', 'event', 'issue_type')
-        }),
-        ('Incident Details', {
-            'fields': ('incident_type', 'reliability_impact', 'notes', 'description')
-        }),
-        ('Status', {
-            'fields': ('resolved', 'reported_on')
-        }),
-    )
-
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        return qs.select_related('staff', 'event', 'issue_type') # faster loading
-
-class AssignmentAdmin(admin.ModelAdmin):
-    list_display = ['event', 'duty_number', 'staff', 'role', 'staff_score', 'status']
-    list_filter = ['event', 'role', 'status']
-    search_fields = ['staff__name', 'event__title', 'role__name']
-    ordering = ['event', 'duty_number']  # keeps slots 1,2,3 in order
-    list_editable = ['staff', 'status']  # assign without opening each record
-
-    def staff_score(self, obj):
-        if obj.staff:
-            return f"{obj.staff.reliability_score}%"
-        return "—"
-    staff_score.short_description = 'Reliability'
-
-class RoleAdmin(admin.ModelAdmin):
-    list_display = ('name', 'slug')
-    prepopulated_fields = {'slug': ('name',)}
-    search_fields = ['name']
-
+# ==========================================
+# # 1. IMPORTS + CUSTOM ADMIN SITE
+# ==========================================
 class StaffSite(admin.AdminSite):
     site_header = "Catering Operations"
     site_title = "Catering Admin"
     index_title = "Dashboard"
-    index_template = "admin/staff_index.html"  # <-- shows the blue box
+    index_template = "admin/staff_index.html"
 
     def each_context(self, request):
         context = super().each_context(request)
         context['event_status_url'] = '/staff/event-status/'
         return context
 
-    def get_app_list(self, request): # <-- puts link at top of app list
+    def get_app_list(self, request):
         app_list = super().get_app_list(request)
         app_list.insert(0, {
             'name': 'Staff Manager',
             'app_label': 'dashboard',
             'models': [{
                 'name': 'Event Risk Dashboard',
-                'admin_url': '/admin/risk-dashboard/',
+                'admin_url': '/staff_admin/risk-dashboard/', # use site name
                 'view_only': True
             }]
         })
@@ -226,19 +55,19 @@ class StaffSite(admin.AdminSite):
         custom_urls = [
             path('risk-dashboard/', self.admin_view(self.risk_dashboard_view), name='risk-dashboard'),
             path('auto-fill-roster/<int:event_id>/', self.admin_view(self.auto_fill_roster), name='auto-fill-roster'),
-            path('replace-staff/<int:assignment_id>/', self.admin_view(self.replace_staff), name='replace-staff'),
+            path('replace-staff/<int:assignment_id>/', self.admin_view(self.replace_staff), name='replace-stelf'),
         ]
         return custom_urls + urls
 
     def risk_dashboard_view(self, request):
         today = datetime.now()
         upcoming_events = Event.objects.filter(
-            start_time__gte=today, 
+            start_time__gte=today,
             start_time__lte=today + timedelta(days=14)
         ).prefetch_related('assignments__staff', 'assignments__staff__role').order_by('start_time')
 
         risky_staff = Staff.objects.filter(
-            reliability_score__lt=80, 
+            reliability_score__lt=80,
             is_active=True
         ).select_related('role').order_by('reliability_score')
 
@@ -270,12 +99,12 @@ class StaffSite(admin.AdminSite):
                     filled_count += 1
                     break
         return filled_count
-    
+
     def auto_fill_roster(self, request, event_id):
         event = get_object_or_404(Event, id=event_id)
         filled_count = self.auto_fill_event(event)
         messages.success(request, f"Auto-filled {filled_count} duties for event '{event.title}'.")
-        return redirect('/staff/event-status/')
+        return redirect('/staff_admin/event-status/')
 
     @csrf_exempt
     def replace_staff(self, request, assignment_id):
@@ -291,12 +120,175 @@ class StaffSite(admin.AdminSite):
         assignment.save(update_fields=['staff'])
         return JsonResponse({'success': True})
 
-class ApplicantAdmin(admin.ModelAdmin):
-    list_display = ('name', 'email', 'status', 'interview_time', 'applied_at', 'recruitment')
-    list_filter = ('status', 'applied_at', 'recruitment')
-    search_fields = ('name', 'email')
-    date_hierarchy = 'applied_at'
+# ==========================================
+# # 2. CORE/UTILS
+# ==========================================
+class RoleAdmin(admin.ModelAdmin):
+    list_display = ('name', 'slug')
+    prepopulated_fields = {'slug': ('name',)}
+    search_fields = ['name']
 
+# ==========================================
+# # 3. EVENTS
+# ==========================================
+class EventTemplateRoleInline(admin.TabularInline):
+    model = EventTemplateRole
+    extra = 1
+    autocomplete_fields = ['role']
+    min_num = 0
+
+class EventTemplateAdmin(admin.ModelAdmin):
+    list_display = ['name', 'is_active', 'role_summary', 'event_count', 'created_at']
+    list_filter = ['is_active']
+    search_fields = ['name']
+    inlines = [EventTemplateRoleInline]
+    list_editable = ['is_active']
+
+    def role_summary(self, obj):
+        roles = obj.template_roles.select_related('role').all()
+        if not roles:
+            return mark_safe('<span style="color: #999;">No roles</span>')
+        return ", ".join([f"{tr.count}× {tr.role.name}" for tr in roles])
+    role_summary.short_description = 'Staffing'
+
+    def event_count(self, obj):
+        return obj.event_set.count()
+    event_count.short_description = 'Events Using'
+
+class EventAdmin(admin.ModelAdmin):
+    list_display = ['title', 'start_time', 'client_name', 'template', 'assignment_count', 'location']
+    list_filter = ['start_time', 'template']
+    search_fields = ['title', 'client_name']
+    autocomplete_fields = ['template']
+
+    def save_model(self, request, obj, form, change):
+        is_new = obj.pk is None
+        super().save_model(request, obj, form, change)
+
+        if is_new and obj.template and not Assignment.objects.filter(event=obj).exists():
+            duty_num = 1
+            created = 0
+            for tr in obj.template_roles.all():
+                for _ in range(tr.count):
+                    Assignment.objects.create(
+                        event=obj,
+                        role=tr.role,
+                        duty_number=duty_num,
+                        status='assigned',
+                        staff=None
+                    )
+                    duty_num += 1
+                    created += 1
+
+            empty_duties = obj.assignments.filter(staff__isnull=True, status='assigned').select_related('role')
+            filled_count = 0
+            for duty in empty_duties:
+                assigned_staff_ids = obj.assignments.filter(staff__isnull=False).values_list('staff_id', flat=True)
+                candidate = Staff.objects.filter(
+                    role=duty.role,
+                    is_active=True,
+                    reliability_score__gte=75
+                ).exclude(id__in=assigned_staff_ids).order_by('-reliability_score').first()
+                if candidate:
+                    duty.staff = candidate
+                    duty.save(update_fields=['staff'])
+                    filled_count += 1
+            messages.success(request, f"Created {created} duties from template and auto-filled {filled_count}.")
+
+    def assignment_count(self, obj):
+        total = obj.assignments.count()
+        filled = obj.assignments.filter(staff__isnull=False, status='assigned').count()
+        return format_html('{}/{} filled', filled, total)
+    assignment_count.short_description = 'Duties'
+
+# ==========================================
+# # 4. STAFF
+# ==========================================
+class StaffAdmin(admin.ModelAdmin):
+    form = StaffForm
+    list_display = ('name', 'role', 'phone', 'reliability_badge', 'is_active')
+    list_filter = ('role', 'is_active', 'reliability_score')
+    search_fields = ('name', 'email', 'phone')
+    readonly_fields = ('reliability_score',)
+    fieldsets = (
+        ('Basic Info', {'fields': ('name', 'email', 'role', 'is_active')}),
+        ('Contact', {'fields': ('phone', 'whatsapp', 'address')}),
+        ('Emergency Contact', {'fields': ('next_of_kin', 'emergency_contact_name', 'emergency_contact_phone')}),
+        ('Performance', {'fields': ('reliability_score', 'reliability_notes')}),
+    )
+
+    @admin.display(description='Reliability', ordering='reliability_score')
+    def reliability_badge(self, obj):
+        score = obj.reliability_score
+        if score >= 90:
+            color = '#28a745'; emoji = '🟢'
+        elif score >= 75:
+            color = '#ffc107'; emoji = '🟡'
+        else:
+            color = '#dc3545'; emoji = '🔴'
+        return format_html('<span style="color: {}; font-weight: 600;">{} {}%</span>', color, emoji, score)
+
+class StaffUpdateLogAdmin(admin.ModelAdmin): pass
+class StaffUpdateRequestAdmin(admin.ModelAdmin): pass
+class StaffUpdateApprovalAdmin(admin.ModelAdmin): pass
+
+# ==========================================
+# # 5. RELIABILITY
+# ==========================================
+class IssueTypeAdmin(admin.ModelAdmin):
+    list_display = ['name', 'weight_percent', 'counts_against_staff']
+    list_editable = ['weight_percent', 'counts_against_staff']
+
+class IncidentAdmin(admin.ModelAdmin):
+    list_display = ['staff', 'event', 'issue_type', 'incident_type', 'reliability_impact', 'resolved', 'reported_on']
+    list_filter = ['issue_type', 'incident_type', 'reliability_impact', 'resolved', 'reported_on']
+    search_fields = ['staff__name', 'incident_type', 'notes', 'description']
+    list_editable = ['resolved']
+    readonly_fields = ['reported_on']
+    autocomplete_fields = ['staff', 'event']
+
+    fieldsets = (
+        ('Basic Info', {'fields': ('staff', 'event', 'issue_type')}),
+        ('Incident Details', {'fields': ('incident_type', 'reliability_impact', 'notes', 'description')}),
+        ('Status', {'fields': ('resolved', 'reported_on')}),
+    )
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('staff', 'event', 'issue_type')
+
+class RuleAdmin(admin.ModelAdmin):
+    list_display = ['name', 'rule_type', 'issue_type', 'threshold', 'days', 'is_active']
+    list_filter = ['rule_type', 'is_active']
+    search_fields = ['name']
+
+class FlagAdmin(admin.ModelAdmin):
+    list_display = ['staff', 'rule', 'flag_level', 'last_triggered']
+    list_filter = ['flag_level', 'rule']
+    readonly_fields = ['created_at', 'last_triggered']
+    search_fields = ['staff__name', 'rule__name']
+
+# ==========================================
+# # 6. ASSIGNMENTS
+# ==========================================
+class AssignmentAdmin(admin.ModelAdmin):
+    list_display = ['event', 'duty_number', 'staff', 'role', 'staff_score', 'status']
+    list_filter = ['event', 'role', 'status']
+    search_fields = ['staff__name', 'event__title', 'role__name']
+    ordering = ['event', 'duty_number']
+    list_editable = ['staff', 'status']
+
+    def staff_score(self, obj):
+        if obj.staff:
+            return f"{obj.staff.reliability_score}%"
+        return "—"
+    staff_score.short_description = 'Reliability'
+
+class TaskAdmin(admin.ModelAdmin): pass
+
+# ==========================================
+# # 7. RECRUITMENT
+# ==========================================
 class RecruitmentAdmin(admin.ModelAdmin):
     list_display = ('title', 'status', 'event')
     list_filter = ('status',)
@@ -307,23 +299,60 @@ class InterviewSlotAdmin(admin.ModelAdmin):
     list_filter = ('recruitment', 'interviewer')
     search_fields = ('interviewer__name',)
 
-# Activate custom admin site
+class InterviewAdmin(admin.ModelAdmin): pass
+
+class ApplicantAdmin(admin.ModelAdmin):
+    list_display = ('name', 'email', 'status', 'interview_time', 'applied_at', 'recruitment')
+    list_filter = ('status', 'applied_at', 'recruitment')
+    search_fields = ('name', 'email')
+    date_hierarchy = 'applied_at'
+
+class RolePlayAdmin(admin.ModelAdmin): pass
+class ApplicantRolePlayAdmin(admin.ModelAdmin): pass
+
+class RolePlayResponseAdmin(admin.ModelAdmin):
+    list_display = ['staff', 'roleplay', 'submitted_at']
+    list_filter = ['submitted_at', 'roleplay__role']
+    search_fields = ['staff__name', 'action']
+
+# ==========================================
+# # 8. MISC
+# ==========================================
+class MeetingAdmin(admin.ModelAdmin): pass
+class ExpenseAdmin(admin.ModelAdmin): pass
+class LeaveRequestAdmin(admin.ModelAdmin): pass
+
+# ==========================================
+# # 9. NOTIFICATIONS
+# ==========================================
+class NotificationAdmin(admin.ModelAdmin): pass
+
+# ==========================================
+# # 10. REGISTER
+# ==========================================
 staff_admin_site = StaffSite(name='staff_admin')
 
-# Register all models to custom site
-staff_admin_site.register(Applicant, ApplicantAdmin)
-staff_admin_site.register(Recruitment, RecruitmentAdmin)
-staff_admin_site.register(InterviewSlot, InterviewSlotAdmin)
-staff_admin_site.register(Staff, StaffAdmin)
-staff_admin_site.register(RolePlayResponse, RolePlayResponseAdmin)
-staff_admin_site.register(Event, EventAdmin)
-staff_admin_site.register(IssueType, IssueTypeAdmin)
-staff_admin_site.register(Incident, IncidentAdmin)
-staff_admin_site.register(Assignment, AssignmentAdmin)
 staff_admin_site.register(Role, RoleAdmin)
 staff_admin_site.register(EventTemplate, EventTemplateAdmin)
-
-# DELETE these 3 lines:
-# admin.site.index_template = 'admin/custom_index.html'
-# admin.site = staff_admin_site
-# admin.sites.site = staff_admin_site
+staff_admin_site.register(Event, EventAdmin)
+staff_admin_site.register(Staff, StaffAdmin)
+staff_admin_site.register(StaffUpdateLog, StaffUpdateLogAdmin)
+staff_admin_site.register(StaffUpdateRequest, StaffUpdateRequestAdmin)
+staff_admin_site.register(StaffUpdateApproval, StaffUpdateApprovalAdmin)
+staff_admin_site.register(IssueType, IssueTypeAdmin)
+staff_admin_site.register(Incident, IncidentAdmin)
+staff_admin_site.register(Rule, RuleAdmin)
+staff_admin_site.register(Flag, FlagAdmin)
+staff_admin_site.register(Assignment, AssignmentAdmin)
+staff_admin_site.register(Task, TaskAdmin)
+staff_admin_site.register(Recruitment, RecruitmentAdmin)
+staff_admin_site.register(InterviewSlot, InterviewSlotAdmin)
+staff_admin_site.register(Applicant, ApplicantAdmin)
+staff_admin_site.register(Interview, InterviewAdmin)
+staff_admin_site.register(RolePlay, RolePlayAdmin)
+staff_admin_site.register(ApplicantRolePlay, ApplicantRolePlayAdmin)
+staff_admin_site.register(RolePlayResponse, RolePlayResponseAdmin)
+staff_admin_site.register(Meeting, MeetingAdmin)
+staff_admin_site.register(Expense, ExpenseAdmin)
+staff_admin_site.register(LeaveRequest, LeaveRequestAdmin)
+staff_admin_site.register(Notification, NotificationAdmin)

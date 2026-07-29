@@ -1,0 +1,98 @@
+{% extends "staff/base.html" %}
+{% block title %}Risk Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+  <h2 class="mb-4">Staffing Risk Dashboard</h2>
+
+  <!-- Stats Cards -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="card bg-primary text-white">
+        <div class="card-body">
+          <h5>Total Events</h5>
+          <h2>{{ stats.total_events }}</h2>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-info text-white">
+        <div class="card-body">
+          <h5>Upcoming</h5>
+          <h2>{{ stats.upcoming }}</h2>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-warning text-white">
+        <div class="card-body">
+          <h5>Warning Duties</h5>
+          <h2>{{ stats.warning_duties }}</h2>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-danger text-white">
+        <div class="card-body">
+          <h5>Critical + Empty</h5>
+          <h2>{{ stats.critical_duties|add:stats.empty_duties }}</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Risky Events -->
+  {% if risky_events %}
+    {% for event in risky_events %}
+    <div class="card mb-3 border-danger">
+      <div class="card-header bg-danger text-white">
+        <strong>{{ event.title }}</strong> - {{ event.date|date:"M d, Y H:i" }} @ {{ event.location }}
+        <span class="badge bg-light text-dark float-end">
+          Critical: {{ event.critical_count }} | Warning: {{ event.warning_count }} | Empty: {{ event.empty_count }}
+        </span>
+      </div>
+      <div class="card-body">
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th>Duty #</th>
+              <th>Role</th>
+              <th>Staff</th>
+              <th>Score</th>
+              <th>Status</th>
+              <th>Replacements</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for duty in event.duties %}
+            <tr class="{% if duty.status == 'critical' %}table-danger{% elif duty.status == 'warning' %}table-warning{% else %}table-secondary{% endif %}">
+              <td>{{ duty.index }}</td>
+              <td>{{ duty.role }}</td>
+              <td>{{ duty.staff }}</td>
+              <td>{{ duty.score }}</td>
+              <td><span class="badge bg-{{ duty.status }}">{{ duty.status|upper }}</span></td>
+              <td>
+                {% for c in duty.candidates %}
+                  <span class="badge bg-success">{{ c.name }} ({{ c.reliability_score }})</span>
+                {% empty %}
+                  <span class="text-muted">None</span>
+                {% endfor %}
+              </td>
+              <td>
+                {% if duty.assignment_id %}
+                <button class="btn btn-sm btn-primary replace-btn" data-id="{{ duty.assignment_id }}">Replace</button>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="alert alert-success">No staffing risks detected for upcoming events 🎉</div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load widget_tweaks %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Manage Interview Slots for: {{ recruitment.title }}</h2>
+    <p>Assign interview slots and dates to applicants</p>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ formset.management_form }}
+
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Applicant</th>
+                    <th>Email</th>
+                    <th>Interview Slot</th>
+                    <th>Interview Date & Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for applicant, form in applicants_forms %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ applicant.name }}</td>
+                    <td>{{ applicant.email }}</td>
+                    <td>{{ form.slot }}</td>
+                    <td>{{ form.interview_time }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <button type="submit" class="btn btn-primary">Save Assignments</button>
+        <a href="{% url 'staff:recruitment_detail' recruitment.pk %}" class="btn btn-secondary">Back</a>
+    </form>
+</div>
+{% endblock %}

@@ -11,9 +11,95 @@ def validate_phone(value, allow_plus=True):
         raise forms.ValidationError("Phone number must be 10-15 digits, " + ("optionally starting with +" if allow_plus else "no + or spaces"))
     return value
 
-# local validate_phone is defined below; avoid importing .utils to prevent unresolved import
-from.models import Staff
 
+# 2. CORE / UTILS
+class RoleForm(forms.ModelForm): pass
+
+# 3. EVENTS
+
+class EventForm(forms.ModelForm):
+    template = forms.ModelChoiceField(
+        queryset=EventTemplate.objects.filter(is_active=True),
+        required=False,
+        empty_label="-- Custom: set roles manually --",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+
+    class Meta:
+        model = Event
+        fields = ['title', 'description', 'start_time', 'end_time', 'location', 'template']
+        widgets = {
+            'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Event Title'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'What is this event about?'}),
+            'location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'HQ Conference Room / Venue'}),
+            'start_time': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+            'end_time': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # BIT 1: Fix datetime-local format for edit
+        for field in ['start_time', 'end_time']:
+            if self.initial.get(field):
+                self.initial[field] = self.initial[field].strftime('%Y-%m-%dT%H:%M')
+            elif self.instance and self.instance.pk and getattr(self.instance, field):
+                self.initial[field] = getattr(self.instance, field).strftime('%Y-%m-%dT%H:%M')
+
+        # BIT 2: Dynamically add a field for each Role: role_{id}
+        self.role_fields = {}
+        for role in Role.objects.filter(is_active=True).order_by('name'):
+            field_name = f'role_{role.id}'
+            initial_count = 0
+
+            # If editing, pre-fill with current count of assignments for this role
+            if self.instance and self.instance.pk:
+                initial_count = self.instance.assignments.filter(role=role).count()
+
+            self.fields[field_name] = forms.IntegerField(
+                label=f"{role.name} Slots",
+                min_value=0,
+                initial=initial_count,
+                required=False,
+                widget=forms.NumberInput(attrs={
+                    'class': 'form-control',
+                    'placeholder': '0',
+                    'min': '0'
+                }),
+                help_text=f"How many {role.name}s needed"
+            )
+            self.role_fields[role.id] = field_name
+
+    def clean(self):
+        cleaned_data = super().clean()
+        # BIT 3: If template is selected, override role counts with template defaults
+        template = cleaned_data.get('template')
+        if template:
+            for tr in template.template_roles.all():
+                field_name = f'role_{tr.role.id}'
+                if field_name in self.fields:
+                    self.cleaned_data[field_name] = tr.default_count
+        return cleaned_data
+
+    def get_role_counts(self):
+        # BIT 4: Returns {'role_id': count} for only roles > 0
+        role_counts = {}
+        for role_id, field_name in self.role_fields.items():
+            count = self.cleaned_data.get(field_name) or 0
+            if count > 0:
+                role_counts[role_id] = count
+        return role_counts
+
+class EventTemplateForm(forms.ModelForm):
+    class Meta:
+        model = EventTemplate
+        fields = ['name', 'is_active']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+# 4. STAFF
 
 class StaffForm(forms.ModelForm):
     class Meta:
@@ -82,16 +168,6 @@ class StaffSelfUpdateForm(forms.ModelForm):
             raise forms.ValidationError("Address must be at least 10 characters long")
         return address
 
-class StaffUpdateRequestForm(forms.ModelForm):
-    confirmation_message = forms.CharField(required=False, widget=forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}), help_text="Optional message to confirm the update")
-    rejection_reason = forms.CharField(required=False, widget=forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}), help_text="Reason for rejecting the update (if applicable)")
-    class Meta:
-        model = StaffUpdateRequest
-        fields = ['request_reason']
-        widgets = {
-            'request_reason': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'})
-        }
-
 class StaffProfileForm(forms.ModelForm):
     class Meta:
         model = Staff
@@ -120,131 +196,47 @@ class StaffProfileForm(forms.ModelForm):
             raise forms.ValidationError("Address must be at least 10 characters long")
         return address
 
+class StaffUpdateRequestForm(forms.ModelForm):
+    confirmation_message = forms.CharField(required=False, widget=forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}), help_text="Optional message to confirm the update")
+    rejection_reason = forms.CharField(required=False, widget=forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}), help_text="Reason for rejecting the update (if applicable)")
+    class Meta:
+        model = StaffUpdateRequest
+        fields = ['request_reason']
+        widgets = {
+            'request_reason': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'})
+        }
 
-class EventForm(forms.ModelForm):
-    template = forms.ModelChoiceField(
-        queryset=EventTemplate.objects.filter(is_active=True),
+class StaffFilterForm(forms.Form):
+    search = forms.CharField(
+        required=False, 
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Search name, phone, email...', 
+            'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+        })
+    )
+    role = forms.ModelChoiceField(
+        queryset=Role.objects.all(), 
+        required=False, 
+        empty_label="All Roles", 
+        widget=forms.Select(attrs={
+            'class': 'w-full px-4 py-2.5 border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white'
+        })
+    )
+    reliability = forms.ChoiceField(
         required=False,
-        empty_label="-- Custom: set roles manually --",
-        widget=forms.Select(attrs={'class': 'form-select'})
+        choices=[
+            ('', 'All Reliability'),
+            ('90', 'A-Team 90+'),
+            ('80', 'Good 80-89'),
+            ('70', 'Watch 70-79'),
+            ('0', 'Warning <70'),
+        ],
+        widget=forms.Select(attrs={
+            'class': 'w-full px-4 py-2.5 border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white'
+        })
     )
 
-    class Meta:
-        model = Event
-        fields = ['title', 'description', 'start_time', 'end_time', 'location', 'template']
-        widgets = {
-            'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Event Title'}),
-            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'What is this event about?'}),
-            'location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'HQ Conference Room / Venue'}),
-            'start_time': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
-            'end_time': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # BIT 1: Fix datetime-local format for edit
-        for field in ['start_time', 'end_time']:
-            if self.initial.get(field):
-                self.initial[field] = self.initial[field].strftime('%Y-%m-%dT%H:%M')
-            elif self.instance and self.instance.pk and getattr(self.instance, field):
-                self.initial[field] = getattr(self.instance, field).strftime('%Y-%m-%dT%H:%M')
-
-        # BIT 2: Dynamically add a field for each Role: role_{id}
-        self.role_fields = {}
-        for role in Role.objects.filter(is_active=True).order_by('name'):
-            field_name = f'role_{role.id}'
-            initial_count = 0
-
-            # If editing, pre-fill with current count of assignments for this role
-            if self.instance and self.instance.pk:
-                initial_count = self.instance.assignments.filter(role=role).count()
-
-            self.fields[field_name] = forms.IntegerField(
-                label=f"{role.name} Slots",
-                min_value=0,
-                initial=initial_count,
-                required=False,
-                widget=forms.NumberInput(attrs={
-                    'class': 'form-control',
-                    'placeholder': '0',
-                    'min': '0'
-                }),
-                help_text=f"How many {role.name}s needed"
-            )
-            self.role_fields[role.id] = field_name
-
-    def clean(self):
-        cleaned_data = super().clean()
-        # BIT 3: If template is selected, override role counts with template defaults
-        template = cleaned_data.get('template')
-        if template:
-            for tr in template.templaterole_set.all():
-                field_name = f'role_{tr.role.id}'
-                if field_name in self.fields:
-                    self.cleaned_data[field_name] = tr.default_count
-        return cleaned_data
-
-    def get_role_counts(self):
-        # BIT 4: Returns {'role_id': count} for only roles > 0
-        role_counts = {}
-        for role_id, field_name in self.role_fields.items():
-            count = self.cleaned_data.get(field_name) or 0
-            if count > 0:
-                role_counts[role_id] = count
-        return role_counts
-
-class ApplicantForm(forms.ModelForm):
-    class Meta:
-        model = Applicant
-        fields = ['name', 'email', 'phone', 'resume', 'cover_letter'] # removed recruitment, status, interview_time
-        widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Full Name'}),
-            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'email@example.com'}),
-            'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+2348012345678'}),
-            'resume': forms.FileInput(attrs={'class': 'form-control'}),
-            'cover_letter': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Tell us why you are a good fit...'}),
-        }
-
-    def clean_phone(self):
-        return validate_phone(self.cleaned_data.get('phone'), allow_plus=True)
-
-class RolePlayForm(forms.ModelForm):
-    class Meta:
-        model = RolePlay
-        fields = '__all__'
-        widgets = {
-            'description': forms.Textarea(attrs={'rows': 4, 'class': 'form-control', 'placeholder': 'Brief summary of the scenario'}),
-            'expected_outcome': forms.Textarea(attrs={'rows': 4, 'class': 'form-control', 'placeholder': 'What should the staff member do/say?'}),
-            'scenario': forms.Textarea(attrs={'rows': 12, 'class': 'form-control font-monospace', 'placeholder': 'Full roleplay script / situation details...'}),
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        for field_name, field in self.fields.items():
-            if field_name not in ['description', 'expected_outcome', 'scenario']:
-                if isinstance(field.widget, forms.Select):
-                    field.widget.attrs.update({'class': 'form-select'})
-                elif isinstance(field.widget, forms.TextInput):
-                    field.widget.attrs.update({'class': 'form-control'})
-
-class ApplicantRolePlayForm(forms.ModelForm):
-    class Meta:
-        model = ApplicantRolePlay
-        fields = ('applicant', 'role_play', 'score')
-        widgets = {
-            'applicant': forms.Select(attrs={'class': 'form-select'}),
-            'role_play': forms.Select(attrs={'class': 'form-select'}),
-            'score': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'max': 100}),
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['applicant'].empty_label = "Select Applicant"
-        self.fields['role_play'].empty_label = "Select Scenario"
-        self.fields['applicant'].queryset = Applicant.objects.all().order_by('name')
-        self.fields['role_play'].queryset = RolePlay.objects.all().order_by('title')
-
+# 5. RELIABILITY
 
 class IncidentForm(forms.ModelForm):
     # Map incident_type to default scores. Adjust these to match your choices
@@ -319,14 +311,65 @@ class IncidentForm(forms.ModelForm):
             cleaned_data['staff'] = self.initial['staff']
         return cleaned_data
 
-class EventTemplateForm(forms.ModelForm):
+class IssueTypeForm(forms.ModelForm): pass
+class RuleForm(forms.ModelForm): pass
+class FlagForm(forms.ModelForm): pass
+
+# 6. ASSIGNMENTS
+
+class AssignmentForm(forms.ModelForm):
+    force_reassign = forms.BooleanField(required=False, label="Force reassign - end existing active assignment", widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}))
+
     class Meta:
-        model = EventTemplate
-        fields = ['name', 'is_active']
+        model = Assignment
+        fields = ['staff', 'event', 'duty_number', 'role', 'status']
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control'}),
-            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'staff': forms.Select(attrs={'class': 'form-select'}),
+            'event': forms.Select(attrs={'class': 'form-select'}),
+            'duty_number': forms.NumberInput(attrs={'class': 'form-control'}),
+            'role': forms.Select(attrs={'class': 'form-select'}),
+            'status': forms.Select(attrs={'class': 'form-select'}),
         }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        staff = cleaned_data.get('staff')
+        event = cleaned_data.get('event')
+        duty_number = cleaned_data.get('duty_number')
+        force = cleaned_data.get('force_reassign')
+        if staff and event and duty_number:
+            existing = Assignment.objects.filter(staff=staff, event=event, duty_number=duty_number, status='assigned').first()
+            if existing and not force:
+                raise ValidationError("Active assignment exists. Check 'Force reassign' to override.")
+        return cleaned_data
+
+    def save(self, commit=True):
+        staff = self.cleaned_data.get('staff')
+        event = self.cleaned_data.get('event')
+        duty_number = self.cleaned_data.get('duty_number')
+        force = self.cleaned_data.get('force_reassign')
+        if force and staff and event and duty_number:
+            Assignment.objects.filter(staff=staff, event=event, duty_number=duty_number, status='assigned').update(status='ended', reassigned_at=timezone.now())
+        return super().save(commit=commit)
+
+class TaskForm(forms.ModelForm):
+    class Meta:
+        model = Task
+        fields = ['title', 'description', 'assigned_to', 'due_date', 'priority', 'status']
+        widgets = {
+            'title': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'assigned_to': forms.Select(attrs={'class': 'form-select'}),
+            'due_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'priority': forms.Select(attrs={'class': 'form-select'}),
+            'status': forms.Select(attrs={'class': 'form-select'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['assigned_to'].queryset = Staff.objects.filter(is_active=True).order_by('name')
+
+# 7. RECRUITMENT
 
 class RecruitmentForm(forms.ModelForm):
     position = forms.ModelChoiceField(
@@ -365,6 +408,81 @@ class RecruitmentForm(forms.ModelForm):
             raise forms.ValidationError("Deadline cannot be in the past")
         return deadline
 
+# forms.py
+from django import forms
+from.models import InterviewSlot
+
+class InterviewSlotForm(forms.ModelForm):
+    class Meta:
+        model = InterviewSlot
+        fields = ['date', 'start_time', 'end_time', 'capacity', 'interviewer']
+        widgets = {
+            'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'start_time': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+            'end_time': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+            'capacity': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'interviewer': forms.Select(attrs={'class': 'form-select'}),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start = cleaned_data.get('start_time')
+        end = cleaned_data.get('end_time')
+        if start and end and start >= end:
+            raise forms.ValidationError("End time must be after start time")
+        return cleaned_data
+
+class ApplicantForm(forms.ModelForm):
+    class Meta:
+        model = Applicant
+        fields = ['name', 'email', 'phone', 'resume', 'cover_letter'] # removed recruitment, status, interview_time
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Full Name'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'email@example.com'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+2348012345678'}),
+            'resume': forms.FileInput(attrs={'class': 'form-control'}),
+            'cover_letter': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Tell us why you are a good fit...'}),
+        }
+
+    def clean_phone(self):
+        return validate_phone(self.cleaned_data.get('phone'), allow_plus=True)
+
+class RolePlayForm(forms.ModelForm):
+    class Meta:
+        model = RolePlay
+        fields = '__all__'
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 4, 'class': 'form-control', 'placeholder': 'Brief summary of the scenario'}),
+            'expected_outcome': forms.Textarea(attrs={'rows': 4, 'class': 'form-control', 'placeholder': 'What should the staff member do/say?'}),
+            'scenario': forms.Textarea(attrs={'rows': 12, 'class': 'form-control font-monospace', 'placeholder': 'Full roleplay script / situation details...'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            if field_name not in ['description', 'expected_outcome', 'scenario']:
+                if isinstance(field.widget, forms.Select):
+                    field.widget.attrs.update({'class': 'form-select'})
+                elif isinstance(field.widget, forms.TextInput):
+                    field.widget.attrs.update({'class': 'form-control'})
+
+class ApplicantRolePlayForm(forms.ModelForm):
+    class Meta:
+        model = ApplicantRolePlay
+        fields = ('applicant', 'role_play', 'score')
+        widgets = {
+            'applicant': forms.Select(attrs={'class': 'form-select'}),
+            'role_play': forms.Select(attrs={'class': 'form-select'}),
+            'score': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'max': 100}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['applicant'].empty_label = "Select Applicant"
+        self.fields['role_play'].empty_label = "Select Scenario"
+        self.fields['applicant'].queryset = Applicant.objects.all().order_by('name')
+        self.fields['role_play'].queryset = RolePlay.objects.all().order_by('title')
+
 class RolePlayResponseForm(forms.ModelForm):
     class Meta:
         model = RolePlayResponse
@@ -373,22 +491,7 @@ class RolePlayResponseForm(forms.ModelForm):
             'action': forms.Textarea(attrs={'rows': 8, 'class': 'form-control font-monospace', 'placeholder': 'As the Catering Lead, what do you do?'})
         }
 
-class TaskForm(forms.ModelForm):
-    class Meta:
-        model = Task
-        fields = ['title', 'description', 'assigned_to', 'due_date', 'priority', 'status']
-        widgets = {
-            'title': forms.TextInput(attrs={'class': 'form-control'}),
-            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'assigned_to': forms.Select(attrs={'class': 'form-select'}),
-            'due_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'priority': forms.Select(attrs={'class': 'form-select'}),
-            'status': forms.Select(attrs={'class': 'form-select'}),
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['assigned_to'].queryset = Staff.objects.filter(is_active=True).order_by('name')
+# 8. MISC
 
 class MeetingForm(forms.ModelForm):
     class Meta:
@@ -463,80 +566,12 @@ class ExpenseApprovalForm(forms.ModelForm):
             instance.save()
         return instance
 
-class AssignmentForm(forms.ModelForm):
-    force_reassign = forms.BooleanField(required=False, label="Force reassign - end existing active assignment", widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}))
+class LeaveRequestForm(forms.ModelForm): pass
 
-    class Meta:
-        model = Assignment
-        fields = ['staff', 'event', 'duty_number', 'role', 'status']
-        widgets = {
-            'staff': forms.Select(attrs={'class': 'form-select'}),
-            'event': forms.Select(attrs={'class': 'form-select'}),
-            'duty_number': forms.NumberInput(attrs={'class': 'form-control'}),
-            'role': forms.Select(attrs={'class': 'form-select'}),
-            'status': forms.Select(attrs={'class': 'form-select'}),
-        }
+# 9. NOTIFICATIONS
 
-    def clean(self):
-        cleaned_data = super().clean()
-        staff = cleaned_data.get('staff')
-        event = cleaned_data.get('event')
-        duty_number = cleaned_data.get('duty_number')
-        force = cleaned_data.get('force_reassign')
-        if staff and event and duty_number:
-            existing = Assignment.objects.filter(staff=staff, event=event, duty_number=duty_number, status='assigned').first()
-            if existing and not force:
-                raise ValidationError("Active assignment exists. Check 'Force reassign' to override.")
-        return cleaned_data
+class NotificationForm(forms.ModelForm): pass
 
-    def save(self, commit=True):
-        staff = self.cleaned_data.get('staff')
-        event = self.cleaned_data.get('event')
-        duty_number = self.cleaned_data.get('duty_number')
-        force = self.cleaned_data.get('force_reassign')
-        if force and staff and event and duty_number:
-            Assignment.objects.filter(staff=staff, event=event, duty_number=duty_number, status='assigned').update(status='ended', reassigned_at=timezone.now())
-        return super().save(commit=commit)
 
-class InterviewSlotForm(forms.ModelForm):
-    class Meta:
-        model = InterviewSlot
-        fields = ['recruitment', 'date', 'start_time', 'end_time', 'capacity', 'interviewer']
-        widgets = {
-            'recruitment': forms.Select(attrs={'class': 'form-select'}),
-            'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'start_time': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
-            'end_time': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
-            'capacity': forms.NumberInput(attrs={'class': 'form-control'}),
-            'interviewer': forms.Select(attrs={'class': 'form-select'}),
-        }
 
-class StaffFilterForm(forms.Form):
-    search = forms.CharField(
-        required=False, 
-        widget=forms.TextInput(attrs={
-            'placeholder': 'Search name, phone, email...', 
-            'class': 'w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
-        })
-    )
-    role = forms.ModelChoiceField(
-        queryset=Role.objects.all(), 
-        required=False, 
-        empty_label="All Roles", 
-        widget=forms.Select(attrs={
-            'class': 'w-full px-4 py-2.5 border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white'
-        })
-    )
-    reliability = forms.ChoiceField(
-        required=False,
-        choices=[
-            ('', 'All Reliability'),
-            ('90', 'A-Team 90+'),
-            ('80', 'Good 80-89'),
-            ('70', 'Watch 70-79'),
-            ('0', 'Warning <70'),
-        ],
-        widget=forms.Select(attrs={
-            'class': 'w-full px-4 py-2.5 border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white'
-        })
-    )
+
