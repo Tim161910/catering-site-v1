@@ -58,6 +58,8 @@ urlpatterns = [
     path('recruitment/<int:recruitment_id>/send_email/', views.SendEmailToApplicantsView.as_view(), name='send_email_to_applicants'),
     path('recruitment/<int:recruitment_id>/schedule_interviews/', views.ScheduleInterviewsView.as_view(), name='schedule_interviews'),
     path('recruitment/<int:recruitment_id>/manage_interview_slots/', views.ManageInterviewSlotsView.as_view(), name='manage_interview_slots'),
+    path('interview/<int:slot_id>/accept/', views.accept_interview, name='accept_interview'),
+    path('interview/<int:slot_id>/decline/', views.decline_interview, name='decline_interview'),
 
     # ROLE PLAY
     path('role_play/', views.RolePlayListView.as_view(), name='role_play_list'),

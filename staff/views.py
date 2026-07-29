@@ -1128,3 +1128,20 @@ def reset_admin(request):
     else:
         return HttpResponse("✅ Admin UPDATED. Username: admin, Password: admin123. DELETE THIS VIEW AFTER TESTING")
 
+@login_required
+def accept_interview(request, slot_id):
+    slot = get_object_or_404(InterviewSlot, id=slot_id, applicant=request.user)
+    if slot.status == 'pending':
+        slot.status = 'accepted'
+        slot.save()
+        messages.success(request, f"You accepted the interview for {slot.slot_date} at {slot.slot_time}")
+    return redirect('staff:my_dashboard')
+
+@login_required
+def decline_interview(request, slot_id):
+    slot = get_object_or_404(InterviewSlot, id=slot_id, applicant=request.user)
+    if slot.status == 'pending':
+        slot.status = 'declined'
+        slot.save()
+        messages.info(request, f"You declined the interview for {slot.slot_date} at {slot.slot_time}")
+    return redirect('staff:my_dashboard')
