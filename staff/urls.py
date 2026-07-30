@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from  .views import MarkNotificationReadView, RespondNotificationView, NotificationListView
+from  .views import MarkNotificationReadView, RespondNotificationView, NotificationListView, mark_all_notifications_read
 
 app_name = 'staff'
 
@@ -50,8 +50,6 @@ urlpatterns = [
 
     path('assignment/<int:pk>/accept/', views.accept_assignment, name='accept_assignment'),
     path('assignment/<int:pk>/decline/', views.decline_assignment, name='decline_assignment'),
-    path('notifications/mark-all-read/', views.mark_all_notifications_read, name='mark_all_notifications_read'),
-    path('notifications/<int:pk>/read/', views.mark_notification_read, name='mark_notification_read'),
     
     # RECRUITMENT
 
@@ -83,9 +81,9 @@ urlpatterns = [
     path('success/', views.SuccessView.as_view(), name='success'),
 
     # NOTIFICATIONS
-    
+
     path('notifications/', NotificationListView.as_view(), name='notifications_list'),
     path('notifications/<int:pk>/mark-read/', MarkNotificationReadView.as_view(), name='mark_notification_read'),
     path('notifications/<int:pk>/respond/<str:action>/', RespondNotificationView.as_view(), name='respond_notification'),
+    path('notifications/mark-all-read/', mark_all_notifications_read, name='mark_all_notifications_read'),
 ]
-

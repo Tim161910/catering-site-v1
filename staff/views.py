@@ -758,25 +758,33 @@ def create_assignments_from_template(request, event_id):
     messages.success(request, f"Created {len(assignments)} assignments from template")
     return redirect('staff:assignment_list', event_id=event_id)
 
-@staff_member_required
-@require_POST
-def mark_notification_read(request, pk): 
-    return JsonResponse({'success': True})
+def accept_assignment(request, pk):
+    try:
+        assignment = Assignment.objects.get(pk=pk, staff=request.user)
+        assignment.status = 'accepted'
+        assignment.save()
+        Notification.objects.create(
+            user=assignment.event.created_by,
+            message=f"{request.user} accepted {assignment.event.name}"
+        )
+        return redirect('staff:event_list')
+    except Assignment.DoesNotExist:
+        messages.error(request, "Assignment not found")
+        return redirect('staff:event_list')
 
-@staff_member_required
-def mark_all_notifications_read(request): 
-    messages.success(request, "All marked as read")
-    return redirect('staff:my_dashboard')
-
-@staff_member_required
-def accept_assignment(request, pk): 
-    messages.success(request, "Accepted")
-    return redirect('staff:my_dashboard')
-
-@staff_member_required  
 def decline_assignment(request, pk):
-    messages.warning(request, "Declined") 
-    return redirect('staff:my_dashboard')
+    try:
+        assignment = Assignment.objects.get(pk=pk, staff=request.user)
+        assignment.status = 'declined'
+        assignment.save()
+        Notification.objects.create(
+            user=assignment.event.created_by,
+            message=f"{request.user} declined {assignment.event.name}"
+        )
+        return redirect('staff:event_list')
+    except Assignment.DoesNotExist:
+        messages.error(request, "Assignment not found")
+        return redirect('staff:event_list')
 
 
 # 7. RECRUITMENT VIEWS
@@ -1235,3 +1243,12 @@ class RespondNotificationView(LoginRequiredMixin, View):
         if action in ['accept', 'reject']:
             notification.respond_to_action(action, user=request.user) # use the model method
         return redirect('staff:notifications_list')
+
+@staff_member_required
+def mark_all_notifications_read(request): 
+    updated = Notification.objects.filter(user=request.user, is_read=False).update(
+        is_read=True, 
+        read_at=timezone.now()
+    )
+    messages.success(request, f"{updated} notifications marked as read")
+    return redirect('staff:notifications_list') # better to go back to list
