@@ -1,10 +1,12 @@
 from django.urls import path
 from . import views
+from  .views import MarkNotificationReadView, RespondNotificationView, NotificationListView
 
 app_name = 'staff'
 
 urlpatterns = [
     # DASHBOARD / STAFF
+
     path('risk-dashboard/', views.RiskDashboardView.as_view(), name='risk_dashboard'),  # FIXED: underscore
     path('', views.StaffDashboardView.as_view(), name='staff_dashboard'),
     path('dashboard/', views.StaffDashboardView.as_view(), name='staff_dashboard_alt'),
@@ -20,6 +22,7 @@ urlpatterns = [
     path('reset-admin/', views.reset_admin, name='reset_admin'),
 
     # EVENTS
+
     path('event/', views.EventListView.as_view(), name='event_list'),
     path('event/new/', views.EventCreateView.as_view(), name='event_create'),
     path('event/<int:pk>/', views.EventDetailView.as_view(), name='event_detail'),
@@ -27,6 +30,7 @@ urlpatterns = [
     path('event/<int:pk>/delete/', views.EventDeleteView.as_view(), name='event_delete'),
     
     # EVENT STATUS + AUTO FILL
+
     path('event-status/', views.EventStatusView.as_view(), name='event_status'),
     path('event/<int:event_id>/auto-fill/', views.AutoFillRosterView.as_view(), name='auto_fill_roster'),
     path('auto-fill-all/', views.AutoFillAllEventsView.as_view(), name='auto_fill_all_events'),
@@ -36,17 +40,20 @@ urlpatterns = [
     path('incident/add/', views.IncidentCreateView.as_view(), name='incident_add'),
 
     # ASSIGNMENT API
+
     path('api/events/<int:pk>/assignments/', views.create_assignment, name='create_assignment'), 
     path('api/assignments/<int:assignment_id>/reassign/', views.reassign_assignment, name='reassign_assignment'), 
     path('api/assignments/<int:assignment_id>/replace_staff/', views.replace_staff, name='replace_staff'), 
     
     # ACTION URLS - THE 4 STUBS
+
     path('assignment/<int:pk>/accept/', views.accept_assignment, name='accept_assignment'),
     path('assignment/<int:pk>/decline/', views.decline_assignment, name='decline_assignment'),
     path('notifications/mark-all-read/', views.mark_all_notifications_read, name='mark_all_notifications_read'),
     path('notifications/<int:pk>/read/', views.mark_notification_read, name='mark_notification_read'),
     
     # RECRUITMENT
+
     path('recruitment/', views.RecruitmentListView.as_view(), name='recruitment_list'),
     path('recruitment/new/', views.RecruitmentCreateView.as_view(), name='recruitment_create'),
     path('recruitment/<int:recruitment_id>/', views.RecruitmentDetailView.as_view(), name='recruitment_detail'),
@@ -62,6 +69,7 @@ urlpatterns = [
     path('interview/<int:slot_id>/decline/', views.decline_interview, name='decline_interview'),
 
     # ROLE PLAY
+
     path('role_play/', views.RolePlayListView.as_view(), name='role_play_list'),
     path('role_play/new/', views.RolePlayCreateView.as_view(), name='role_play_create'),
     path('role_play/<int:pk>/', views.RolePlayDetailView.as_view(), name='role_play_detail'),
@@ -70,5 +78,13 @@ urlpatterns = [
     path('role_play/<int:pk>/start/', views.StartScenarioView.as_view(), name='start_scenario'),
 
     # OTHER
+
     path('success/', views.SuccessView.as_view(), name='success'),
+
+    # NOTIFICATIONS
+    
+    path('notifications/', NotificationListView.as_view(), name='notifications_list'),
+    path('notifications/<int:pk>/mark-read/', MarkNotificationReadView.as_view(), name='mark_notification_read'),
+    path('notifications/<int:pk>/respond/<str:action>/', RespondNotificationView.as_view(), name='respond_notification'),
 ]
+

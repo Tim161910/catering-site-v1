@@ -1,6 +1,7 @@
 from django.db.models import Sum
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
@@ -8,7 +9,7 @@ from django.core.exceptions import ValidationError
 
 from .fields import EncryptedCharField, EncryptedTextField
 
-# CORE ? UTILS
+# CORE / UTILS
 
 class Role(models.Model):
     name = models.CharField(max_length=50, unique=True)
@@ -528,18 +529,79 @@ class Notification(models.Model):
         ('general', 'General'),
     ]
 
+    ACTION_CHOICES = [
+        ('accept', 'Accept'),
+        ('reject', 'Reject'),
+        ('accept_action', 'Accept Action'),
+        ('reject_action', 'Reject Action'),
+    ]
+
+    SENDER_TYPE_CHOICES = [
+        ('staff', 'Staff'), 
+        ('admin', 'Admin')
+    ]
+
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications')
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='sent_notifications')
+    sender_type = models.CharField(max_length=10, choices=SENDER_TYPE_CHOICES)
+
     title = models.CharField(max_length=255)
     message = models.TextField()
     notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES, default='general')
-    related_event = models.ForeignKey(Event, on_delete=models.CASCADE, null=True, blank=True)
-    related_assignment = models.ForeignKey(Assignment, on_delete=models.CASCADE, null=True, blank=True)
-    
+    related_event = models.ForeignKey('Event', on_delete=models.CASCADE, null=True, blank=True)
+    related_assignment = models.ForeignKey('Assignment', on_delete=models.CASCADE, null=True, blank=True)
+
     is_read = models.BooleanField(default=False)
+    read_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name='read_notifications', null=True, blank=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    action_required = models.CharField(max_length=255, blank=True, null=True)
+    action_response = models.CharField(max_length=20, choices=ACTION_CHOICES, blank=True, null=True)
+    action_responded_at = models.DateTimeField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
+    is_dismissable = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'is_read']),
+            models.Index(fields=['sender', 'created_at']),
+        ]
 
     def __str__(self):
         return f"{self.user.username} - {self.title}"
+
+    def mark_as_read(self, user):
+        if not self.is_read:
+            self.is_read = True
+            self.read_by = user
+            self.read_at = timezone.now()
+            self.save()
+
+    def respond_to_action(self, response, user=None):
+        self.action_response = response
+        self.action_responded_at = timezone.now()
+        if user:
+            self.read_by = user
+            self.is_read = True
+            self.read_at = self.read_at or timezone.now()
+        self.save()
+    
+    @property
+    def read_confirmation_text(self):
+        if self.is_read and self.read_by and self.read_at:
+            return f"Read by {self.read_by.get_full_name() or self.read_by.username} at {self.read_at.strftime('%Y-%m-%d %H:%M')}"
+        return "Not confirmed yet"
+    
+    @property
+    def requires_action(self):  # <-- ADD THIS
+        return self.action_required is not None and self.action_response is None
+
+    @property
+    def link(self):  # <-- ADD THIS
+        if self.related_assignment:
+            return f"/staff/event/{self.related_assignment.event.id}/" 
+        if self.related_event:
+            return f"/staff/event/{self.related_event.id}/"
+        return "#"

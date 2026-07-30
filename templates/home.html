@@ -1,0 +1,11 @@
+{% extends "staff/base.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="container text-center mt-5">
+  <h1 class="mb-4">Welcome to Catering Staff Manager</h1>
+  <p class="lead">Manage events, staff, and notifications</p>
+  <a href="{% url 'staff:event_list' %}" class="btn btn-primary btn-lg">Go to Events</a>
+</div>
+{% endblock %}

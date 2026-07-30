@@ -1,12 +1,13 @@
 import os
 import sys
 import logging
+from pathlib import Path
 
 logging.basicConfig(level=logging.DEBUG)
 
 print("SETTINGS LOADING...")
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = Path(__file__).resolve().parent.parent  # Keep only Path
 
 # Security
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-this')
@@ -36,7 +37,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'catering_site.urls'  # <-- THIS WAS MISSING
+ROOT_URLCONF = 'catering_site.urls'
 WSGI_APPLICATION = 'catering_site.wsgi.application'
 
 # Database
@@ -44,14 +45,14 @@ if 'collectstatic' in sys.argv:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+            'NAME': BASE_DIR / 'db.sqlite3',  # <-- Changed to Path
         }
     }
 else:
     import dj_database_url
     DATABASES = {
         'default': dj_database_url.config(
-            default=os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite3'),
+            default=os.environ.get('DATABASE_URL', f'sqlite:///{BASE_DIR / "db.sqlite3"}'), # <-- Changed
             conn_max_age=600,
             ssl_require=os.environ.get('DATABASE_URL') is not None
         )
@@ -59,16 +60,17 @@ else:
 
 # Static files
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-STATICFILES_DIRS = []  # <-- EMPTY. Don't add app folders here
+STATIC_ROOT = BASE_DIR / 'staticfiles'  # <-- Changed to Path
+STATICFILES_DIRS = []  
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
+# Templates
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            os.path.join(BASE_DIR, 'templates'),
-            os.path.join(BASE_DIR, 'staff', 'templates'),
+            BASE_DIR / 'templates',        # <-- Changed to Path
+            BASE_DIR / 'staff' / 'templates', # <-- Changed to Path
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -77,11 +79,11 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'staff.context_processors.notifications',  # <-- Already added. Good
             ],
         },
     },
 ]
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 FERNET_KEY = 'gDVz3ECufpfkYF7t6za6GgNMnBC9BQx4uUn47DU2L6g='
@@ -98,14 +100,4 @@ LOGOUT_REDIRECT_URL = '/admin/'
 
 # Email Settings
 DEFAULT_FROM_EMAIL = 'Bamboo Staff <noreply@bamboo.com>'
-
-# For LOCAL TESTING - prints emails to console
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
-# For PRODUCTION - use SMTP. Example with Gmail:
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = 'smtp.gmail.com'
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')  # your gmail
-# EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')  # app password

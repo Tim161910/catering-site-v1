@@ -1,0 +1,51 @@
+{% extends "staff/base.html" %}
+{% block title %}Notifications{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Notifications</h5>
+        <!-- Filter Tabs -->
+        <div class="btn-group btn-group-sm">
+            <a href="{% url 'staff:notifications_list' %}" class="btn btn-{% if status == 'all' %}primary{% else %}outline-secondary{% endif %}">All</a>
+            <a href="?status=unread" class="btn btn-{% if status == 'unread' %}primary{% else %}outline-secondary{% endif %}">Unread</a>
+            <a href="?status=accepted" class="btn btn-{% if status == 'accepted' %}primary{% else %}outline-secondary{% endif %}">Accepted</a>
+            <a href="?status=rejected" class="btn btn-{% if status == 'rejected' %}primary{% else %}outline-secondary{% endif %}">Rejected</a>
+        </div>
+    </div>
+    <div class="list-group list-group-flush">
+        {% for notification in notifications %}
+        <div class="list-group-item {% if not notification.is_read %}bg-light{% endif %}">
+            <div class="d-flex w-100 justify-content-between">
+                <p class="mb-1">{{ notification.message }}</p>
+                <small class="text-muted">{{ notification.created_at|timesince }} ago</small>
+            </div>
+            
+            {% if notification.requires_action and notification.action_response == 'pending' %}
+            <div class="mt-2">
+                <form method="post" action="{% url 'staff:respond_notification' notification.pk 'accept' %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success btn-sm">Accept</button>
+                </form>
+                <form method="post" action="{% url 'staff:respond_notification' notification.pk 'reject' %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger btn-sm">Reject</button>
+                </form>
+            </div>
+            {% elif notification.action_response %}
+            <small class="text-muted">You {{ notification.action_response }}d this</small>
+            {% endif %}
+
+            {% if not notification.is_read %}
+            <form method="post" action="{% url 'staff:mark_notification_read' notification.pk %}" class="d-inline float-end">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-link btn-sm">Mark as read</button>
+            </form>
+            {% endif %}
+        </div>
+        {% empty %}
+        <div class="list-group-item text-center text-muted">No notifications</div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

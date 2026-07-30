@@ -25,7 +25,7 @@ from django.forms import modelformset_factory
 
 logger = logging.getLogger(__name__)
 
-from .models import Recruitment, Applicant, RolePlay, Incident, Event, Staff, Assignment, Role, RolePlayResponse, InterviewSlot, Task
+from .models import Recruitment, Applicant, RolePlay, Incident, Event, Staff, Assignment, Role, RolePlayResponse, InterviewSlot, Task, Notification
 from .forms import RecruitmentForm, ApplicantForm, IncidentForm, EventForm, StaffForm, RolePlayForm, RolePlayResponseForm, InterviewSlotForm
 
 class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
@@ -249,6 +249,17 @@ def auto_fill_event(event):
             assign.staff = candidate
             assign.status = 'assigned'
             assign.save()
+            
+            # NEW: Send notification
+            Notification.objects.create(
+                user=candidate.user,
+                sender=None,  # system assigned
+                sender_type='system',
+                message=f'You have been auto-assigned to: {event.name} as {assign.role.name}',
+                notification_type='assignment',
+                link=f'/staff/events/{event.id}/assignments/'
+            )
+            
             filled_count += 1
 
     return filled_count
@@ -279,6 +290,17 @@ class AutoFillRosterView(StaffRequiredMixin, View):
                 assign.staff = candidate
                 assign.status = 'assigned'
                 assign.save()
+                
+                # NEW: Send notification
+                Notification.objects.create(
+                    user=candidate.user,
+                    sender=request.user,  # who clicked auto-fill
+                    sender_type='staff',
+                    message=f'You have been auto-assigned to: {event.name} as {assign.role.name}',
+                    notification_type='assignment',
+                    link=f'/staff/events/{event.id}/assignments/'
+                )
+                
                 filled_count += 1
             else:
                 if assign.role and assign.role.name not in skipped_roles:
@@ -603,12 +625,22 @@ def create_assignment(request, pk):
             return JsonResponse({'success': False, 'error': 'Staff already assigned to this duty number.'}, status=400)
 
         role_obj = get_object_or_404(Role, id=role_id) # get Role object based on role_id
+        staff_obj = get_object_or_404(Staff, id=staff_id)
         assignment = Assignment.objects.create(
             event=event,
-            staff_id=staff_id,
+            staff=staff_obj,
             duty_number=duty_number,
             role=role_obj, # pass Role object
             status='assigned'
+        )
+
+        Notification.objects.create(
+            user=staff_obj.user,
+            sender=request.user,
+            sender_type='staff',
+            message=f'You have been assigned to: {event.name} as {role_obj.name}',
+            notification_type='assignment',
+            link=f'/staff/events/{event.id}/assignments/'
         )
 
         return JsonResponse({
@@ -630,6 +662,7 @@ def reassign_assignment(request, assignment_id):
         reason = data.get('reason', '').strip()
 
         old_assignment = get_object_or_404(Assignment, id=assignment_id, status='assigned')
+        new_staff_obj = get_object_or_404(Staff, id=new_staff_id) 
 
         if old_assignment.event.assignments.filter(staff_id=new_staff_id, status='assigned').exists():
             return JsonResponse({'success': False, 'error': 'Staff already assigned to this event'}, status=400)
@@ -642,12 +675,21 @@ def reassign_assignment(request, assignment_id):
         # Create new assignment for same duty
         new_assignment = Assignment.objects.create(
             event=old_assignment.event,
-            staff_id=new_staff_id,
+            staff=new_staff_obj, # now this works
             duty_number=old_assignment.duty_number,
             role=old_assignment.role, 
             status='assigned'
         )
 
+        Notification.objects.create(
+            user=new_staff_obj.user,
+            sender=request.user,
+            sender_type='staff',
+            message=f'You have been reassigned to: {old_assignment.event.name} - Duty {old_assignment.duty_number}', # FIXED: old_assignment
+            notification_type='assignment',
+            link=f'/staff/events/{old_assignment.event.id}/assignments/' # FIXED: old_assignment
+        )
+        
         return JsonResponse({
             'success': True,
             'new_staff': new_assignment.staff.name,
@@ -676,6 +718,16 @@ def replace_staff(request, assignment_id):
     assignment.reassigned_by = request.user
     assignment.reassignment_reason = request.POST.get('reason', 'Replaced via dashboard')
     assignment.save()
+
+    # NEW BLOCK
+    Notification.objects.create(
+        user=new_staff.user,
+        sender=request.user,
+        sender_type='staff',
+        message=f'You have replaced {old_staff_name} on: {assignment.event.name} - Duty {assignment.duty_number}',
+        notification_type='assignment',
+        link=f'/staff/events/{assignment.event.id}/assignments/'
+    )
 
     return JsonResponse({
         'success': True,
@@ -1145,3 +1197,41 @@ def decline_interview(request, slot_id):
         slot.save()
         messages.info(request, f"You declined the interview for {slot.slot_date} at {slot.slot_time}")
     return redirect('staff:my_dashboard')
+
+# NOTIFICATIONS
+
+class NotificationListView(LoginRequiredMixin, ListView):
+    model = Notification
+    template_name = 'staff/notifications_list.html'
+    context_object_name = 'notifications'
+
+    def get_queryset(self):
+        qs = Notification.objects.filter(user=self.request.user).order_by('-created_at')
+        status = self.request.GET.get('status')
+        if status == 'unread':
+            qs = qs.filter(is_read=False)
+        elif status == 'read':
+            qs = qs.filter(is_read=True)
+        elif status == 'accepted':
+            qs = qs.filter(action_response__in=['accept', 'accept_action'])
+        elif status == 'rejected':
+            qs = qs.filter(action_response__in=['reject', 'reject_action'])
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['status'] = self.request.GET.get('status', 'all')
+        return context
+
+class MarkNotificationReadView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        notif = get_object_or_404(Notification, pk=pk, user=request.user)
+        notif.mark_as_read(request.user)
+        return JsonResponse({'success': True})
+
+class RespondNotificationView(LoginRequiredMixin, View):
+    def post(self, request, pk, action):
+        notification = get_object_or_404(Notification, pk=pk, user=request.user, requires_action=True)
+        if action in ['accept', 'reject']:
+            notification.respond_to_action(action, user=request.user) # use the model method
+        return redirect('staff:notifications_list')
