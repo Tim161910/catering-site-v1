@@ -2,6 +2,7 @@
 
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.urls import reverse_lazy
@@ -17,15 +18,16 @@ from django.db.models import Count, Q, ProtectedError
 import csv
 import logging
 import json
-from datetime import datetime,timedelta
+from datetime import datetime
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib import messages
 from django.utils.decorators import method_decorator
 from django.forms import modelformset_factory
+from django.core.exceptions import PermissionDenied
 
 logger = logging.getLogger(__name__)
 
-from .models import Recruitment, Applicant, RolePlay, Incident, Event, Staff, Assignment, Role, RolePlayResponse, InterviewSlot, Task, Notification
+from .models import Recruitment, Applicant, RolePlay, Incident, Event, Staff, Assignment, Role, RolePlayResponse, InterviewSlot, Task, Notification, LeaveRequest
 from .forms import RecruitmentForm, ApplicantForm, IncidentForm, EventForm, StaffForm, RolePlayForm, RolePlayResponseForm, InterviewSlotForm
 
 class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
@@ -252,12 +254,13 @@ def auto_fill_event(event):
             
             # NEW: Send notification
             Notification.objects.create(
-                user=candidate.user,
-                sender=None,  # system assigned
-                sender_type='system',
-                message=f'You have been auto-assigned to: {event.name} as {assign.role.name}',
-                notification_type='assignment',
-                link=f'/staff/events/{event.id}/assignments/'
+               user=candidate.user,
+               sender=User.objects.filter(is_superuser=True).first(),
+               sender_type='system',
+               message=f'You have been auto-assigned to: {event.title} as {assign.role.name}',
+               notification_type='assignment',
+               related_event=event,
+               related_assignment=assign
             )
             
             filled_count += 1
@@ -296,9 +299,10 @@ class AutoFillRosterView(StaffRequiredMixin, View):
                     user=candidate.user,
                     sender=request.user,  # who clicked auto-fill
                     sender_type='staff',
-                    message=f'You have been auto-assigned to: {event.name} as {assign.role.name}',
+                    message=f'You have been auto-assigned to: {event.title} as {assign.role.name}',
                     notification_type='assignment',
-                    link=f'/staff/events/{event.id}/assignments/'
+                    related_event=event,
+                    related_assignment=assign
                 )
                 
                 filled_count += 1
@@ -369,15 +373,83 @@ class StaffDeleteView(LoginRequiredMixin, DeleteView):
     template_name = 'staff/staff_confirm_delete.html'
     success_url = reverse_lazy('staff:staff_list')
 
+class StaffProfileView(LoginRequiredMixin, DetailView):
+    model = Staff
+    template_name = 'staff/staff_profile.html'
+    context_object_name = 'staff'
+
+    def get_object(self):
+        return self.request.user.staff
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        staff = self.object  # this is the staff from get_object()
+
+        # Build the leave_balance dict for the template
+        context['leave_balance'] = {
+            'Annual Leave': getattr(staff, 'annual_leave_balance', 0),
+            'Sick Leave': getattr(staff, 'sick_leave_balance', 0),
+            'Casual Leave': getattr(staff, 'casual_leave_balance', 0),
+        }
+        
+        # Make sure leave_requests is available for the table
+        context['staff'].leave_requests = staff.leaverequest_set.all().order_by('-from_date')[:5] 
+        # ^^^ assumes your LeaveRequest model has ForeignKey to Staff. 
+        # If your related_name is different, use that instead of leaverequest_set
+
+        return context
+
 class StaffProfileUpdateView(LoginRequiredMixin, UpdateView):
     model = Staff
     form_class = StaffForm
     template_name = 'staff/staff_profile_form.html'
+    success_url = reverse_lazy('staff_profile')
 
     def get_object(self, queryset=None):
-        staff, created = Staff.objects.get_or_create(user=self.request.user)
-        defaults = {'name': self.request.user.get_full_name() or self.request.user.username, 'email': self.request.user.email}
+        staff = super().get_object(queryset)
+        if staff.user != self.request.user and not self.request.user.is_staff:
+            raise PermissionDenied("You do not have permission to edit this profile.")
         return staff
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Update Staff Profile'
+        return context
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Profile updated successfully.')
+        return super().form_valid(form)
+
+class ApplyLeaveView(LoginRequiredMixin, View):
+    template_name = 'staff/apply_leave.html'
+
+    def get(self, request):
+        return render(request, self.template_name)
+
+    def post(self, request):
+        staff = request.user.staff
+        leave_type = request.POST.get('leave_type')
+        start_date = request.POST.get('start_date')
+        end_date = request.POST.get('end_date')
+        reason = request.POST.get('reason', '')
+
+        # Basic validation
+        if not leave_type or not start_date or not end_date:
+            messages.error(request, "All fields are required")
+            return render(request, self.template_name)
+
+        # Create the leave request
+        LeaveRequest.objects.create(
+            staff=staff,
+            leave_type=leave_type,
+            start_date=start_date,
+            end_date=end_date,
+            reason=reason,
+            status='pending'
+        )
+
+        messages.success(request, "Leave request submitted successfully. Waiting for approval.")
+        return redirect('staff:staff_profile')
 
 @method_decorator([login_required, staff_member_required], name='dispatch')
 class ExportStaffCSVView(View):
@@ -465,7 +537,7 @@ class StaffPersonalDashboardView(StaffRequiredMixin, LoginRequiredMixin, View):
         
         # Handle notifications safely - FIX FOR CRASH
         if hasattr(staff, 'notifications'):
-            notifications = staff.notifications.filter(is_read=False)
+            notifications = Notification.objects.filter(user=request.user, is_read=False)
             unread_count = notifications.count()
         else:
             notifications = []
@@ -573,6 +645,78 @@ class RiskDashboardView(StaffRequiredMixin, View):
         }
         return render(request, 'staff/risk_dashboard.html', context)
 
+class HRLeaveListView(LoginRequiredMixin, View):
+    template_name = 'staff/hr_leave_list.html'
+
+    def get(self, request):
+        # Only HR/Admin should see this. We'll add permission later
+        leave_requests = LeaveRequest.objects.filter(status='pending').select_related('staff')
+        return render(request, self.template_name, {'leave_requests': leave_requests})
+    
+class HRLeaveDetailView(LoginRequiredMixin, View):
+    template_name = 'staff/hr_leave_detail.html'
+
+    def get(self, request, pk):
+        leave = get_object_or_404(LeaveRequest, pk=pk)
+        return render(request, self.template_name, {'leave': leave})
+
+    def post(self, request, pk):
+        leave = get_object_or_404(LeaveRequest, pk=pk)
+        action = request.POST.get('action') # 'approve' or 'reject'
+        notes = request.POST.get('approval_notes', '')
+
+        if leave.status != 'pending':
+            messages.error(request, "This request has already been processed")
+            return redirect('staff:hr_leave_list')
+
+        if action == 'approve':
+            # 1. Calculate number of days
+            delta = leave.end_date - leave.start_date
+            days_requested = delta.days + 1 # +1 because both start and end day count
+
+            staff = leave.staff
+            can_approve = False
+
+            # 2. Check balance and deduct
+            if leave.leave_type == 'annual':
+                if staff.annual_leave_balance >= days_requested:
+                    staff.annual_leave_balance -= days_requested
+                    can_approve = True
+                else:
+                    messages.error(request, f"Not enough Annual Leave. Has {staff.annual_leave_balance} days")
+            
+            elif leave.leave_type == 'sick':
+                if staff.sick_leave_balance >= days_requested:
+                    staff.sick_leave_balance -= days_requested
+                    can_approve = True
+                else:
+                    messages.error(request, f"Not enough Sick Leave. Has {staff.sick_leave_balance} days")
+
+            elif leave.leave_type == 'casual':
+                if staff.casual_leave_balance >= days_requested:
+                    staff.casual_leave_balance -= days_requested
+                    can_approve = True
+                else:
+                    messages.error(request, f"Not enough Casual Leave. Has {staff.casual_leave_balance} days")
+            
+            if can_approve:
+                staff.save() # Save the new balance
+                leave.status = 'approved'
+                messages.success(request, f"Leave approved. {days_requested} days deducted.")
+            else:
+                return redirect('staff:hr_leave_detail', pk=pk) # Go back if not enough balance
+
+        elif action == 'reject':
+            leave.status = 'rejected'
+            messages.success(request, "Leave request rejected")
+
+        # 3. Save approval details
+        leave.approved_by = request.user
+        leave.approval_notes = notes
+        leave.approved_at = timezone.now()
+        leave.save()
+
+        return redirect('staff:hr_leave_list')
 
 # 5. RELIABILITY
 
@@ -638,9 +782,9 @@ def create_assignment(request, pk):
             user=staff_obj.user,
             sender=request.user,
             sender_type='staff',
-            message=f'You have been assigned to: {event.name} as {role_obj.name}',
+            message=f'You have been assigned to: {event.title} as {role_obj.name}',
             notification_type='assignment',
-            link=f'/staff/events/{event.id}/assignments/'
+            related_event=event
         )
 
         return JsonResponse({
@@ -685,9 +829,10 @@ def reassign_assignment(request, assignment_id):
             user=new_staff_obj.user,
             sender=request.user,
             sender_type='staff',
-            message=f'You have been reassigned to: {old_assignment.event.name} - Duty {old_assignment.duty_number}', # FIXED: old_assignment
+            message=f'You have been reassigned to: {old_assignment.event.title} - Duty {old_assignment.duty_number}', # FIXED: old_assignment
             notification_type='assignment',
-            link=f'/staff/events/{old_assignment.event.id}/assignments/' # FIXED: old_assignment
+            related_event=old_assignment.event,
+            related_assignment=new_assignment
         )
         
         return JsonResponse({
@@ -724,9 +869,10 @@ def replace_staff(request, assignment_id):
         user=new_staff.user,
         sender=request.user,
         sender_type='staff',
-        message=f'You have replaced {old_staff_name} on: {assignment.event.name} - Duty {assignment.duty_number}',
+        message=f'You have replaced {old_staff_name} on: {assignment.event.title} - Duty {assignment.duty_number}',
         notification_type='assignment',
-        link=f'/staff/events/{assignment.event.id}/assignments/'
+        related_event=assignment.event,
+        related_assignment=assignment
     )
 
     return JsonResponse({
@@ -760,12 +906,16 @@ def create_assignments_from_template(request, event_id):
 
 def accept_assignment(request, pk):
     try:
-        assignment = Assignment.objects.get(pk=pk, staff=request.user)
+        assignment = Assignment.objects.get(pk=pk, staff__user=request.user) # FIXED
         assignment.status = 'accepted'
         assignment.save()
         Notification.objects.create(
             user=assignment.event.created_by,
-            message=f"{request.user} accepted {assignment.event.name}"
+            sender=request.user, # add this
+            sender_type='staff', # add this
+            message=f"{request.user} accepted {assignment.event.title}",
+            related_event=assignment.event, # add this
+            related_assignment=assignment # add this
         )
         return redirect('staff:event_list')
     except Assignment.DoesNotExist:
@@ -774,12 +924,16 @@ def accept_assignment(request, pk):
 
 def decline_assignment(request, pk):
     try:
-        assignment = Assignment.objects.get(pk=pk, staff=request.user)
+        assignment = Assignment.objects.get(pk=pk, staff__user=request.user) # FIXED
         assignment.status = 'declined'
         assignment.save()
         Notification.objects.create(
             user=assignment.event.created_by,
-            message=f"{request.user} declined {assignment.event.name}"
+            sender=request.user, # add this
+            sender_type='staff', # add this
+            message=f"{request.user} declined {assignment.event.title}",
+            related_event=assignment.event, # add this
+            related_assignment=assignment # add this
         )
         return redirect('staff:event_list')
     except Assignment.DoesNotExist:
@@ -850,19 +1004,18 @@ class RecruitmentApplicantsView(ListView):
 class ExportApplicantsCSVView(View):
     def get(self, request, recruitment_id):
         recruitment = get_object_or_404(Recruitment, pk=recruitment_id)
-        applicants = recruitment.applicant_set.all()
+        applicants = recruitment.applicants.all() # FIXED
 
         # Apply filters from query params
         status = request.GET.get('status')
         if status:
             applicants = applicants.filter(status=status)
         
-        # Add more filters as needed
         name_search = request.GET.get('name')
         if name_search:
             applicants = applicants.filter(name__icontains=name_search)
 
-        safe_position = "".join(c if c.isalnum() else "_" for c in recruitment.position.name)
+        safe_position = "".join(c if c.isalnum() else "_" for c in recruitment.position) # FIXED
         response = HttpResponse(content_type='text/csv; charset=utf-8')
         response['Content-Disposition'] = f'attachment; filename="{safe_position}_{recruitment_id}_applicants.csv"'
         
@@ -876,15 +1029,14 @@ class ExportApplicantsCSVView(View):
                 request.build_absolute_uri(applicant.resume.url) if applicant.resume else '',
                 request.build_absolute_uri(applicant.cover_letter.url) if applicant.cover_letter else '',
                 applicant.get_status_display() if hasattr(applicant, 'get_status_display') else applicant.status,
-                applicant.created_at.strftime('%Y-%m-%d %H:%M') if applicant.created_at else '',
+                applicant.applied_at.strftime('%Y-%m-%d %H:%M') if applicant.applied_at else '', # was created_at
             ])
         return response
 
-@method_decorator(staff_member_required, name='dispatch')
 class SendEmailToApplicantsView(View):
     def get(self, request, recruitment_id):
         recruitment = get_object_or_404(Recruitment, pk=recruitment_id)
-        applicants = recruitment.applicant_set.all()
+        applicants = recruitment.applicants.all() # FIXED
         return render(request, 'staff/send_emails.html', {
             'recruitment': recruitment,
             'applicants': applicants,
@@ -893,12 +1045,11 @@ class SendEmailToApplicantsView(View):
     
     def post(self, request, recruitment_id):
         recruitment = get_object_or_404(Recruitment, pk=recruitment_id)
-        applicants = recruitment.applicant_set.all()
+        applicants = recruitment.applicants.all() # FIXED
 
         applicant_ids = request.POST.getlist('applicant_ids')
         if applicant_ids:
             applicants = applicants.filter(id__in=applicant_ids)
-
 
         emails_sent = 0
         errors = []
@@ -908,8 +1059,8 @@ class SendEmailToApplicantsView(View):
                 continue
             try:
                 send_mail(
-                    subject=f'Interview Invitation - {recruitment.position.name}',
-                    message=f'Dear {applicant.name},\n\nYou are invited for an interview for the position of {recruitment.position.name} you applied for. Please reply to this email to schedule your interview.\n\nBest regards,\nCatering Team',
+                    subject=f'Interview Invitation - {recruitment.position}', # FIXED
+                    message=f'Dear {applicant.name},\n\nYou are invited for an interview for the position of {recruitment.position} you applied for. Please reply to this email to schedule your interview.\n\nBest regards,\nCatering Team', # FIXED
                     from_email=settings.DEFAULT_FROM_EMAIL,
                     recipient_list=[applicant.email],
                     fail_silently=False
@@ -917,7 +1068,7 @@ class SendEmailToApplicantsView(View):
                 logger.info(f'Email sent to {applicant.email} for recruitment {recruitment_id}')
                 emails_sent += 1
             except Exception as e:
-                logger.error(f'Error sending email to {applicant.name} for recruitment {recruitment.position}: {str(e)}')
+                logger.error(f'Error sending email to {applicant.name} for recruitment {recruitment.position}: {str(e)}') # FIXED
                 errors.append(f'Error sending email to {applicant.name}: {str(e)}')
 
         if errors:
@@ -928,16 +1079,15 @@ class SendEmailToApplicantsView(View):
         
         return redirect('staff:recruitment_detail', pk=recruitment_id)
 
-@method_decorator(staff_member_required, name='dispatch')    
 class ScheduleInterviewsView(View):
     def get(self, request, recruitment_id):
         recruitment = get_object_or_404(Recruitment, pk=recruitment_id)
-        applicants = recruitment.applicant_set.all()
+        applicants = recruitment.applicants.all() # FIXED
         return render(request, 'staff/schedule_interviews.html', {'recruitment': recruitment, 'applicants': applicants, 'errors':[]})
     
     def post(self, request, recruitment_id):
         recruitment = get_object_or_404(Recruitment, pk=recruitment_id)
-        all_applicants = recruitment.applicant_set.all()
+        all_applicants = recruitment.applicants.all() # FIXED
         applicant_ids = request.POST.getlist('applicant_ids')
         if not applicant_ids:
             errors = ["Please select at least one applicant to schedule an interview."]
@@ -975,41 +1125,62 @@ class ScheduleInterviewsView(View):
 class ManageInterviewSlotsView(View):
     def get(self, request, recruitment_id):
         recruitment = get_object_or_404(Recruitment, pk=recruitment_id)
-        applicants = recruitment.applicants.all() # use.applicants consistently
+        applicants = recruitment.applicants.all()
+        existing_slots = recruitment.slots.select_related('applicant') # get existing ones too
 
         InterviewSlotFormSet = modelformset_factory(
             InterviewSlot,
             form=InterviewSlotForm,
-            extra=len(applicants) # 1 empty form for each applicant
+            extra=max(0, len(applicants) - existing_slots.count()), # only show empty forms for unassigned applicants
+            can_delete=True # <- ADD THIS for delete
         )
 
-        # Start with empty queryset so we create new slots
-        formset = InterviewSlotFormSet(queryset=InterviewSlot.objects.none())
+        # Load existing slots + empty ones
+        formset = InterviewSlotFormSet(queryset=existing_slots)
 
         return render(request, 'staff/manage_slots.html', {
            'recruitment': recruitment,
            'formset': formset,
-           'applicants_forms': zip(applicants, formset.forms) # zip here
+           'applicants_forms': zip(applicants, formset.forms)
         })
 
     def post(self, request, recruitment_id):
         recruitment = get_object_or_404(Recruitment, pk=recruitment_id)
-        applicants = recruitment.applicants.all() # same as GET
+        applicants = list(recruitment.applicants.all()) # cast to list so we can index
+        existing_slots = recruitment.slots.all()
 
         InterviewSlotFormSet = modelformset_factory(
             InterviewSlot,
             form=InterviewSlotForm,
-            extra=len(applicants) # 1 form for each applicant
+            extra=max(0, len(applicants) - existing_slots.count()),
+            can_delete=True
         )
 
-        formset = InterviewSlotFormSet(request.POST, queryset=InterviewSlot.objects.none())
+        formset = InterviewSlotFormSet(request.POST, queryset=existing_slots)
 
         if formset.is_valid():
             instances = formset.save(commit=False)
-            for i, instance in enumerate(instances):
-                instance.applicant = applicants[i] # link to the right applicant
+            
+            # Track which applicants are already assigned
+            assigned_applicant_ids = {s.applicant_id for s in existing_slots if s.applicant_id}
+            applicant_idx = 0
+
+            for instance in instances:
+                if instance._state.adding: # new slot
+                    # find next unassigned applicant
+                    while applicant_idx < len(applicants) and applicants[applicant_idx].id in assigned_applicant_ids:
+                        applicant_idx += 1
+                    if applicant_idx < len(applicants):
+                        instance.applicant = applicants[applicant_idx]
+                        applicant_idx += 1
+                
                 instance.recruitment = recruitment
                 instance.save()
+            
+            # Handle deletions
+            for obj in formset.deleted_objects:
+                obj.delete()
+                
             messages.success(request, "Interview slots updated.")
             return redirect('staff:recruitment_detail', pk=recruitment_id)
 
@@ -1188,23 +1359,6 @@ def reset_admin(request):
     else:
         return HttpResponse("✅ Admin UPDATED. Username: admin, Password: admin123. DELETE THIS VIEW AFTER TESTING")
 
-@login_required
-def accept_interview(request, slot_id):
-    slot = get_object_or_404(InterviewSlot, id=slot_id, applicant=request.user)
-    if slot.status == 'pending':
-        slot.status = 'accepted'
-        slot.save()
-        messages.success(request, f"You accepted the interview for {slot.slot_date} at {slot.slot_time}")
-    return redirect('staff:my_dashboard')
-
-@login_required
-def decline_interview(request, slot_id):
-    slot = get_object_or_404(InterviewSlot, id=slot_id, applicant=request.user)
-    if slot.status == 'pending':
-        slot.status = 'declined'
-        slot.save()
-        messages.info(request, f"You declined the interview for {slot.slot_date} at {slot.slot_time}")
-    return redirect('staff:my_dashboard')
 
 # NOTIFICATIONS
 
@@ -1244,6 +1398,8 @@ class RespondNotificationView(LoginRequiredMixin, View):
             notification.respond_to_action(action, user=request.user) # use the model method
         return redirect('staff:notifications_list')
 
+# ... all your CBVs above
+
 @staff_member_required
 def mark_all_notifications_read(request): 
     updated = Notification.objects.filter(user=request.user, is_read=False).update(
@@ -1251,4 +1407,42 @@ def mark_all_notifications_read(request):
         read_at=timezone.now()
     )
     messages.success(request, f"{updated} notifications marked as read")
-    return redirect('staff:notifications_list') # better to go back to list
+    return redirect('staff:notifications_list')
+
+# ===== APPLICANT ACTIONS =====
+
+@login_required
+def accept_interview(request, slot_id):
+    slot = get_object_or_404(InterviewSlot, id=slot_id)
+    
+    # Find applicant by email
+    try:
+        applicant = Applicant.objects.get(email=request.user.email, recruitment=slot.recruitment)
+    except Applicant.DoesNotExist:
+        messages.error(request, "No application found for you for this recruitment")
+        return redirect('staff:my_dashboard')
+
+    # security: only claim empty slots
+    if slot.applicant and slot.applicant != applicant:
+        messages.error(request, "This slot is already taken")
+        return redirect('staff:my_dashboard')
+        
+    slot.applicant = applicant
+    slot.save()
+    messages.success(request, f"You accepted the interview for {slot.date} at {slot.start_time}")
+    return redirect('staff:my_dashboard')
+
+@login_required
+def decline_interview(request, slot_id):
+    slot = get_object_or_404(InterviewSlot, id=slot_id)
+    try:
+        applicant = Applicant.objects.get(email=request.user.email, recruitment=slot.recruitment)
+    except Applicant.DoesNotExist:
+        messages.error(request, "No application found for you")
+        return redirect('staff:my_dashboard')
+    
+    if slot.applicant == applicant:
+        slot.applicant = None
+        slot.save()
+        messages.info(request, f"You declined the interview for {slot.date} at {slot.start_time}")
+    return redirect('staff:my_dashboard')

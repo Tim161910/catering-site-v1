@@ -90,6 +90,11 @@ class Staff(models.Model):
     
     reliability_score = models.IntegerField(default=100, help_text="Reliability score 0-100")
     reliability_notes = models.TextField(blank=True, null=True)
+
+    # NEW: Leave balances
+    annual_leave_balance = models.PositiveIntegerField(default=20)
+    sick_leave_balance = models.PositiveIntegerField(default=10)
+    casual_leave_balance = models.PositiveIntegerField(default=5)
     
     APPROVAL_REQUIRED_FIELDS = ['address', 'next_of_kin', 'emergency_contact_name', 'emergency_contact_phone']
     DIRECT_UPDATE_FIELDS = ['name', 'email', 'phone', 'whatsapp', 'role', 'is_active']
@@ -104,6 +109,50 @@ class Staff(models.Model):
         ).aggregate(total=Sum('issue_type__weight_percent'))['total'] or 0
         self.reliability_score = max(0, 100 - min(penalty, 100))
         self.save(update_fields=['reliability_score'])
+
+class LeaveRequest(models.Model):
+    LEAVE_TYPE_CHOICES = [
+        ('annual', 'Annual Leave'),
+        ('sick', 'Sick Leave'),
+        ('maternity', 'Maternity Leave'),
+        ('paternity', 'Paternity Leave'),
+        ('unpaid', 'Unpaid Leave'),
+        ('other', 'Other'),
+    ]
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+    staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name='leave_requests')
+    leave_type = models.CharField(max_length=15, choices=LEAVE_TYPE_CHOICES)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    reason = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    approval_notes = models.TextField(blank=True, null=True, help_text="Notes from approver")
+    approved_at = models.DateTimeField(null=True, blank=True)
+    
+    def __str__(self):
+        return f"{self.staff.name} - {self.leave_type} {self.start_date} to {self.end_date} [{self.status}]"
+    
+    class Meta:
+        ordering = ['-submitted_at']
+
+    # THESE 3 MUST BE OUTSIDE Meta, INDENTED TO MATCH __str__
+    @property
+    def type(self):
+        return self.get_leave_type_display()  # shows "Annual Leave" instead of "annual"
+
+    @property 
+    def from_date(self):
+        return self.start_date
+
+    @property
+    def to_date(self):
+        return self.end_date
 
 class StaffUpdateLog(models.Model):
     staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name='update_logs')
@@ -120,7 +169,7 @@ class StaffUpdateLog(models.Model):
 
     def __str__(self):
         return f"{self.staff.name} - {self.field_name} changed at {self.timestamp:%Y-%m-%d %H:%M}"
-    
+   
 class StaffUpdateRequest(models.Model):
     staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name='update_requests')
     requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
@@ -488,36 +537,8 @@ class Expense(models.Model):
         ordering = ['-submitted_at']
         verbose_name_plural = "Expenses"
 
-class LeaveRequest(models.Model):
-    LEAVE_TYPE_CHOICES = [
-        ('annual', 'Annual Leave'),
-        ('sick', 'Sick Leave'),
-        ('maternity', 'Maternity Leave'),
-        ('paternity', 'Paternity Leave'),
-        ('unpaid', 'Unpaid Leave'),
-        ('other', 'Other'),
-    ]
-    STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('approved', 'Approved'),
-        ('rejected', 'Rejected'),
-    ]
-    staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name='leave_requests')
-    leave_type = models.CharField(max_length=15, choices=LEAVE_TYPE_CHOICES)
-    start_date = models.DateField()
-    end_date = models.DateField()
-    reason = models.TextField(blank=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    submitted_at = models.DateTimeField(auto_now_add=True)
-    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
-    approval_notes = models.TextField(blank=True, null=True, help_text="Notes from approver")
-    approved_at = models.DateTimeField(null=True, blank=True)
-    
-    def __str__(self):
-        return f"{self.staff.name} - {self.leave_type} {self.start_date} to {self.end_date} [{self.status}]"
-    
-    class Meta:
-        ordering = ['-submitted_at']
+from django.conf import settings # <- make sure this import is at top
+
 
 # NOTIFICATIONS
 

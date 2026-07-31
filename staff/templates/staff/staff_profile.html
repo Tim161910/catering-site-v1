@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container mt-4">
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3>My Staff Profile</h3>
+        </div>
+        <div class="card-body">
+            <p><strong>Employee ID:</strong> {{ staff.employee_id }}</p>
+            <p><strong>Full Name:</strong> {{ staff.user.get_full_name }}</p>
+            <p><strong>Email:</strong> {{ staff.user.email }}</p>
+            <p><strong>Phone:</strong> {{ staff.phone_number }}</p>
+            <p><strong>Department:</strong> {{ staff.department.name }}</p>
+            <p><strong>Position:</strong> {{ staff.position }}</p>
+            <p><strong>Hire Date:</strong> {{ staff.hire_date|date:"M d, Y" }}</p>
+            <p><strong>Status:</strong> {{ staff.get_status_display }}</p>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2>Leave Balance</h2>
+        </div>
+        <div class="card-body">
+            <ul>
+                {% for leave_type, days in leave_balance.items %}
+                <li>{{ leave_type }}: {{ days }} days remaining</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2>Recent Leave Requests</h2>
+        </div>
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Leave Type</th>
+                        <th>From</th>
+                        <th>To</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for leave in staff.leave_requests.all %}
+                    <tr>
+                        <td>{{ leave.type }}</td>
+                        <td>{{ leave.from_date }}</td>
+                        <td>{{ leave.to_date }}</td>
+                        <td>{{ leave.status }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="4">No leave records found.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            <br>
+            <a href="{% url 'staff:apply_leave' %}" class="btn btn-primary">Apply for New Leave</a>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

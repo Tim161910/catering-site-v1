@@ -9,9 +9,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
-from.forms import StaffForm
+from .forms import StaffForm
+from django.contrib import admin as default_admin
 
-from.models import (
+from .models import (
     Role, EventTemplate, EventTemplateRole, Event,
     Staff, StaffUpdateLog, StaffUpdateRequest, StaffUpdateApproval,
     IssueType, Incident, Rule, Flag,
@@ -21,7 +22,11 @@ from.models import (
     Notification,
 )
 
-today = timezone.now().date()
+today = timezone.now()
+
+admin.site.site_header = "Catering Operations"
+admin.site.site_title = "Catering Admin"
+admin.site.index_title = "Dashboard"
 
 # ==========================================
 # # 1. IMPORTS + CUSTOM ADMIN SITE
@@ -55,7 +60,7 @@ class StaffSite(admin.AdminSite):
         custom_urls = [
             path('risk-dashboard/', self.admin_view(self.risk_dashboard_view), name='risk-dashboard'),
             path('auto-fill-roster/<int:event_id>/', self.admin_view(self.auto_fill_roster), name='auto-fill-roster'),
-            path('replace-staff/<int:assignment_id>/', self.admin_view(self.replace_staff), name='replace-stelf'),
+            path('replace-staff/<int:assignment_id>/', self.admin_view(self.replace_staff), name='replace-staff'),
         ]
         return custom_urls + urls
 
@@ -356,3 +361,32 @@ staff_admin_site.register(Meeting, MeetingAdmin)
 staff_admin_site.register(Expense, ExpenseAdmin)
 staff_admin_site.register(LeaveRequest, LeaveRequestAdmin)
 staff_admin_site.register(Notification, NotificationAdmin)
+
+# ==========================================
+# # 11. REGISTER TO DEFAULT ADMIN TOO
+# ==========================================
+
+default_admin.site.register(Role, RoleAdmin)
+default_admin.site.register(EventTemplate, EventTemplateAdmin)
+default_admin.site.register(Event, EventAdmin)
+default_admin.site.register(Staff, StaffAdmin)
+default_admin.site.register(StaffUpdateLog, StaffUpdateLogAdmin)
+default_admin.site.register(StaffUpdateRequest, StaffUpdateRequestAdmin)
+default_admin.site.register(StaffUpdateApproval, StaffUpdateApprovalAdmin)
+default_admin.site.register(IssueType, IssueTypeAdmin)
+default_admin.site.register(Incident, IncidentAdmin)
+default_admin.site.register(Rule, RuleAdmin)
+default_admin.site.register(Flag, FlagAdmin)
+default_admin.site.register(Assignment, AssignmentAdmin)
+default_admin.site.register(Task, TaskAdmin)
+default_admin.site.register(Recruitment, RecruitmentAdmin)
+default_admin.site.register(InterviewSlot, InterviewSlotAdmin)
+default_admin.site.register(Applicant, ApplicantAdmin)
+default_admin.site.register(Interview, InterviewAdmin)
+default_admin.site.register(RolePlay, RolePlayAdmin)
+default_admin.site.register(ApplicantRolePlay, ApplicantRolePlayAdmin)
+default_admin.site.register(RolePlayResponse, RolePlayResponseAdmin)
+default_admin.site.register(Meeting, MeetingAdmin)
+default_admin.site.register(Expense, ExpenseAdmin)
+default_admin.site.register(LeaveRequest, LeaveRequestAdmin)
+default_admin.site.register(Notification, NotificationAdmin)

@@ -16,6 +16,7 @@ urlpatterns = [
     path('<int:pk>/', views.StaffDetailView.as_view(), name='staff_detail'),
     path('<int:pk>/update/', views.StaffUpdateView.as_view(), name='staff_update'),
     path('<int:pk>/delete/', views.StaffDeleteView.as_view(), name='staff_delete'),
+    path('profile/', views.StaffProfileView.as_view(), name='staff_profile'),
     path('profile/edit/', views.StaffProfileUpdateView.as_view(), name='staff_profile_edit'),
     path('dashboard/export-csv/', views.ExportStaffCSVView.as_view(), name='export_staff_csv'),
     path('tasks/', views.TaskListView.as_view(), name='task_list'),

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Review Leave Request</h2>
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title">{{ leave.staff.name }} - {{ leave.get_leave_type_display }}</h5>
+            <p><b>Dates:</b> {{ leave.start_date }} to {{ leave.end_date }}</p>
+            <p><b>Reason:</b> {{ leave.reason }}</p>
+            <p><b>Status:</b> <span class="badge bg-warning">{{ leave.status }}</span></p>
+            <p><b>Current Balance:</b> 
+                Annual: {{ leave.staff.annual_leave_balance }} | 
+                Sick: {{ leave.staff.sick_leave_balance }} | 
+                Casual: {{ leave.staff.casual_leave_balance }}
+            </p>
+        </div>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="approval_notes" class="form-label">Approval Notes</label>
+            <textarea name="approval_notes" class="form-control" rows="3"></textarea>
+        </div>
+        <button type="submit" name="action" value="approve" class="btn btn-success">Approve</button>
+        <button type="submit" name="action" value="reject" class="btn btn-danger">Reject</button>
+        <a href="{% url 'staff:hr_leave_list' %}" class="btn btn-secondary">Back</a>
+    </form>
+</div>
+{% endblock %}
