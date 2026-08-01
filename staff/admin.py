@@ -20,33 +20,7 @@ class StaffSite(admin.AdminSite):
     site_header = "Staff Manager Portal"
     site_title = "Staff Portal"
     index_title = "Staff Operations"
-    # index_template = "admin/staff_index.html" # <-- COMMENTED OUT FOR NOW
-
-    def get_app_list(self, request):
-        app_list = super().get_app_list(request)
-
-        def safe_reverse(name):
-            try:
-                return reverse_lazy(name)
-            except Exception:
-                return '#'
-
-        return [
-            {'name': 'STAFF DIRECTORY', 'app_label': 'staff', 'models': [
-                {'name': 'Staffs', 'admin_url': safe_reverse('staff_admin:staff_changelist'), 'view_only': False},
-                {'name': 'Roles', 'admin_url': safe_reverse('staff_admin:role_changelist'), 'view_only': False},
-                {'name': 'Job Assignments', 'admin_url': safe_reverse('staff_admin:assignment_changelist'), 'view_only': False},
-            ]},
-            {'name': 'SCHEDULING & RELIABILITY', 'app_label': 'staff', 'models': [
-                {'name': 'Event Risk Dashboard', 'admin_url': safe_reverse('staff_admin:risk-dashboard'), 'view_only': True},
-                {'name': 'Events', 'admin_url': safe_reverse('staff_admin:event_changelist'), 'view_only': False},
-                {'name': 'Event Templates', 'admin_url': safe_reverse('staff_admin:eventtemplate_changelist'), 'view_only': False},
-            ]},
-            {'name': 'COMPLIANCE', 'app_label': 'staff', 'models': [
-                {'name': 'Incidents', 'admin_url': safe_reverse('staff_admin:incident_changelist'), 'view_only': False},
-                {'name': 'HR Issues', 'admin_url': safe_reverse('staff_admin:issuetype_changelist'), 'view_only': False},
-            ]},
-        ]
+    index_template = "admin/staff_index.html"  # <-- ADD THIS LINE
 
     def get_urls(self):
         urls = super().get_urls()
@@ -55,6 +29,9 @@ class StaffSite(admin.AdminSite):
             path('auto-fill-roster/<int:event_id>/', self.admin_view(self.auto_fill_roster), name='auto-fill-roster'),
         ]
         return custom_urls + urls
+
+    # You can DELETE the whole index() override. We don't need it anymore
+    # because the template link is hardcoded now
 
     def risk_dashboard(self, request):
         today = timezone.now()
@@ -86,8 +63,8 @@ class StaffSite(admin.AdminSite):
         event = get_object_or_404(Event, id=event_id)
         filled_count = self.auto_fill_event(event)
         messages.success(request, f"Auto-filled {filled_count} duties for event '{event.title}'.")
-        return redirect(reverse_lazy('staff_admin:risk-dashboard')) # <-- ADDED NAMESPACE
-
+        return redirect(reverse_lazy('staff_admin:risk-dashboard'))
+    
 # ADMIN CLASSES
 class RoleAdmin(admin.ModelAdmin):
     list_display = ('name', 'slug')
