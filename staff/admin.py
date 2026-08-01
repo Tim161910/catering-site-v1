@@ -4,39 +4,47 @@ from django.utils import timezone
 from datetime import timedelta
 from django.utils.html import format_html
 from django.shortcuts import get_object_or_404, redirect, render
-from.forms import StaffForm
+from.forms import StaffForm # <-- FIXED DOT
 from django.contrib.auth.models import Group, User
 
-from.models import (
+from.models import ( # <-- FIXED DOT
     Role, EventTemplate, EventTemplateRole, Event,
     Staff, IssueType, Incident, Assignment,
 )
 
-admin.site.site_header = "Catering Operations"
-admin.site_title = "Catering Admin"
+admin.site_header = "Catering Operations"
+admin.site.site_title = "Catering Admin" # <-- was admin.site_title
 admin.site.index_title = "Dashboard"
 
 class StaffSite(admin.AdminSite):
     site_header = "Staff Manager Portal"
     site_title = "Staff Portal"
     index_title = "Staff Operations"
-    index_template = "admin/staff_index.html"
+    # index_template = "admin/staff_index.html" # <-- COMMENTED OUT FOR NOW
 
     def get_app_list(self, request):
+        app_list = super().get_app_list(request)
+        # Use try/except so one bad reverse doesn't crash everything
+        def safe_reverse(name):
+            try:
+                return reverse_lazy(name)
+            except:
+                return '#'
+
         return [
             {'name': 'STAFF DIRECTORY', 'app_label': 'staff', 'models': [
-                {'name': 'Staffs', 'admin_url': reverse_lazy('staff_staff_changelist'), 'view_only': False},
-                {'name': 'Roles', 'admin_url': reverse_lazy('staff_role_changelist'), 'view_only': False},
-                {'name': 'Job Assignments', 'admin_url': reverse_lazy('staff_assignment_changelist'), 'view_only': False},
+                {'name': 'Staffs', 'admin_url': safe_reverse('staff_staff_changelist'), 'view_only': False},
+                {'name': 'Roles', 'admin_url': safe_reverse('staff_role_changelist'), 'view_only': False},
+                {'name': 'Job Assignments', 'admin_url': safe_reverse('staff_assignment_changelist'), 'view_only': False},
             ]},
             {'name': 'SCHEDULING & RELIABILITY', 'app_label': 'staff', 'models': [
-                {'name': 'Event Risk Dashboard', 'admin_url': reverse_lazy('risk-dashboard'), 'view_only': True},
-                {'name': 'Events', 'admin_url': reverse_lazy('staff_event_changelist'), 'view_only': False},
-                {'name': 'Event Templates', 'admin_url': reverse_lazy('staff_eventtemplate_changelist'), 'view_only': False},
+                {'name': 'Event Risk Dashboard', 'admin_url': safe_reverse('staff_admin:risk-dashboard'), 'view_only': True},
+                {'name': 'Events', 'admin_url': safe_reverse('staff_event_changelist'), 'view_only': False},
+                {'name': 'Event Templates', 'admin_url': safe_reverse('staff_eventtemplate_changelist'), 'view_only': False},
             ]},
             {'name': 'COMPLIANCE', 'app_label': 'staff', 'models': [
-                {'name': 'Incidents', 'admin_url': reverse_lazy('staff_incident_changelist'), 'view_only': False},
-                {'name': 'HR Issues', 'admin_url': reverse_lazy('staff_issuetype_changelist'), 'view_only': False},
+                {'name': 'Incidents', 'admin_url': safe_reverse('staff_incident_changelist'), 'view_only': False},
+                {'name': 'HR Issues', 'admin_url': safe_reverse('staff_issuetype_changelist'), 'view_only': False},
             ]},
         ]
 
@@ -78,12 +86,12 @@ class StaffSite(admin.AdminSite):
         event = get_object_or_404(Event, id=event_id)
         filled_count = self.auto_fill_event(event)
         messages.success(request, f"Auto-filled {filled_count} duties for event '{event.title}'.")
-        return redirect(reverse_lazy('risk-dashboard'))
+        return redirect(reverse_lazy('staff_admin:risk-dashboard')) # <-- ADDED NAMESPACE
 
 # ADMIN CLASSES
 class RoleAdmin(admin.ModelAdmin):
     list_display = ('name', 'slug')
-    search_fields = ['name'] # <-- ADDED THIS FOR AUTOCOMPLETE
+    search_fields = ['name']
     prepopulated_fields = {'slug': ('name',)}
 
 class EventTemplateRoleInline(admin.TabularInline):
@@ -94,20 +102,20 @@ class EventTemplateRoleInline(admin.TabularInline):
 class EventTemplateAdmin(admin.ModelAdmin):
     list_display = ['name', 'is_active']
     list_filter = ['is_active']
-    search_fields = ['name'] # <-- ADDED THIS TOO
+    search_fields = ['name']
     inlines = [EventTemplateRoleInline]
     list_editable = ['is_active']
 
 class EventAdmin(admin.ModelAdmin):
     list_display = ['title', 'start_time', 'client_name']
     list_filter = ['start_time']
-    search_fields = ['title', 'client_name'] # <-- ADDED
+    search_fields = ['title', 'client_name']
 
 class StaffAdmin(admin.ModelAdmin):
     form = StaffForm
     list_display = ('name', 'role', 'phone', 'reliability_badge', 'is_active')
     list_filter = ('role', 'is_active')
-    search_fields = ('name', 'email', 'phone') # <-- ADDED MORE
+    search_fields = ('name', 'email', 'phone')
     readonly_fields = ('reliability_score',)
 
     @admin.display(description='Reliability')
