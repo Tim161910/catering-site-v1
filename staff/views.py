@@ -32,14 +32,33 @@ logger = logging.getLogger(__name__)
 from .models import Recruitment, Applicant, RolePlay, Incident, Event, Staff, Assignment, Role, RolePlayResponse, InterviewSlot, Task, Notification, LeaveRequest
 from .forms import RecruitmentForm, ApplicantForm, IncidentForm, EventForm, StaffForm, RolePlayForm, RolePlayResponseForm, InterviewSlotForm
 
-class StaffRequiredMixin(UserPassesTestMixin):
-    def test_func(self):
-        return hasattr(self.request.user, 'staff')
-    
-    def handle_no_permission(self):
-        messages.error(self.request, "You must be logged in as staff to access this page.")
-        return redirect('staff:staff_login')
-    
+class StaffLoginView(LoginView):
+    template_name = 'staff/login.html'
+    redirect_authenticated_user = True
+
+    def form_valid(self, form):
+        user = form.get_user()
+        
+        # SECURITY CHECK 1: Must be active
+        if not user.is_active:
+            messages.error(self.request, "This account has been deactivated.")
+            return self.form_invalid(form)
+            
+        # SECURITY CHECK 2: Must have a Staff profile
+        if not hasattr(user, 'staff'):
+            messages.error(self.request, "Access denied. You are not registered as staff.")
+            return self.form_invalid(form)
+        
+        # SECURITY CHECK 3: Staff profile itself must be active
+        if not user.staff.is_active:
+            messages.error(self.request, "Your staff profile has been deactivated. Contact admin.")
+            return self.form_invalid(form)
+        
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy('staff:my_dashboard')
+
 # 2. CORE / UTILS
 
 class RoleListView(StaffRequiredMixin, ListView):
