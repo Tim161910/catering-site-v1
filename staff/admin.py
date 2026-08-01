@@ -44,37 +44,37 @@ class StaffSite(admin.AdminSite):
         return context
 
     def get_app_list(self, request):
-    return [
-        {
-            'name': 'STAFF DIRECTORY',
-            'app_label': 'staff',
-            'models': [
-                {'name': 'Staffs', 'admin_url': reverse_lazy('staff_staff_changelist'), 'view_only': False},
-                {'name': 'Roles', 'admin_url': reverse_lazy('staff_role_changelist'), 'view_only': False},
-                {'name': 'Job Assignments', 'admin_url': reverse_lazy('staff_assignment_changelist'), 'view_only': False},
-            ]
-        },
-        {
-            'name': 'SCHEDULING & RELIABILITY',
-            'app_label': 'staff',
-            'models': [
-                {'name': 'Event Risk Dashboard', 'admin_url': reverse_lazy('risk-dashboard'), 'view_only': True},
-                {'name': 'Events', 'admin_url': reverse_lazy('staff_event_changelist'), 'view_only': False},
-                {'name': 'Event Templates', 'admin_url': reverse_lazy('staff_eventtemplate_changelist'), 'view_only': False},
-            ]
-        },
-        {
-            'name': 'COMPLIANCE',
-            'app_label': 'staff',
-            'models': [
-                {'name': 'Incidents', 'admin_url': reverse_lazy('staff_incident_changelist'), 'view_only': False},
-                {'name': 'HR Issues', 'admin_url': reverse_lazy('staff_issuetype_changelist'), 'view_only': False},
-            ]
-        },
-    ]
+        return [
+            {
+                'name': 'STAFF DIRECTORY',
+                'app_label': 'staff',
+                'models': [
+                    {'name': 'Staffs', 'admin_url': reverse_lazy('staff_staff_changelist'), 'view_only': False},
+                    {'name': 'Roles', 'admin_url': reverse_lazy('staff_role_changelist'), 'view_only': False},
+                    {'name': 'Job Assignments', 'admin_url': reverse_lazy('staff_assignment_changelist'), 'view_only': False},
+                ]
+            },
+            {
+                'name': 'SCHEDULING & RELIABILITY',
+                'app_label': 'staff',
+                'models': [
+                    {'name': 'Event Risk Dashboard', 'admin_url': reverse_lazy('risk-dashboard'), 'view_only': True},
+                    {'name': 'Events', 'admin_url': reverse_lazy('staff_event_changelist'), 'view_only': False},
+                    {'name': 'Event Templates', 'admin_url': reverse_lazy('staff_eventtemplate_changelist'), 'view_only': False},
+                ]
+            },
+            {
+                'name': 'COMPLIANCE',
+                'app_label': 'staff',
+                'models': [
+                    {'name': 'Incidents', 'admin_url': reverse_lazy('staff_incident_changelist'), 'view_only': False},
+                    {'name': 'HR Issues', 'admin_url': reverse_lazy('staff_issuetype_changelist'), 'view_only': False},
+                ]
+            },
+        ]
 
     def get_urls(self):
-        urls = super().get_urls()
+        urls = super().get_urls() 
         custom_urls = [
             path('risk-dashboard/', self.admin_view(self.risk_dashboard_view), name='risk-dashboard'),
             path('auto-fill-roster/<int:event_id>/', self.admin_view(self.auto_fill_roster), name='auto-fill-roster'),
@@ -127,7 +127,7 @@ class StaffSite(admin.AdminSite):
         event = get_object_or_404(Event, id=event_id)
         filled_count = self.auto_fill_event(event)
         messages.success(request, f"Auto-filled {filled_count} duties for event '{event.title}'.")
-        return redirect('/staff_admin/event-status/')
+        return redirect(reverse_lazy('risk-dashboard'))
 
     @csrf_exempt
     def replace_staff(self, request, assignment_id):
