@@ -2,12 +2,9 @@ from django.contrib import admin, messages
 from django.urls import path, reverse_lazy
 from django.utils import timezone
 from datetime import timedelta
-from django.utils.html import format_html, mark_safe
+from django.utils.html import format_html
 from django.shortcuts import get_object_or_404, redirect, render
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from.forms import StaffForm
-from django.contrib import admin as default_admin
 from django.contrib.auth.models import Group, User
 
 from.models import (
@@ -15,10 +12,8 @@ from.models import (
     Staff, IssueType, Incident, Assignment,
 )
 
-today = timezone.now()
-
-admin.site_header = "Catering Operations"
-admin.site.site_title = "Catering Admin"
+admin.site.site_header = "Catering Operations"
+admin.site_title = "Catering Admin"
 admin.site.index_title = "Dashboard"
 
 # ==========================================
@@ -89,12 +84,11 @@ class StaffSite(admin.AdminSite):
         return redirect(reverse_lazy('risk-dashboard'))
 
 # ==========================================
-# 2. ADMIN CLASSES - ONLY FOR THE 7 MODELS WE USE
+# 2. ADMIN CLASSES
 # ==========================================
 class RoleAdmin(admin.ModelAdmin):
     list_display = ('name', 'slug')
     prepopulated_fields = {'slug': ('name',)}
-    search_fields = ['name']
 
 class EventTemplateRoleInline(admin.TabularInline):
     model = EventTemplateRole
@@ -104,54 +98,33 @@ class EventTemplateRoleInline(admin.TabularInline):
 class EventTemplateAdmin(admin.ModelAdmin):
     list_display = ['name', 'is_active']
     list_filter = ['is_active']
-    search_fields = ['name']
     inlines = [EventTemplateRoleInline]
     list_editable = ['is_active']
 
 class EventAdmin(admin.ModelAdmin):
-    list_display = ['title', 'start_time', 'client_name', 'assignment_count']
+    list_display = ['title', 'start_time', 'client_name']
     list_filter = ['start_time']
-    search_fields = ['title', 'client_name']
-
-    def assignment_count(self, obj):
-        total = obj.assignments.count()
-        filled = obj.assignments.filter(staff__isnull=False).count()
-        return format_html('{}/{} filled', filled, total)
-    assignment_count.short_description = 'Duties'
 
 class StaffAdmin(admin.ModelAdmin):
     form = StaffForm
     list_display = ('name', 'role', 'phone', 'reliability_badge', 'is_active')
     list_filter = ('role', 'is_active')
-    search_fields = ('name', 'email', 'phone')
+    search_fields = ('name',)
     readonly_fields = ('reliability_score',)
 
-    @admin.display(description='Reliability', ordering='reliability_score')
+    @admin.display(description='Reliability')
     def reliability_badge(self, obj):
         score = obj.reliability_score or 0
         color = '#28a745' if score >= 90 else '#ffc107' if score >= 75 else '#dc3545'
         emoji = '🟢' if score >= 90 else '🟡' if score >= 75 else '🔴'
         return format_html('<span style="color: {}; font-weight: 600;">{} {}%</span>', color, emoji, score)
 
-class IssueTypeAdmin(admin.ModelAdmin):
-    list_display = ['name', 'weight_percent']
-    list_editable = ['weight_percent']
-
-class IncidentAdmin(admin.ModelAdmin):
-    list_display = ['staff', 'event', 'issue_type', 'resolved']
-    list_filter = ['issue_type', 'resolved']
-    search_fields = ['staff__name']
-    autocomplete_fields = ['staff', 'event']
-
-class AssignmentAdmin(admin.ModelAdmin):
-    list_display = ['event', 'duty_number', 'staff', 'role', 'status']
-    list_filter = ['event', 'role', 'status']
-    search_fields = ['staff__name', 'event__title']
-    ordering = ['event', 'duty_number']
-    list_editable = ['staff', 'status']
+class IssueTypeAdmin(admin.ModelAdmin): list_display = ['name']
+class IncidentAdmin(admin.ModelAdmin): list_display = ['staff', 'event', 'issue_type', 'resolved']
+class AssignmentAdmin(admin.ModelAdmin): list_display = ['event', 'duty_number', 'staff', 'role', 'status']
 
 # ==========================================
-# 3. REGISTRATION
+# 3. REGISTER ONLY TO STAFF_ADMIN_SITE
 # ==========================================
 staff_admin_site = StaffSite(name='staff_admin')
 staff_admin_site.register(Role, RoleAdmin)
@@ -162,17 +135,5 @@ staff_admin_site.register(Event, EventAdmin)
 staff_admin_site.register(IssueType, IssueTypeAdmin)
 staff_admin_site.register(Incident, IncidentAdmin)
 
-# Keep full admin for you
-default_admin.site.register(Role, RoleAdmin)
-default_admin.site.register(EventTemplate, EventTemplateAdmin)
-default_admin.site.register(Event, EventAdmin)
-default_admin.site.register(Staff, StaffAdmin)
-default_admin.site.register(IssueType, IssueTypeAdmin)
-default_admin.site.register(Incident, IncidentAdmin)
-default_admin.site.register(Assignment, AssignmentAdmin)
-
-try:
-    default_admin.site.unregister(Group)
-    default_admin.site.unregister(User)
-except admin.sites.NotRegistered:
-    pass
+# REMOVED ALL default_admin.site.register LINES
+# This will fix the 500 on /admin/
