@@ -24,27 +24,27 @@ class StaffSite(admin.AdminSite):
 
     def get_app_list(self, request):
         app_list = super().get_app_list(request)
-        # Use try/except so one bad reverse doesn't crash everything
+
         def safe_reverse(name):
             try:
                 return reverse_lazy(name)
-            except:
+            except Exception:
                 return '#'
 
         return [
             {'name': 'STAFF DIRECTORY', 'app_label': 'staff', 'models': [
-                {'name': 'Staffs', 'admin_url': safe_reverse('staff_staff_changelist'), 'view_only': False},
-                {'name': 'Roles', 'admin_url': safe_reverse('staff_role_changelist'), 'view_only': False},
-                {'name': 'Job Assignments', 'admin_url': safe_reverse('staff_assignment_changelist'), 'view_only': False},
+                {'name': 'Staffs', 'admin_url': safe_reverse('staff_admin:staff_changelist'), 'view_only': False},
+                {'name': 'Roles', 'admin_url': safe_reverse('staff_admin:role_changelist'), 'view_only': False},
+                {'name': 'Job Assignments', 'admin_url': safe_reverse('staff_admin:assignment_changelist'), 'view_only': False},
             ]},
             {'name': 'SCHEDULING & RELIABILITY', 'app_label': 'staff', 'models': [
                 {'name': 'Event Risk Dashboard', 'admin_url': safe_reverse('staff_admin:risk-dashboard'), 'view_only': True},
-                {'name': 'Events', 'admin_url': safe_reverse('staff_event_changelist'), 'view_only': False},
-                {'name': 'Event Templates', 'admin_url': safe_reverse('staff_eventtemplate_changelist'), 'view_only': False},
+                {'name': 'Events', 'admin_url': safe_reverse('staff_admin:event_changelist'), 'view_only': False},
+                {'name': 'Event Templates', 'admin_url': safe_reverse('staff_admin:eventtemplate_changelist'), 'view_only': False},
             ]},
             {'name': 'COMPLIANCE', 'app_label': 'staff', 'models': [
-                {'name': 'Incidents', 'admin_url': safe_reverse('staff_incident_changelist'), 'view_only': False},
-                {'name': 'HR Issues', 'admin_url': safe_reverse('staff_issuetype_changelist'), 'view_only': False},
+                {'name': 'Incidents', 'admin_url': safe_reverse('staff_admin:incident_changelist'), 'view_only': False},
+                {'name': 'HR Issues', 'admin_url': safe_reverse('staff_admin:issuetype_changelist'), 'view_only': False},
             ]},
         ]
 
