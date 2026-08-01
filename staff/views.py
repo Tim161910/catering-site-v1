@@ -487,31 +487,32 @@ class ExportStaffCSVView(View):
 
 class StaffLoginView(LoginView):
     template_name = 'staff/login.html'
-    redirect_authenticated_user = True
+    redirect_authenticated_user = False # CHANGE THIS to False
+
+    def dispatch(self, request, *args, **kwargs):
+        # If someone is already logged in but not staff, log them out
+        if request.user.is_authenticated:
+            if not hasattr(request.user, 'staff'):
+                from django.contrib.auth import logout
+                logout(request)
+                messages.warning(request, "You were logged in as admin. Please login as staff.")
+        return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
         user = form.get_user()
-        
-        # SECURITY CHECK 1: Must be active
         if not user.is_active:
             messages.error(self.request, "This account has been deactivated.")
             return self.form_invalid(form)
-            
-        # SECURITY CHECK 2: Must have a Staff profile
         if not hasattr(user, 'staff'):
             messages.error(self.request, "Access denied. You are not registered as staff.")
             return self.form_invalid(form)
-        
-        # SECURITY CHECK 3: Staff profile itself must be active
         if not user.staff.is_active:
             messages.error(self.request, "Your staff profile has been deactivated. Contact admin.")
             return self.form_invalid(form)
-        
         return super().form_valid(form)
 
     def get_success_url(self):
         return reverse_lazy('staff:my_dashboard')
-
 
 @method_decorator(staff_member_required, name='dispatch')
 class StaffDashboardView(ListView):
