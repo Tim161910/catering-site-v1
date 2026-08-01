@@ -520,7 +520,6 @@ class StaffPersonalDashboardView(StaffRequiredMixin, LoginRequiredMixin, View):
     template_name = 'staff/dashboard.html'
 
     def get(self, request):
-        # Get or create staff profile for logged in user
         staff, created = Staff.objects.get_or_create(
             user=request.user,
             defaults={
@@ -529,13 +528,11 @@ class StaffPersonalDashboardView(StaffRequiredMixin, LoginRequiredMixin, View):
             }
         )
         
-        # Upcoming assignments
         assignments = staff.assignments.filter(
             event__start_time__gte=timezone.now(), 
-            status='assigned'
+            status='assigned'  # only show pending ones
         ).select_related('event', 'role').order_by('event__start_time')
         
-        # Handle notifications safely - FIX FOR CRASH
         if hasattr(staff, 'notifications'):
             notifications = Notification.objects.filter(user=request.user, is_read=False)
             unread_count = notifications.count()
@@ -554,6 +551,37 @@ class StaffPersonalDashboardView(StaffRequiredMixin, LoginRequiredMixin, View):
             'chart_data': json.dumps([85, 90, 88, staff.reliability_score or 0])
         }
         return render(request, self.template_name, context)
+
+    def post(self, request):
+        action = request.POST.get('action')
+        assignment_id = request.POST.get('assignment_id')
+        notification_id = request.POST.get('notification_id')
+        staff = request.user.staff
+
+        if action == 'accept':
+            assignment = get_object_or_404(Assignment, id=assignment_id, staff=staff)
+            assignment.status = 'accepted'
+            assignment.save()
+            messages.success(request, f'Accepted: {assignment.event.title} - Duty {assignment.duty_number}')
+        
+        elif action == 'decline':
+            assignment = get_object_or_404(Assignment, id=assignment_id, staff=staff)
+            assignment.status = 'declined'
+            assignment.save()
+            messages.warning(request, f'Declined: {assignment.event.title} - Duty {assignment.duty_number}')
+
+        elif action == 'mark_read':
+            notif = get_object_or_404(Notification, id=notification_id, user=request.user)
+            notif.is_read = True
+            notif.save()
+            messages.success(request, 'Notification marked as read.')
+        elif action == 'mark_all_read':
+            Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+            messages.success(request, 'All notifications marked as read.')
+        else:
+            messages.error(request, 'Invalid action.')
+            
+        return redirect('staff:my_dashboard')
 
 class RiskDashboardView(StaffRequiredMixin, View):
     def get(self, request):

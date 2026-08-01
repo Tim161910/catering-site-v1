@@ -27,21 +27,31 @@
                         <ul class="list-group list-group-flush">
                         {% for a in assignments %}
                             <li class="list-group-item">
-                                <div class="d-flex justify-content-between align-items-start">
+                                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-2">
                                     <div>
                                         <strong>{{ a.event.title }}</strong><br>
                                         <small class="text-muted">
                                             {{ a.role.name }} | {{ a.event.start_time|date:"D, M j - H:i" }} @ {{ a.event.location }}
                                         </small>
                                     </div>
-                                    <!-- Accept / Decline Buttons -->
-                                    {% if a.status == 'Assigned' %}
-                                        <div class="btn-group btn-group-sm">
-                                            <a href="{% url 'staff:accept_assignment' a.id %}" class="btn btn-success">Accept</a>
-                                            <a href="{% url 'staff:decline_assignment' a.id %}" class="btn btn-outline-danger">Decline</a>
+                                    <!-- Accept / Decline Buttons - NOW POST FORMS -->
+                                    {% if a.status == 'assigned' %}
+                                        <div class="d-flex gap-2">
+                                            <form method="post" class="d-inline">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="action" value="accept">
+                                                <input type="hidden" name="assignment_id" value="{{ a.pk }}">
+                                                <button type="submit" class="btn btn-success btn-sm">Accept</button>
+                                            </form>
+                                            <form method="post" class="d-inline">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="action" value="decline">
+                                                <input type="hidden" name="assignment_id" value="{{ a.pk }}">
+                                                <button type="submit" class="btn btn-outline-danger btn-sm">Decline</button>
+                                            </form>
                                         </div>
                                     {% else %}
-                                        <span class="badge bg-secondary">{{ a.status }}</span>
+                                        <span class="badge bg-{{ a.status|yesno:'success,secondary' }}">{{ a.status|title }}</span>
                                     {% endif %}
                                 </div>
                             </li>
@@ -70,8 +80,8 @@
                         <ul class="list-group list-group-flush">
                         {% for n in notifications %}
                             <li class="list-group-item d-flex justify-content-between align-items-center">
-                                {{ n.message }}
-                                <button class="btn btn-sm btn-link mark-read" data-id="{{ n.id }}">Mark read</button>
+                                <span class="me-2">{{ n.message }}</span>
+                                <button class="btn btn-sm btn-link mark-read flex-shrink-0" data-id="{{ n.id }}">Mark read</button>
                             </li>
                         {% endfor %}
                         </ul>
@@ -125,10 +135,13 @@ new Chart(ctx, {
             data: {{ chart_data|safe }},
             borderWidth: 2,
             tension: 0.3,
-            fill: false
+            fill: false,
+            borderColor: '#0d6efd'
         }]
     },
     options: { 
+        responsive: true,
+        maintainAspectRatio: false,
         scales: { 
             y: { 
                 beginAtZero: true, 
@@ -138,13 +151,14 @@ new Chart(ctx, {
     }
 });
 
-// Mark notification read
+// Mark notification read - FIXED URL
 document.querySelectorAll('.mark-read').forEach(btn => {
     btn.addEventListener('click', () => {
-        fetch(`/staff/notifications/${btn.dataset.id}/read/`, {
+        fetch(`/staff/notifications/${btn.dataset.id}/mark-read/`, { // matches your CBV
             method: 'POST', 
             headers: {'X-CSRFToken': '{{ csrf_token }}'}
         })
+        .then(res => res.json())
         .then(() => location.reload())
     })
 })
