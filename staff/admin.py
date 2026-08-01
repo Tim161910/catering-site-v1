@@ -16,9 +16,6 @@ admin.site.site_header = "Catering Operations"
 admin.site_title = "Catering Admin"
 admin.site.index_title = "Dashboard"
 
-# ==========================================
-# 1. CUSTOM ADMIN SITE
-# ==========================================
 class StaffSite(admin.AdminSite):
     site_header = "Staff Manager Portal"
     site_title = "Staff Portal"
@@ -83,11 +80,10 @@ class StaffSite(admin.AdminSite):
         messages.success(request, f"Auto-filled {filled_count} duties for event '{event.title}'.")
         return redirect(reverse_lazy('risk-dashboard'))
 
-# ==========================================
-# 2. ADMIN CLASSES
-# ==========================================
+# ADMIN CLASSES
 class RoleAdmin(admin.ModelAdmin):
     list_display = ('name', 'slug')
+    search_fields = ['name'] # <-- ADDED THIS FOR AUTOCOMPLETE
     prepopulated_fields = {'slug': ('name',)}
 
 class EventTemplateRoleInline(admin.TabularInline):
@@ -98,18 +94,20 @@ class EventTemplateRoleInline(admin.TabularInline):
 class EventTemplateAdmin(admin.ModelAdmin):
     list_display = ['name', 'is_active']
     list_filter = ['is_active']
+    search_fields = ['name'] # <-- ADDED THIS TOO
     inlines = [EventTemplateRoleInline]
     list_editable = ['is_active']
 
 class EventAdmin(admin.ModelAdmin):
     list_display = ['title', 'start_time', 'client_name']
     list_filter = ['start_time']
+    search_fields = ['title', 'client_name'] # <-- ADDED
 
 class StaffAdmin(admin.ModelAdmin):
     form = StaffForm
     list_display = ('name', 'role', 'phone', 'reliability_badge', 'is_active')
     list_filter = ('role', 'is_active')
-    search_fields = ('name',)
+    search_fields = ('name', 'email', 'phone') # <-- ADDED MORE
     readonly_fields = ('reliability_score',)
 
     @admin.display(description='Reliability')
@@ -119,13 +117,19 @@ class StaffAdmin(admin.ModelAdmin):
         emoji = '🟢' if score >= 90 else '🟡' if score >= 75 else '🔴'
         return format_html('<span style="color: {}; font-weight: 600;">{} {}%</span>', color, emoji, score)
 
-class IssueTypeAdmin(admin.ModelAdmin): list_display = ['name']
-class IncidentAdmin(admin.ModelAdmin): list_display = ['staff', 'event', 'issue_type', 'resolved']
-class AssignmentAdmin(admin.ModelAdmin): list_display = ['event', 'duty_number', 'staff', 'role', 'status']
+class IssueTypeAdmin(admin.ModelAdmin):
+    list_display = ['name']
+    search_fields = ['name']
 
-# ==========================================
-# 3. REGISTER ONLY TO STAFF_ADMIN_SITE
-# ==========================================
+class IncidentAdmin(admin.ModelAdmin):
+    list_display = ['staff', 'event', 'issue_type', 'resolved']
+    search_fields = ['staff__name']
+
+class AssignmentAdmin(admin.ModelAdmin):
+    list_display = ['event', 'duty_number', 'staff', 'role', 'status']
+    search_fields = ['staff__name', 'event__title']
+
+# REGISTER ONLY TO STAFF_ADMIN_SITE
 staff_admin_site = StaffSite(name='staff_admin')
 staff_admin_site.register(Role, RoleAdmin)
 staff_admin_site.register(Staff, StaffAdmin)
@@ -134,6 +138,3 @@ staff_admin_site.register(EventTemplate, EventTemplateAdmin)
 staff_admin_site.register(Event, EventAdmin)
 staff_admin_site.register(IssueType, IssueTypeAdmin)
 staff_admin_site.register(Incident, IncidentAdmin)
-
-# REMOVED ALL default_admin.site.register LINES
-# This will fix the 500 on /admin/
