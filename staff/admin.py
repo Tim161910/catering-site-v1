@@ -1,16 +1,14 @@
 from django.contrib import admin, messages
 from django.urls import path, reverse_lazy
-from django.template.response import TemplateResponse
 from django.utils import timezone
 from datetime import datetime, timedelta
 from django.utils.html import format_html, mark_safe
-from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.http import JsonResponse
-from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from .forms import StaffForm
 from django.contrib import admin as default_admin
+from django.contrib.auth.models import Group, User 
 
 from .models import (
     Role, EventTemplate, EventTemplateRole, Event,
@@ -21,6 +19,7 @@ from .models import (
     Meeting, Expense, LeaveRequest,
     Notification,
 )
+
 
 today = timezone.now()
 
@@ -85,7 +84,7 @@ class StaffSite(admin.AdminSite):
         return custom_urls + urls
 
     def risk_dashboard_view(self, request):
-        today = datetime.now()
+        today = timezone.now()
         upcoming_events = Event.objects.filter(
             start_time__gte=today,
             start_time__lte=today + timedelta(days=14)
@@ -390,7 +389,6 @@ staff_admin_site.register(Incident, IncidentAdmin)
 # ==========================================
 # # 11. REGISTER TO DEFAULT ADMIN TOO - KEEP FULL FOR YOU
 # ==========================================
-# Keep everything registered to default /admin/ so YOU can still access it
 default_admin.site.register(Role, RoleAdmin)
 default_admin.site.register(EventTemplate, EventTemplateAdmin)
 default_admin.site.register(Event, EventAdmin)
@@ -419,7 +417,8 @@ default_admin.site.register(Notification, NotificationAdmin)
 # ==========================================
 # # 12. HIDE GROUPS AND USERS FROM DEFAULT ADMIN
 # ==========================================
-from django.contrib.auth.models import Group, User
-
-default_admin.site.unregister(Group)
-default_admin.site.unregister(User)
+try:
+    default_admin.site.unregister(Group)
+    default_admin.site.unregister(User)
+except admin.sites.NotRegistered:
+    pass # already not registered, ignore
