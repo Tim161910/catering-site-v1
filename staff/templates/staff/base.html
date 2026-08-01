@@ -28,16 +28,30 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
         <div class="container">
-            <a class="navbar-brand" href="{% url 'staff:event_list' %}">Staff Manager</a>
+            <!-- CHANGED: Conditional Brand + Link -->
+            <a class="navbar-brand" href="{% if user.is_superuser %}{% url 'staff:event_list' %}{% else %}{% url 'staff:my_dashboard' %}{% endif %}">
+                {% if user.is_superuser %}
+                    Staff Manager
+                {% else %}
+                    My Dashboard
+                {% endif %}
+            </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <div class="navbar-nav me-auto">
-                    <a class="nav-link" href="{% url 'staff:event_list' %}">Events</a>
-                    <a class="nav-link" href="{% url 'staff:staff_list' %}">Staff</a>
-                    <a class="nav-link" href="{% url 'staff:recruitment_list' %}">Recruitment</a>
-                    <a class="nav-link" href="{% url 'staff:task_list' %}">Tasks</a>
+                    {% if user.is_superuser %}
+                        <!-- ADMIN MENU -->
+                        <a class="nav-link" href="{% url 'staff:event_list' %}">Events</a>
+                        <a class="nav-link" href="{% url 'staff:staff_list' %}">Staff</a>
+                        <a class="nav-link" href="{% url 'staff:recruitment_list' %}">Recruitment</a>
+                        <a class="nav-link" href="{% url 'staff:task_list' %}">Tasks</a>
+                    {% else %}
+                        <!-- STAFF MENU -->
+                        <a class="nav-link" href="{% url 'staff:my_dashboard' %}">Dashboard</a>
+                        <a class="nav-link" href="{% url 'staff:task_list' %}">My Tasks</a>
+                    {% endif %}
                 </div>
 
                 {% if user.is_authenticated %}
@@ -77,7 +91,7 @@
 
                     <!-- Logout -->
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'admin:login' %}">Logout</a> 
+                        <a class="nav-link" href="{% url 'admin:logout' %}">Logout</a> 
                     </li>
                 </ul>
                 {% endif %}
