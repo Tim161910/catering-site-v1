@@ -28,9 +28,11 @@ admin.site.site_header = "Catering Operations"
 admin.site.site_title = "Catering Admin"
 admin.site.index_title = "Dashboard"
 
+
 # ==========================================
 # # 1. IMPORTS + CUSTOM ADMIN SITE
 # ==========================================
+
 class StaffSite(admin.AdminSite):
     site_header = "Catering Operations"
     site_title = "Catering Admin"
@@ -43,17 +45,35 @@ class StaffSite(admin.AdminSite):
         return context
 
     def get_app_list(self, request):
-        app_list = super().get_app_list(request)
-        app_list.insert(0, {
-            'name': 'Staff Manager',
-            'app_label': 'dashboard',
-            'models': [{
-                'name': 'Event Risk Dashboard',
-                'admin_url': '/staff_admin/risk-dashboard/', # use site name
-                'view_only': True
-            }]
-        })
-        return app_list
+        # DELETE the old app_list logic. Return ONLY these 3 groups
+        return [
+            {
+                'name': 'STAFF DIRECTORY',
+                'app_label': 'staff',
+                'models': [
+                    {'name': 'Staffs', 'admin_url': reverse_lazy('staff_admin:staff_staff_changelist'), 'view_only': False},
+                    {'name': 'Roles', 'admin_url': reverse_lazy('staff_admin:staff_role_changelist'), 'view_only': False},
+                    {'name': 'Job Assignments', 'admin_url': reverse_lazy('staff_admin:staff_assignment_changelist'), 'view_only': False},
+                ]
+            },
+            {
+                'name': 'SCHEDULING & RELIABILITY',
+                'app_label': 'staff',
+                'models': [
+                    {'name': 'Event Risk Dashboard', 'admin_url': reverse_lazy('staff_admin:risk-dashboard'), 'view_only': True}, # KEEP THIS
+                    {'name': 'Events', 'admin_url': reverse_lazy('staff_admin:staff_event_changelist'), 'view_only': False},
+                    {'name': 'Event Templates', 'admin_url': reverse_lazy('staff_admin:staff_eventtemplate_changelist'), 'view_only': False},
+                ]
+            },
+            {
+                'name': 'COMPLIANCE',
+                'app_label': 'staff',
+                'models': [
+                    {'name': 'Incidents', 'admin_url': reverse_lazy('staff_admin:staff_incident_changelist'), 'view_only': False},
+                    {'name': 'HR Issues', 'admin_url': reverse_lazy('staff_admin:staff_issuetype_changelist'), 'view_only': False},
+                ]
+            },
+        ]
 
     def get_urls(self):
         urls = super().get_urls()
@@ -333,39 +353,44 @@ class LeaveRequestAdmin(admin.ModelAdmin): pass
 class NotificationAdmin(admin.ModelAdmin): pass
 
 # ==========================================
-# # 10. REGISTER
+# # 10. REGISTER - DEMO MODE ONLY
 # ==========================================
 staff_admin_site = StaffSite(name='staff_admin')
 
+# CORE 3 GROUPS ONLY - What she will see
 staff_admin_site.register(Role, RoleAdmin)
+staff_admin_site.register(Staff, StaffAdmin)
+staff_admin_site.register(Assignment, AssignmentAdmin)
+
 staff_admin_site.register(EventTemplate, EventTemplateAdmin)
 staff_admin_site.register(Event, EventAdmin)
-staff_admin_site.register(Staff, StaffAdmin)
-staff_admin_site.register(StaffUpdateLog, StaffUpdateLogAdmin)
-staff_admin_site.register(StaffUpdateRequest, StaffUpdateRequestAdmin)
-staff_admin_site.register(StaffUpdateApproval, StaffUpdateApprovalAdmin)
+
 staff_admin_site.register(IssueType, IssueTypeAdmin)
 staff_admin_site.register(Incident, IncidentAdmin)
-staff_admin_site.register(Rule, RuleAdmin)
-staff_admin_site.register(Flag, FlagAdmin)
-staff_admin_site.register(Assignment, AssignmentAdmin)
-staff_admin_site.register(Task, TaskAdmin)
-staff_admin_site.register(Recruitment, RecruitmentAdmin)
-staff_admin_site.register(InterviewSlot, InterviewSlotAdmin)
-staff_admin_site.register(Applicant, ApplicantAdmin)
-staff_admin_site.register(Interview, InterviewAdmin)
-staff_admin_site.register(RolePlay, RolePlayAdmin)
-staff_admin_site.register(ApplicantRolePlay, ApplicantRolePlayAdmin)
-staff_admin_site.register(RolePlayResponse, RolePlayResponseAdmin)
-staff_admin_site.register(Meeting, MeetingAdmin)
-staff_admin_site.register(Expense, ExpenseAdmin)
-staff_admin_site.register(LeaveRequest, LeaveRequestAdmin)
-staff_admin_site.register(Notification, NotificationAdmin)
+
+# HIDDEN FOR DEMO - Uncomment later for Phase 2
+# staff_admin_site.register(StaffUpdateLog, StaffUpdateLogAdmin)
+# staff_admin_site.register(StaffUpdateRequest, StaffUpdateRequestAdmin)
+# staff_admin_site.register(StaffUpdateApproval, StaffUpdateApprovalAdmin)
+# staff_admin_site.register(Rule, RuleAdmin)
+# staff_admin_site.register(Flag, FlagAdmin)
+# staff_admin_site.register(Task, TaskAdmin)
+# staff_admin_site.register(Recruitment, RecruitmentAdmin)
+# staff_admin_site.register(InterviewSlot, InterviewSlotAdmin)
+# staff_admin_site.register(Applicant, ApplicantAdmin)
+# staff_admin_site.register(Interview, InterviewAdmin)
+# staff_admin_site.register(RolePlay, RolePlayAdmin)
+# staff_admin_site.register(ApplicantRolePlay, ApplicantRolePlayAdmin)
+# staff_admin_site.register(RolePlayResponse, RolePlayResponseAdmin)
+# staff_admin_site.register(Meeting, MeetingAdmin)
+# staff_admin_site.register(Expense, ExpenseAdmin)
+# staff_admin_site.register(LeaveRequest, LeaveRequestAdmin)
+# staff_admin_site.register(Notification, NotificationAdmin)
 
 # ==========================================
-# # 11. REGISTER TO DEFAULT ADMIN TOO
+# # 11. REGISTER TO DEFAULT ADMIN TOO - KEEP FULL FOR YOU
 # ==========================================
-
+# Keep everything registered to default /admin/ so YOU can still access it
 default_admin.site.register(Role, RoleAdmin)
 default_admin.site.register(EventTemplate, EventTemplateAdmin)
 default_admin.site.register(Event, EventAdmin)
@@ -390,3 +415,11 @@ default_admin.site.register(Meeting, MeetingAdmin)
 default_admin.site.register(Expense, ExpenseAdmin)
 default_admin.site.register(LeaveRequest, LeaveRequestAdmin)
 default_admin.site.register(Notification, NotificationAdmin)
+
+# ==========================================
+# # 12. HIDE GROUPS AND USERS FROM DEFAULT ADMIN
+# ==========================================
+from django.contrib.auth.models import Group, User
+
+default_admin.site.unregister(Group)
+default_admin.site.unregister(User)
