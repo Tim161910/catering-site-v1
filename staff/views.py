@@ -2,6 +2,7 @@
 
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import LoginView
 from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -24,16 +25,21 @@ from django.contrib import messages
 from django.utils.decorators import method_decorator
 from django.forms import modelformset_factory
 from django.core.exceptions import PermissionDenied
+from django.contrib import messages
 
 logger = logging.getLogger(__name__)
 
 from .models import Recruitment, Applicant, RolePlay, Incident, Event, Staff, Assignment, Role, RolePlayResponse, InterviewSlot, Task, Notification, LeaveRequest
 from .forms import RecruitmentForm, ApplicantForm, IncidentForm, EventForm, StaffForm, RolePlayForm, RolePlayResponseForm, InterviewSlotForm
 
-class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
+class StaffRequiredMixin(UserPassesTestMixin):
     def test_func(self):
-        return self.request.user.is_staff
-
+        return hasattr(self.request.user, 'staff')
+    
+    def handle_no_permission(self):
+        messages.error(self.request, "You must be logged in as staff to access this page.")
+        return redirect('staff:staff_login')
+    
 # 2. CORE / UTILS
 
 class RoleListView(StaffRequiredMixin, ListView):
@@ -476,6 +482,22 @@ class ExportStaffCSVView(View):
 
         return response
 
+class StaffLoginView(LoginView):
+    template_name = 'staff/login.html'
+    redirect_authenticated_user = True
+
+    def form_valid(self, form):
+        user = form.get_user()
+        # SECURITY CHECK: User must have a Staff profile
+        if not hasattr(user, 'staff'):
+            messages.error(self.request, "Access denied. You are not registered as staff.")
+            return self.form_invalid(form)
+        
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy('staff:my_dashboard')
+
 @method_decorator(staff_member_required, name='dispatch')
 class StaffDashboardView(ListView):
     model = Staff
@@ -580,7 +602,7 @@ class StaffPersonalDashboardView(StaffRequiredMixin, LoginRequiredMixin, View):
             messages.success(request, 'All notifications marked as read.')
         else:
             messages.error(request, 'Invalid action.')
-            
+
         return redirect('staff:my_dashboard')
 
 class RiskDashboardView(StaffRequiredMixin, View):
