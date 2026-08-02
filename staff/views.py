@@ -159,7 +159,7 @@ class EventStatusView(StaffRequiredMixin, View):
 
         today = timezone.now().date()
 
-        # Dashboard card stats - MUST match template: stats.total_events etc
+        # Dashboard card stats
         stats = {
             'total_events': Event.objects.count(),
             'upcoming': Event.objects.filter(start_time__date__gte=today).count(),
@@ -180,24 +180,36 @@ class EventStatusView(StaffRequiredMixin, View):
             duties = []
             at_risk = 0
             empty = 0
-            assignments = event.assignments.filter(status='assigned')
-            assigned_staff_ids = assignments.values_list('staff_id', flat=True)
+            accepted = 0  # NEW
+            declined = 0  # NEW
+            
+            # CHANGED: get all statuses so we can count them
+            assignments = event.assignments.filter(status__in=['assigned', 'accepted', 'declined'])
+            assigned_staff_ids = assignments.exclude(staff=None).values_list('staff_id', flat=True)
 
             for a in assignments:
                 if a.staff is None:
                     score = 0
-                    status = 'warning'  # lowercase to match template
+                    status = 'warning'
                     empty += 1
                 else:
                     score = getattr(a.staff, 'reliability_score', 100)
-                    if score < 50:
-                        status = 'critical'  # lowercase
+                    
+                    # NEW: Check assignment status first
+                    if a.status == 'accepted':
+                        status = 'ok'
+                        accepted += 1
+                    elif a.status == 'declined':
+                        status = 'critical'
+                        declined += 1
+                    elif score < 50:
+                        status = 'critical'
                         at_risk += 1
                     elif score < 75:
-                        status = 'warning'   # lowercase
+                        status = 'warning'
                         at_risk += 1
                     else:
-                        status = 'ok'        # lowercase
+                        status = 'ok'
 
                 if a.role:
                     replacements = Staff.objects.filter(
@@ -215,6 +227,7 @@ class EventStatusView(StaffRequiredMixin, View):
                     'role': a.role.name if a.role else 'No Role',
                     'score': score,
                     'status': status,
+                    'assignment_status': a.status,  # NEW: send to template
                     'candidates': replacements
                 })
 
@@ -227,7 +240,9 @@ class EventStatusView(StaffRequiredMixin, View):
                 'total_duties': len(duties),
                 'at_risk': at_risk,
                 'empty': empty,
-                'ok': len(duties) - at_risk - empty
+                'accepted': accepted,  # NEW
+                'declined': declined,  # NEW
+                'ok': len(duties) - at_risk - empty - declined  # CHANGED
             })
 
         recent_events = Event.objects.order_by('-start_time')[:5]

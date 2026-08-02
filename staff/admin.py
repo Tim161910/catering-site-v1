@@ -7,7 +7,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from.forms import StaffForm # <-- FIXED DOT
 from django.contrib.auth.models import Group, User
 
-from.models import ( # <-- FIXED DOT
+
+from .models import ( # <-- FIXED DOT
     Role, EventTemplate, EventTemplateRole, Event,
     Staff, IssueType, Incident, Assignment,
 )
@@ -110,9 +111,23 @@ class IncidentAdmin(admin.ModelAdmin):
     list_display = ['staff', 'event', 'issue_type', 'resolved']
     search_fields = ['staff__name']
 
+from django.contrib import admin
+from .models import Assignment
+
+@admin.register(Assignment)
 class AssignmentAdmin(admin.ModelAdmin):
-    list_display = ['event', 'duty_number', 'staff', 'role', 'status']
+    list_display = ['event', 'duty_number', 'staff', 'role', 'status', 'start_time']
+    list_filter = ['status', 'event', 'role']
     search_fields = ['staff__name', 'event__title']
+    
+    def save_model(self, request, obj, form, change):
+        if change and 'status' in form.changed_data:
+            from staff.models import Notification
+            Notification.objects.create(
+                user=obj.event.created_by,
+                message=f"Assignment status changed: {obj.staff.name} is now {obj.status} for {obj.event.title}"
+            )
+        super().save_model(request, obj, form, change)
 
 # REGISTER ONLY TO STAFF_ADMIN_SITE
 staff_admin_site = StaffSite(name='staff_admin')
