@@ -53,6 +53,7 @@ class RoleListView(StaffRequiredMixin, ListView):
 # 3. EVENTS
 
 class EventListView(LoginRequiredMixin, ListView):
+    login_url = 'staff:staff_login'
     model = Event
     template_name = 'staff/event_list.html'
     context_object_name = 'events'
@@ -65,6 +66,7 @@ class EventListView(LoginRequiredMixin, ListView):
         return Event.objects.filter(start_time__date__gte=today).order_by('start_time')
 
 class EventDetailView(LoginRequiredMixin, DetailView):
+    login_url = 'staff:staff_login'
     model = Event
     template_name = 'staff/event_detail.html'
 
@@ -359,6 +361,7 @@ class StaffListView(LoginRequiredMixin, ListView):
         return qs
 
 class StaffDetailView(LoginRequiredMixin, DetailView):
+    login_url = 'staff:staff_login'
     model = Staff
     template_name = 'staff/staff_detail.html'
     context_object_name = 'staff'
@@ -384,6 +387,7 @@ class StaffDeleteView(LoginRequiredMixin, DeleteView):
     success_url = reverse_lazy('staff:staff_list')
 
 class StaffProfileView(LoginRequiredMixin, DetailView):
+    login_url = 'staff:staff_login'
     model = Staff
     template_name = 'staff/staff_profile.html'
     context_object_name = 'staff'
@@ -410,6 +414,7 @@ class StaffProfileView(LoginRequiredMixin, DetailView):
         return context
 
 class StaffProfileUpdateView(LoginRequiredMixin, UpdateView):
+    login_url = 'staff:staff_login'
     model = Staff
     form_class = StaffForm
     template_name = 'staff/staff_profile_form.html'
@@ -432,6 +437,7 @@ class StaffProfileUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 class ApplyLeaveView(LoginRequiredMixin, View):
+    login_url = 'staff:staff_login'
     template_name = 'staff/apply_leave.html'
 
     def get(self, request):
@@ -462,7 +468,7 @@ class ApplyLeaveView(LoginRequiredMixin, View):
         messages.success(request, "Leave request submitted successfully. Waiting for approval.")
         return redirect('staff:staff_profile')
 
-@method_decorator([login_required, staff_member_required], name='dispatch')
+@method_decorator([login_required(login_url='staff:staff_login'), staff_member_required], name='dispatch')
 class ExportStaffCSVView(View):
     """
     Export staff list to CSV
@@ -563,6 +569,7 @@ class StaffDashboardView(ListView):
         return context
 
 class StaffPersonalDashboardView(StaffRequiredMixin, LoginRequiredMixin, View):
+    login_url = 'staff:staff_login'
     template_name = 'staff/dashboard.html'
 
     def get(self, request):
@@ -720,6 +727,7 @@ class RiskDashboardView(StaffRequiredMixin, View):
         return render(request, 'staff/risk_dashboard.html', context)
 
 class HRLeaveListView(LoginRequiredMixin, View):
+    login_url = 'staff:staff_login'
     template_name = 'staff/hr_leave_list.html'
 
     def get(self, request):
@@ -728,6 +736,7 @@ class HRLeaveListView(LoginRequiredMixin, View):
         return render(request, self.template_name, {'leave_requests': leave_requests})
     
 class HRLeaveDetailView(LoginRequiredMixin, View):
+    login_url = 'staff:staff_login'
     template_name = 'staff/hr_leave_detail.html'
 
     def get(self, request, pk):
@@ -824,7 +833,7 @@ class AssignmentListView(ListView):
 
 @require_POST
 @csrf_exempt
-@login_required
+@login_required(login_url='staff:staff_login')
 def create_assignment(request, pk):
     """
     AJAX endpoint to create an assignment for a specific event.
@@ -871,8 +880,8 @@ def create_assignment(request, pk):
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
 @require_POST
-@login_required
 @csrf_exempt
+@login_required(login_url='staff:staff_login')
 def reassign_assignment(request, assignment_id):
     try:
         data = json.loads(request.body)
@@ -917,8 +926,8 @@ def reassign_assignment(request, assignment_id):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
-@login_required
 @require_POST
+@login_required(login_url='staff:staff_login')
 def replace_staff(request, assignment_id):
     assignment = get_object_or_404(Assignment, id=assignment_id)
     new_staff_id = request.POST.get('new_staff_id')
@@ -978,6 +987,8 @@ def create_assignments_from_template(request, event_id):
     messages.success(request, f"Created {len(assignments)} assignments from template")
     return redirect('staff:assignment_list', event_id=event_id)
 
+
+@login_required(login_url='staff:staff_login')
 def accept_assignment(request, pk):
     try:
         assignment = Assignment.objects.get(pk=pk, staff__user=request.user) # FIXED
@@ -996,6 +1007,8 @@ def accept_assignment(request, pk):
         messages.error(request, "Assignment not found")
         return redirect('staff:event_list')
 
+
+@login_required(login_url='staff:staff_login')
 def decline_assignment(request, pk):
     try:
         assignment = Assignment.objects.get(pk=pk, staff__user=request.user) # FIXED
@@ -1437,6 +1450,7 @@ def reset_admin(request):
 # NOTIFICATIONS
 
 class NotificationListView(LoginRequiredMixin, ListView):
+    login_url = 'staff:staff_login'
     model = Notification
     template_name = 'staff/notifications_list.html'
     context_object_name = 'notifications'
@@ -1460,12 +1474,14 @@ class NotificationListView(LoginRequiredMixin, ListView):
         return context
 
 class MarkNotificationReadView(LoginRequiredMixin, View):
+    login_url = 'staff:staff_login' 
     def post(self, request, pk):
         notif = get_object_or_404(Notification, pk=pk, user=request.user)
         notif.mark_as_read(request.user)
         return JsonResponse({'success': True})
 
 class RespondNotificationView(LoginRequiredMixin, View):
+    login_url = 'staff:staff_login' 
     def post(self, request, pk, action):
         notification = get_object_or_404(Notification, pk=pk, user=request.user, requires_action=True)
         if action in ['accept', 'reject']:
@@ -1485,7 +1501,8 @@ def mark_all_notifications_read(request):
 
 # ===== APPLICANT ACTIONS =====
 
-@login_required
+
+@login_required(login_url='staff:staff_login')
 def accept_interview(request, slot_id):
     slot = get_object_or_404(InterviewSlot, id=slot_id)
     
@@ -1506,7 +1523,8 @@ def accept_interview(request, slot_id):
     messages.success(request, f"You accepted the interview for {slot.date} at {slot.start_time}")
     return redirect('staff:my_dashboard')
 
-@login_required
+
+@login_required(login_url='staff:staff_login')
 def decline_interview(request, slot_id):
     slot = get_object_or_404(InterviewSlot, id=slot_id)
     try:
