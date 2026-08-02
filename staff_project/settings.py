@@ -74,5 +74,7 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 FERNET_KEY = '2ATJ44SLjUK2w0HLf6lcLHLWui0YSkMH3KpALLaWb0U='
 
-LOGIN_REDIRECT_URL = '/staff/'
-LOGOUT_REDIRECT_URL = '/accounts/login/'
+# Auth redirects
+LOGIN_URL = 'staff:staff_login'
+LOGIN_REDIRECT_URL = 'staff:my_dashboard' 
+LOGOUT_REDIRECT_URL = 'staff:staff_login'
