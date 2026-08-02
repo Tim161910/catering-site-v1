@@ -55,7 +55,7 @@
                 </div>
 
                 {% if user.is_authenticated %}
-                <ul class="navbar-nav ms-auto">
+                <ul class="navbar-nav ms-auto align-items-center">
                     <!-- Notifications Dropdown -->
                     <li class="nav-item dropdown">
                         <a class="nav-link position-relative" href="#" id="notificationsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -73,7 +73,7 @@
                             
                             {% for notif in notifications %}
                             <li>
-                                <a class="dropdown-item notification-item {% if not notif.is_read %}unread{% endif %}" 
+                                <a class="dropdown-item notification-item {% if notif.is_read %}unread{% endif %}" 
                                    href="{{ notif.link|default:'#' }}" 
                                    onclick="markAsRead('{{ notif.id }}'); return true;">
                                     <div class="small">{{ notif.message }}</div>
@@ -89,9 +89,16 @@
                         </ul>
                     </li>
 
-                    <!-- Logout -->
+                    <!-- NEW: User Greeting -->
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'admin:logout' %}">Logout</a> 
+                        <span class="navbar-text text-white me-3">
+                            Hi, {% if user.is_superuser %}Admin{% else %}{{ user.staff.name }}{% endif %}
+                        </span>
+                    </li>
+
+                    <!-- UPDATED: Staff Logout -->
+                    <li class="nav-item">
+                        <a class="btn btn-outline-danger btn-sm" href="{% url 'staff:staff_logout' %}">Logout</a> 
                     </li>
                 </ul>
                 {% endif %}
