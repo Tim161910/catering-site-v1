@@ -82,11 +82,14 @@
         </div>
 
         <div class="card-body">
-            <p class="mb-3">
-                <span class="badge bg-danger">🔴 {{ event.at_risk }} At Risk</span>
-                <span class="badge bg-warning text-dark">🟡 {{ event.empty }} Empty</span>
-                <span class="badge bg-success">🟢 {{ event.ok }} OK</span>
-                <span class="badge bg-secondary">📊 {{ event.total_duties }} Total</span>
+            <!-- NEW: Added Accepted and Declined badges -->
+            <p class="mb-3 d-flex flex-wrap gap-2">
+                <span class="badge bg-success">✅ {{ event.accepted }} Accepted</span>
+                <span class="badge bg-danger">❌ {{ event.declined }} Declined</span>
+                <span class="badge bg-warning text-dark">🔴 {{ event.at_risk }} At Risk</span>
+                <span class="badge bg-secondary">🟡 {{ event.empty }} Empty</span>
+                <span class="badge bg-info">🟢 {{ event.ok }} OK</span>
+                <span class="badge bg-dark">📊 {{ event.total_duties }} Total</span>
             </p>
 
             <div class="table-responsive">
@@ -97,7 +100,7 @@
                             <th>Staff</th>
                             <th style="width: 150px;">Role</th>
                             <th style="width: 120px;">Reliability</th>
-                            <th style="width: 100px;">Status</th>
+                            <th style="width: 120px;">Status</th> <!-- WIDER FOR NEW BADGES -->
                             <th style="width: 250px;">Action</th>
                         </tr>
                     </thead>
@@ -116,29 +119,40 @@
                             <td>{{ d.role }}</td>
                             <td>{% if d.score > 0 %}<strong>{{ d.score }}%</strong>{% else %}—{% endif %}</td>
                             <td>
-                                {% if d.status == 'critical' %}<span class="badge bg-danger">Critical</span>
-                                {% elif d.status == 'warning' %}<span class="badge bg-warning text-dark">Warning</span>
-                                {% else %}<span class="badge bg-success">OK</span>{% endif %}
+                                <!-- NEW: Show Assignment Status first -->
+                                {% if d.assignment_status == 'accepted' %}
+                                    <span class="badge bg-success">Accepted</span>
+                                {% elif d.assignment_status == 'declined' %}
+                                    <span class="badge bg-danger">Declined</span>
+                                {% elif d.assignment_status == 'assigned' %}
+                                    {% if d.status == 'critical' %}<span class="badge bg-danger">Critical</span>
+                                    {% elif d.status == 'warning' %}<span class="badge bg-warning text-dark">Warning</span>
+                                    {% else %}<span class="badge bg-success">OK</span>{% endif %}
+                                {% endif %}
                             </td>
                             <td>
                                 {% if d.assignment_id %}
                                 <div class="d-flex gap-1">
-                                    <!-- Dropdown for Replace -->
-                                    {% if d.candidates %}
-                                    <div class="dropdown">
-                                        <button class="btn btn-green btn-sm dropdown-toggle" type="button" id="replace-{{ d.assignment_id }}" data-bs-toggle="dropdown" aria-expanded="false">
-                                            Replace...
-                                        </button>
-                                        <ul class="dropdown-menu" aria-labelledby="replace-{{ d.assignment_id }}">
-                                            {% for r in d.candidates %}
-                                            <li>
-                                                <a class="dropdown-item" href="#" onclick="replaceStaff('{{ d.assignment_id }}', '{{ r.id }}'); return false;">
-                                                    {{ r.name }} - {{ r.score }}%
-                                                </a>
-                                            </li>
-                                            {% endfor %}
-                                        </ul>
-                                    </div>
+                                    <!-- Hide Replace button if Declined -->
+                                    {% if d.assignment_status!= 'declined' %}
+                                        {% if d.candidates %}
+                                        <div class="dropdown">
+                                            <button class="btn btn-green btn-sm dropdown-toggle" type="button" id="replace-{{ d.assignment_id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                                Replace...
+                                            </button>
+                                            <ul class="dropdown-menu" aria-labelledby="replace-{{ d.assignment_id }}">
+                                                {% for r in d.candidates %}
+                                                <li>
+                                                    <a class="dropdown-item" href="#" onclick="replaceStaff('{{ d.assignment_id }}', '{{ r.id }}'); return false;">
+                                                        {{ r.name }} - {{ r.score }}%
+                                                    </a>
+                                                </li>
+                                                {% endfor %}
+                                            </ul>
+                                        </div>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted small">No action</span>
                                     {% endif %}
 
                                     <!-- View Details -->
