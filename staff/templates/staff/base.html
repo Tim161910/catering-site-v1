@@ -89,11 +89,11 @@
                         </ul>
                     </li>
 
-                    <!-- NEW: User Greeting -->
+                    <!-- UPDATED: Safer User Greeting -->
                     <li class="nav-item">
-                        <span class="navbar-text text-white me-3">
-                            Hi, {% if user.is_superuser %}Admin{% else %}{{ user.staff.name }}{% endif %}
-                        </span>
+                      <span class="navbar-text text-white me-3">
+                          Hi, {% if user.is_superuser %}Admin{% elif user.staff %}{{ user.staff.name }}{% else %}{{ user.username }}{% endif %}
+                      </span>
                     </li>
 
                     <!-- UPDATED: Staff Logout -->
