@@ -8,6 +8,7 @@ urlpatterns = [
     # DASHBOARD / STAFF
 
     path('login/', views.StaffLoginView.as_view(), name='staff_login'), 
+    path('logout/', views.StaffLogoutView.as_view(), name='staff_logout'),
     path('risk-dashboard/', views.RiskDashboardView.as_view(), name='risk_dashboard'),  # FIXED: underscore
     path('', views.StaffDashboardView.as_view(), name='staff_dashboard'),
     path('dashboard/', views.StaffDashboardView.as_view(), name='staff_dashboard_alt'),

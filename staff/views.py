@@ -3,6 +3,7 @@
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
+from django.contrib.auth import logout
 from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -513,6 +514,12 @@ class StaffLoginView(LoginView):
 
     def get_success_url(self):
         return reverse_lazy('staff:my_dashboard')
+
+class StaffLogoutView(View):
+    def get(self, request):
+        logout(request)
+        messages.success(request, "You have been logged out.")
+        return redirect('staff:staff_login')
 
 @method_decorator(staff_member_required, name='dispatch')
 class StaffDashboardView(ListView):
