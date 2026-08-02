@@ -2,7 +2,7 @@ from django import forms
 from datetime import date
 from django.utils import timezone
 from django.core.exceptions import ValidationError
-from.models import Staff, Event, Applicant, RolePlay, ApplicantRolePlay, Incident, EventTemplate, Recruitment, Role, RolePlayResponse, StaffUpdateRequest, Task, Meeting, Expense, Assignment, InterviewSlot
+from .models import Staff, Event, Applicant, RolePlay, ApplicantRolePlay, Incident, EventTemplate, Recruitment, Role, RolePlayResponse, StaffUpdateRequest, Task, Meeting, Expense, Assignment, InterviewSlot
 import re
 
 def validate_phone(value, allow_plus=True):
@@ -104,9 +104,10 @@ class EventTemplateForm(forms.ModelForm):
 class StaffForm(forms.ModelForm):
     class Meta:
         model = Staff
-        fields = Staff.DIRECT_UPDATE_FIELDS + Staff.APPROVAL_REQUIRED_FIELDS + ['reliability_notes']
+        fields = ['user'] + Staff.DIRECT_UPDATE_FIELDS + Staff.APPROVAL_REQUIRED_FIELDS + ['reliability_score', 'reliability_notes', 'annual_leave_balance', 'sick_leave_balance', 'casual_leave_balance']
         
         widgets = {
+            'user': forms.Select(attrs={'class': 'form-select'}), # NEW
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Full Name'}),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'email@example.com'}),
             'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+2348012345678'}),
@@ -117,9 +118,13 @@ class StaffForm(forms.ModelForm):
             'next_of_kin': forms.TextInput(attrs={'class': 'form-control'}),
             'emergency_contact_name': forms.TextInput(attrs={'class': 'form-control'}),
             'emergency_contact_phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+2348012345678'}),
+            'reliability_score': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'max': 100}), # NEW
             'reliability_notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'annual_leave_balance': forms.NumberInput(attrs={'class': 'form-control'}),
+            'sick_leave_balance': forms.NumberInput(attrs={'class': 'form-control'}),
+            'casual_leave_balance': forms.NumberInput(attrs={'class': 'form-control'}),
         }
-
+       
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['role'].empty_label = "Select Role"
@@ -407,10 +412,6 @@ class RecruitmentForm(forms.ModelForm):
         if deadline and deadline < timezone.now():
             raise forms.ValidationError("Deadline cannot be in the past")
         return deadline
-
-# forms.py
-from django import forms
-from.models import InterviewSlot
 
 class InterviewSlotForm(forms.ModelForm):
     class Meta:
