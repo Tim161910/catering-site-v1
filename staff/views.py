@@ -413,17 +413,18 @@ class StaffProfileUpdateView(LoginRequiredMixin, UpdateView):
     model = Staff
     form_class = StaffForm
     template_name = 'staff/staff_profile_form.html'
-    success_url = reverse_lazy('staff_profile')
+    success_url = reverse_lazy('staff:my_dashboard') 
 
     def get_object(self, queryset=None):
-        staff = super().get_object(queryset)
-        if staff.user != self.request.user and not self.request.user.is_staff:
-            raise PermissionDenied("You do not have permission to edit this profile.")
-        return staff
+        # NEW: Don't look for pk. Just get the staff linked to logged in user
+        try:
+            return self.request.user.staff
+        except AttributeError:
+            raise PermissionDenied("You do not have a staff profile linked to your account.")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['title'] = 'Update Staff Profile'
+        context['title'] = 'Update My Profile'
         return context
 
     def form_valid(self, form):
