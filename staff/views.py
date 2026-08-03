@@ -1033,59 +1033,7 @@ def create_assignments_from_template(request, event_id):
     messages.success(request, f"Created {len(assignments)} assignments from template")
     return redirect('staff:assignment_list', event_id=event_id)
 
-@login_required(login_url='staff:staff_login')
-def accept_assignment(request, pk):
-    try:
-        assignment = Assignment.objects.get(pk=pk, staff__user=request.user)
-        
-        if assignment.status == 'accepted': # ADD THIS CHECK
-            messages.warning(request, "You already accepted this duty")
-            return redirect('staff:event_list')
-            
-        assignment.status = 'accepted'
-        assignment.save()
-        
-        Notification.objects.create(
-            user=assignment.event.created_by,
-            sender=request.user,
-            sender_type='staff',
-            message=f"✅ {request.user.staff.name} ACCEPTED: {assignment.event.title} - Duty {assignment.duty_number}", # better message
-            related_event=assignment.event,
-            related_assignment=assignment
-        )
-        messages.success(request, "Duty accepted!") # ADD THIS
-        return redirect('staff:event_list')
-        
-    except Assignment.DoesNotExist:
-        messages.error(request, "Assignment not found")
-        return redirect('staff:event_list')
 
-@login_required(login_url='staff:staff_login')
-def decline_assignment(request, pk):
-    try:
-        assignment = Assignment.objects.get(pk=pk, staff__user=request.user)
-        
-        if assignment.status == 'declined': # ADD THIS CHECK
-            messages.warning(request, "You already declined this duty")
-            return redirect('staff:event_list')
-            
-        assignment.status = 'declined'
-        assignment.save()
-        
-        Notification.objects.create(
-            user=assignment.event.created_by,
-            sender=request.user,
-            sender_type='staff',
-            message=f"❌ {request.user.staff.name} DECLINED: {assignment.event.title} - Duty {assignment.duty_number}", # better message
-            related_event=assignment.event,
-            related_assignment=assignment
-        )
-        messages.success(request, "Duty declined.") # ADD THIS
-        return redirect('staff:event_list')
-        
-    except Assignment.DoesNotExist:
-        messages.error(request, "Assignment not found")
-        return redirect('staff:event_list')
 
 
 # 7. RECRUITMENT VIEWS
