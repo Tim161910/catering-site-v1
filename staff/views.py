@@ -81,10 +81,11 @@ class EventListView(LoginRequiredMixin, ListView):
         """Add notifications + extra data"""
         context = super().get_context_data(**kwargs)
         user = self.request.user
-        
+
         # 1. Add notifications for both admin and staff
         context['notifications'] = Notification.objects.filter(user=user).order_by('-created_at')[:10]
-        
+        context['unread_notification_count'] = Notification.objects.filter(user=user, is_read=False).count()
+
         # 2. Add staff assignments if user is staff
         if hasattr(user, 'staff'):
             context['assignments'] = Assignment.objects.filter(staff=user.staff)
@@ -93,7 +94,7 @@ class EventListView(LoginRequiredMixin, ListView):
             for event in context['events']:
                 event.accepted_count = Assignment.objects.filter(event=event, status='accepted').count()
                 event.declined_count = Assignment.objects.filter(event=event, status='declined').count()
-        
+
         return context
 
 class EventDetailView(LoginRequiredMixin, DetailView):
