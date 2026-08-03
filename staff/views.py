@@ -1049,14 +1049,12 @@ def accept_assignment(request, pk):
     staff_name = getattr(request.user, 'staff', None)
     staff_name = staff_name.name if staff_name else request.user.username
     
-    # SEND NOTIFICATION TO ALL ADMINS
-    admins = User.objects.filter(is_superuser=True)
-    if not admins.exists():  # FALLBACK
-        admins = User.objects.filter(is_staff=True)
+    # NEW: SEND NOTIFICATION TO MANAGERS ONLY
+    managers = User.objects.filter(is_manager=True)
         
-    for admin in admins:
+    for manager in managers:
         Notification.objects.create(
-            user=admin,
+            user=manager, # changed from admin to manager
             sender=request.user,
             sender_type='staff',
             message=f"✅ {staff_name} ACCEPTED: {assignment.event.title} - Duty {assignment.duty_number}",
@@ -1065,7 +1063,7 @@ def accept_assignment(request, pk):
             related_assignment=assignment
         )
         
-    messages.success(request, "Duty accepted! Admin has been notified.")
+    messages.success(request, "Duty accepted! Manager has been notified.")
     return redirect('staff:my_dashboard')
 
 @login_required(login_url='staff:staff_login')
@@ -1083,14 +1081,12 @@ def decline_assignment(request, pk):
     staff_name = getattr(request.user, 'staff', None)
     staff_name = staff_name.name if staff_name else request.user.username
     
-    # SEND NOTIFICATION TO ALL ADMINS
-    admins = User.objects.filter(is_superuser=True)
-    if not admins.exists():  # FALLBACK
-        admins = User.objects.filter(is_staff=True)
+    # NEW: SEND NOTIFICATION TO MANAGERS ONLY
+    managers = User.objects.filter(is_manager=True)
         
-    for admin in admins:
+    for manager in managers:
         Notification.objects.create(
-            user=admin,
+            user=manager, # changed from admin to manager
             sender=request.user,
             sender_type='staff',
             message=f"❌ {staff_name} DECLINED: {assignment.event.title} - Duty {assignment.duty_number}",
@@ -1099,7 +1095,7 @@ def decline_assignment(request, pk):
             related_assignment=assignment
         )
         
-    messages.warning(request, "Duty declined. Admin has been notified.")
+    messages.warning(request, "Duty declined. Manager has been notified.")
     return redirect('staff:my_dashboard')
 
 # 7. RECRUITMENT VIEWS

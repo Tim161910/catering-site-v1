@@ -17,6 +17,7 @@ class Role(models.Model):
     
     def __str__(self):
         return self.name
+    
 # EVENTS
 
 class EventTemplate(models.Model):
@@ -109,6 +110,9 @@ class Staff(models.Model):
         ).aggregate(total=Sum('issue_type__weight_percent'))['total'] or 0
         self.reliability_score = max(0, 100 - min(penalty, 100))
         self.save(update_fields=['reliability_score'])
+
+# ADD MANAGER FLAG TO DEFAULT USER
+User.add_to_class('is_manager', models.BooleanField(default=False))
 
 class LeaveRequest(models.Model):
     LEAVE_TYPE_CHOICES = [
