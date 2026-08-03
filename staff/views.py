@@ -1048,6 +1048,9 @@ def accept_assignment(request, pk):
         
         # SEND NOTIFICATION TO ALL ADMINS
         admins = User.objects.filter(is_superuser=True)
+        if not admins.exists():  # FALLBACK
+            admins = User.objects.filter(is_staff=True)
+            
         for admin in admins:
             Notification.objects.create(
                 user=admin,
@@ -1059,7 +1062,7 @@ def accept_assignment(request, pk):
                 related_assignment=assignment
             )
             
-        messages.success(request, "Duty accepted!")
+        messages.success(request, "Duty accepted! Admin has been notified.")
         return redirect('staff:my_dashboard')
         
     except Assignment.DoesNotExist:
@@ -1080,6 +1083,9 @@ def decline_assignment(request, pk):
         
         # SEND NOTIFICATION TO ALL ADMINS
         admins = User.objects.filter(is_superuser=True)
+        if not admins.exists():  # FALLBACK
+            admins = User.objects.filter(is_staff=True)
+            
         for admin in admins:
             Notification.objects.create(
                 user=admin,
@@ -1091,13 +1097,12 @@ def decline_assignment(request, pk):
                 related_assignment=assignment
             )
             
-        messages.warning(request, "Duty declined.")
+        messages.warning(request, "Duty declined. Admin has been notified.")
         return redirect('staff:my_dashboard')
         
     except Assignment.DoesNotExist:
         messages.error(request, "Assignment not found")
         return redirect('staff:my_dashboard')
-
 
 # 7. RECRUITMENT VIEWS
     
