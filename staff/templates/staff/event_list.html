@@ -6,8 +6,30 @@
 <div class="container mt-4">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h2>Upcoming Events</h2>
+    {% if not request.user.staff %}
     <a href="{% url 'staff:event_create' %}" class="btn btn-primary">+ New Event</a>
+    {% endif %}
   </div>
+
+  <!-- NOTIFICATIONS SECTION - NEW -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h4 class="mb-0">🔔 Notifications</h4>
+    </div>
+    <div class="card-body">
+      {% for notif in notifications %}
+        <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+          <div>
+            {{ notif.message }}
+            <br><small class="text-muted">{{ notif.created_at|timesince }} ago</small>
+          </div>
+        </div>
+      {% empty %}
+        <p class="text-muted mb-0">All caught up!</p>
+      {% endfor %}
+    </div>
+  </div>
+  <!-- END NOTIFICATIONS -->
 
   {% if events %}
     <div class="list-group mb-4">
@@ -19,6 +41,9 @@
             <small class="text-muted">
               {{ event.date|date:"F j, Y" }} - {{ event.start_time|time:"g:i A" }}
             </small>
+            {% if not request.user.staff %}
+              <br><small>✅ {{ event.accepted_count }} | ❌ {{ event.declined_count }}</small>
+            {% endif %}
           </div>
           <div>
             {% if event.status == 'Scheduled' %}
@@ -36,6 +61,8 @@
     <div class="alert alert-info">No upcoming events yet.</div>
   {% endif %}
 
+  <!-- Only show assignments to staff -->
+  {% if request.user.staff %}
   <h3 class="mt-4">My Event Assignments</h3>
   {% if assignments %}
     <div class="table-responsive">
@@ -79,6 +106,7 @@
     </div>
   {% else %}
     <div class="alert alert-secondary">You have no event assignments yet.</div>
+  {% endif %}
   {% endif %}
 </div>
 {% endblock %}

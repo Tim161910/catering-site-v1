@@ -1,7 +1,7 @@
 # 1. IMPORT + HELPERS + MIXINS
 
 from django.contrib.admin.views.decorators import staff_member_required
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.views import LoginView
 from django.contrib.auth import logout
 from django.contrib.auth.models import User
@@ -29,6 +29,12 @@ from django.core.exceptions import PermissionDenied
 from django.contrib import messages
 
 logger = logging.getLogger(__name__)
+
+
+def is_admin(user):
+    """Return True for users allowed to access the admin dashboard."""
+    return user.is_authenticated and (user.is_staff or user.is_superuser)
+
 
 from .models import Recruitment, Applicant, RolePlay, Incident, Event, Staff, Assignment, Role, RolePlayResponse, InterviewSlot, Task, Notification, LeaveRequest
 from .forms import RecruitmentForm, ApplicantForm, IncidentForm, EventForm, StaffForm, RolePlayForm, RolePlayResponseForm, InterviewSlotForm
@@ -59,11 +65,36 @@ class EventListView(LoginRequiredMixin, ListView):
     context_object_name = 'events'
 
     def get_queryset(self):
-        """
-        Returns a queryset of events with dates greater than or equal to today, ordered by start_time.
-        """
+        """Different queryset for staff vs admin"""
         today = timezone.now().date()
-        return Event.objects.filter(start_time__date__gte=today).order_by('start_time')
+        
+        if hasattr(self.request.user, 'staff'):
+            # STAFF: show only events where they have assignments
+            staff = self.request.user.staff
+            event_ids = Assignment.objects.filter(staff=staff).values_list('event_id', flat=True)
+            return Event.objects.filter(id__in=event_ids, start_time__date__gte=today).order_by('start_time')
+        else:
+            # ADMIN: show all upcoming events
+            return Event.objects.filter(start_time__date__gte=today).order_by('start_time')
+
+    def get_context_data(self, **kwargs):
+        """Add notifications + extra data"""
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        
+        # 1. Add notifications for both admin and staff
+        context['notifications'] = Notification.objects.filter(user=user).order_by('-created_at')[:10]
+        
+        # 2. Add staff assignments if user is staff
+        if hasattr(user, 'staff'):
+            context['assignments'] = Assignment.objects.filter(staff=user.staff)
+        else:
+            # 3. Add counts for admin
+            for event in context['events']:
+                event.accepted_count = Assignment.objects.filter(event=event, status='accepted').count()
+                event.declined_count = Assignment.objects.filter(event=event, status='declined').count()
+        
+        return context
 
 class EventDetailView(LoginRequiredMixin, DetailView):
     login_url = 'staff:staff_login'
