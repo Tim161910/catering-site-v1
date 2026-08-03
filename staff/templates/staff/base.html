@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>{% block title %}Catering Staff{% endblock %}</title>
+    <title>{% block title %}Staff Portal{% endblock %}</title>
     <meta charset="utf-8">
     <meta name="csrf-token" content="{{ csrf_token }}">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -28,12 +28,12 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
         <div class="container">
-            <!-- CHANGED: Conditional Brand + Link -->
-            <a class="navbar-brand" href="{% if user.is_superuser %}{% url 'staff:event_list' %}{% else %}{% url 'staff:my_dashboard' %}{% endif %}">
-                {% if user.is_superuser %}
-                    Staff Manager
-                {% else %}
+            <!-- BRAND: Staff vs Admin -->
+            <a class="navbar-brand" href="{% if user.staff %}{% url 'staff:my_dashboard' %}{% else %}{% url 'staff:event_list' %}{% endif %}">
+                {% if user.staff %}
                     My Dashboard
+                {% else %}
+                    Staff Manager
                 {% endif %}
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -41,21 +41,21 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <div class="navbar-nav me-auto">
-                    {% if user.is_superuser %}
+                    {% if user.staff %}
+                        <!-- STAFF MENU -->
+                        <a class="nav-link" href="{% url 'staff:my_dashboard' %}">Dashboard</a>
+                        <a class="nav-link" href="{% url 'staff:task_list' %}">My Tasks</a>
+                    {% else %}
                         <!-- ADMIN MENU -->
                         <a class="nav-link" href="{% url 'staff:event_list' %}">Events</a>
                         <a class="nav-link" href="{% url 'staff:staff_list' %}">Staff</a>
                         <a class="nav-link" href="{% url 'staff:recruitment_list' %}">Recruitment</a>
                         <a class="nav-link" href="{% url 'staff:task_list' %}">Tasks</a>
-                    {% else %}
-                        <!-- STAFF MENU -->
-                        <a class="nav-link" href="{% url 'staff:my_dashboard' %}">Dashboard</a>
-                        <a class="nav-link" href="{% url 'staff:task_list' %}">My Tasks</a>
                     {% endif %}
                 </div>
 
                 {% if user.is_authenticated %}
-                <ul class="navbar-nav">  <!-- FIXED: removed ms-auto align-items-center -->
+                <ul class="navbar-nav">
                     <!-- Notifications Dropdown -->
                     <li class="nav-item dropdown">
                         <a class="nav-link position-relative" href="#" id="notificationsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -89,14 +89,14 @@
                         </ul>
                     </li>
 
-                    <!-- UPDATED: Safer User Greeting -->
+                    <!-- User Greeting -->
                     <li class="nav-item">
                       <span class="navbar-text text-white me-3">
-                          Hi, {% if user.is_superuser %}Admin{% elif user.staff %}{{ user.staff.name }}{% else %}{{ user.username }}{% endif %}
+                          Hi, {% if user.staff %}{{ user.staff.name }}{% else %}Admin{% endif %}
                       </span>
                     </li>
 
-                    <!-- UPDATED: Staff Logout -->
+                    <!-- Logout -->
                     <li class="nav-item">
                         <a class="btn btn-outline-danger btn-sm" href="{% url 'staff:staff_logout' %}">Logout</a> 
                     </li>
@@ -118,41 +118,6 @@
 
         {% block content %}
         {% endblock %}
-    </div>
-
-    <!-- Reassign Modal -->
-    <div class="modal fade" id="reassignModal" tabindex="-1">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Reassign Staff</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-          <div class="modal-body">
-            <div class="mb-3">
-              <label for="reassignReason" class="form-label">Reason for Reassignment</label>
-              <textarea class="form-control" id="reassignReason" rows="3" required></textarea>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button type="button" class="btn btn-primary" id="confirmReassign">Confirm</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Global Toast Container -->
-    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1055">
-      <div id="liveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="toast-header">
-          <strong class="me-auto">Notification</strong>
-          <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
-        </div>
-        <div class="toast-body">
-          <span id="toast-message"></span>
-        </div>
-      </div>
     </div>
 
     <!-- JS -->
@@ -181,83 +146,6 @@
       const bsToast = bootstrap.Toast.getOrCreateInstance(toastEl);
       bsToast.show();
     }
-
-    $(document).ready(function() {
-        $('select.form-select, select.form-control').select2({
-            theme: 'bootstrap-5',
-            width: '100%',
-            placeholder: '-- Select --',
-            allowClear: true
-        });
-        
-        $('input[name="deadline"]').flatpickr({
-            enableTime: true,
-            dateFormat: "d/m/Y H:i",
-            time_24hr: true,
-            altInput: true,
-            altFormat: "d/m/Y H:i"
-        });
-
-        let currentAssignmentId = null;
-        let currentNewStaffId = null;
-
-        window.reassign = function(assignmentId, newStaffId, event) {
-          if (!newStaffId) return;
-          currentAssignmentId = assignmentId;
-          currentNewStaffId = newStaffId;
-          document.getElementById('reassignReason').value = '';
-          event.target.selectedIndex = 0;
-          new bootstrap.Modal(document.getElementById('reassignModal')).show();
-        }
-
-        window.updateRole = function(assignmentId, roleId) {
-          fetch('/staff/update-assignment-role/' + assignmentId + '/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCSRFToken(),
-            },
-            body: JSON.stringify({ role_id: roleId })
-          })
-          .then(res => res.json())
-          .then(data => {
-            if (data.success) {
-              showToast('Role updated to ' + data.role_name, 'bg-success');
-            } else {
-              showToast('Failed to update role: ' + data.error, 'bg-danger');
-            }
-          })
-          .catch(err => {
-            console.error(err);
-            showToast('Network error', 'bg-danger');
-          });
-        }
-
-        $('#confirmReassign').on('click', async () => {
-          const reason = document.getElementById('reassignReason').value.trim();
-          if (!reason) {
-            showToast('Please enter a reason for reassignment', 'bg-danger');
-            return;
-          }
-
-          const res = await fetch('/staff/api/assignments/' + currentAssignmentId + '/reassign/', {
-            method: 'POST',
-            headers: {
-              'X-CSRFToken': getCSRFToken(),
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({new_staff_id: currentNewStaffId, reason: reason})
-          });
-
-          const data = await res.json();
-          if (res.ok && data.success) {
-            showToast('Staff reassigned successfully', 'bg-success');
-            setTimeout(() => location.reload(), 800);
-          } else {
-            showToast(data.error || 'Failed to reassign', 'bg-danger');
-          }
-        });
-    });
     </script>
     {% block extra_js %}{% endblock %}
 </body>
