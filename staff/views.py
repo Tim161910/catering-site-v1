@@ -39,7 +39,6 @@ def is_admin(user):
 from .models import Recruitment, Applicant, RolePlay, Incident, Event, Staff, Assignment, Role, RolePlayResponse, InterviewSlot, Task, Notification, LeaveRequest
 from .forms import RecruitmentForm, ApplicantForm, IncidentForm, EventForm, StaffForm, RolePlayForm, RolePlayResponseForm, InterviewSlotForm
 
-
 class StaffRequiredMixin(UserPassesTestMixin):
     """Only allow users who have a Staff profile"""
     def test_func(self):
@@ -1034,6 +1033,44 @@ def create_assignments_from_template(request, event_id):
     messages.success(request, f"Created {len(assignments)} assignments from template")
     return redirect('staff:assignment_list', event_id=event_id)
 
+def _send_manager_notification(sender_user, assignment, action_emoji, action_text):
+    """Helper so we don't repeat code"""
+    staff_name = getattr(sender_user, 'staff', None)
+    staff_name = staff_name.name if staff_name else sender_user.username
+    
+    # Get all managers + superusers as fallback
+    managers = User.objects.filter(Q(is_manager=True) | Q(is_superuser=True)).distinct()
+    
+    for manager in managers:
+        # Only create if manager actually has the field or is superuser
+        if getattr(manager, 'is_manager', False) or manager.is_superuser:
+            Notification.objects.create(
+                user=manager,
+                sender=sender_user,
+                sender_type='staff',
+                message=f"{action_emoji} {staff_name} {action_text}: {assignment.event.title} - Duty {assignment.duty_number}",
+                notification_type='assignment_response',
+                related_event=assignment.event,
+                related_assignment=assignment
+            )
+
+@login_required(login_url='staff:staff_login')
+def decline_assignment(request, pk):
+    assignment = get_object_or_404(Assignment, pk=pk, staff__user=request.user)
+    
+    if assignment.status == 'declined':
+        messages.warning(request, "You already declined this duty")
+        return redirect('staff:my_dashboard')
+        
+    assignment.status = 'declined'
+    assignment.assigned_to = None # free the slot
+    assignment.save()
+    
+    _send_manager_notification(request.user, assignment, "❌", "DECLINED")
+        
+    messages.warning(request, "Duty declined. Manager has been notified.")
+    return redirect('staff:my_dashboard')
+
 @login_required(login_url='staff:staff_login')
 def accept_assignment(request, pk):
     assignment = get_object_or_404(Assignment, pk=pk, staff__user=request.user)
@@ -1045,57 +1082,9 @@ def accept_assignment(request, pk):
     assignment.status = 'accepted'
     assignment.save()
     
-    # SAFE: Get staff name without crashing
-    staff_name = getattr(request.user, 'staff', None)
-    staff_name = staff_name.name if staff_name else request.user.username
-    
-    # NEW: SEND NOTIFICATION TO MANAGERS ONLY
-    managers = User.objects.filter(is_manager=True)
-        
-    for manager in managers:
-        Notification.objects.create(
-            user=manager, # changed from admin to manager
-            sender=request.user,
-            sender_type='staff',
-            message=f"✅ {staff_name} ACCEPTED: {assignment.event.title} - Duty {assignment.duty_number}",
-            notification_type='assignment_response',
-            related_event=assignment.event,
-            related_assignment=assignment
-        )
+    _send_manager_notification(request.user, assignment, "✅", "ACCEPTED")
         
     messages.success(request, "Duty accepted! Manager has been notified.")
-    return redirect('staff:my_dashboard')
-
-@login_required(login_url='staff:staff_login')
-def decline_assignment(request, pk):
-    assignment = get_object_or_404(Assignment, pk=pk, staff__user=request.user)
-    
-    if assignment.status == 'declined':
-        messages.warning(request, "You already declined this duty")
-        return redirect('staff:my_dashboard')
-        
-    assignment.status = 'declined'
-    assignment.save()
-    
-    # SAFE: Get staff name without crashing
-    staff_name = getattr(request.user, 'staff', None)
-    staff_name = staff_name.name if staff_name else request.user.username
-    
-    # NEW: SEND NOTIFICATION TO MANAGERS ONLY
-    managers = User.objects.filter(is_manager=True)
-        
-    for manager in managers:
-        Notification.objects.create(
-            user=manager, # changed from admin to manager
-            sender=request.user,
-            sender_type='staff',
-            message=f"❌ {staff_name} DECLINED: {assignment.event.title} - Duty {assignment.duty_number}",
-            notification_type='assignment_response',
-            related_event=assignment.event,
-            related_assignment=assignment
-        )
-        
-    messages.warning(request, "Duty declined. Manager has been notified.")
     return redirect('staff:my_dashboard')
 
 # 7. RECRUITMENT VIEWS
