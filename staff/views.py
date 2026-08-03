@@ -1036,73 +1036,71 @@ def create_assignments_from_template(request, event_id):
 
 @login_required(login_url='staff:staff_login')
 def accept_assignment(request, pk):
-    try:
-        assignment = Assignment.objects.get(pk=pk, staff__user=request.user)
-        
-        if assignment.status == 'accepted':
-            messages.warning(request, "You already accepted this duty")
-            return redirect('staff:my_dashboard')
-            
-        assignment.status = 'accepted'
-        assignment.save()
-        
-        # SEND NOTIFICATION TO ALL ADMINS
-        admins = User.objects.filter(is_superuser=True)
-        if not admins.exists():  # FALLBACK
-            admins = User.objects.filter(is_staff=True)
-            
-        for admin in admins:
-            Notification.objects.create(
-                user=admin,
-                sender=request.user,
-                sender_type='staff',
-                message=f"✅ {request.user.staff.name} ACCEPTED: {assignment.event.title} - Duty {assignment.duty_number}",
-                notification_type='assignment_response',
-                related_event=assignment.event,
-                related_assignment=assignment
-            )
-            
-        messages.success(request, "Duty accepted! Admin has been notified.")
+    assignment = get_object_or_404(Assignment, pk=pk, staff__user=request.user)
+    
+    if assignment.status == 'accepted':
+        messages.warning(request, "You already accepted this duty")
         return redirect('staff:my_dashboard')
         
-    except Assignment.DoesNotExist:
-        messages.error(request, "Assignment not found")
-        return redirect('staff:my_dashboard')
+    assignment.status = 'accepted'
+    assignment.save()
+    
+    # SAFE: Get staff name without crashing
+    staff_name = getattr(request.user, 'staff', None)
+    staff_name = staff_name.name if staff_name else request.user.username
+    
+    # SEND NOTIFICATION TO ALL ADMINS
+    admins = User.objects.filter(is_superuser=True)
+    if not admins.exists():  # FALLBACK
+        admins = User.objects.filter(is_staff=True)
+        
+    for admin in admins:
+        Notification.objects.create(
+            user=admin,
+            sender=request.user,
+            sender_type='staff',
+            message=f"✅ {staff_name} ACCEPTED: {assignment.event.title} - Duty {assignment.duty_number}",
+            notification_type='assignment_response',
+            related_event=assignment.event,
+            related_assignment=assignment
+        )
+        
+    messages.success(request, "Duty accepted! Admin has been notified.")
+    return redirect('staff:my_dashboard')
 
 @login_required(login_url='staff:staff_login')
 def decline_assignment(request, pk):
-    try:
-        assignment = Assignment.objects.get(pk=pk, staff__user=request.user)
-        
-        if assignment.status == 'declined':
-            messages.warning(request, "You already declined this duty")
-            return redirect('staff:my_dashboard')
-            
-        assignment.status = 'declined'
-        assignment.save()
-        
-        # SEND NOTIFICATION TO ALL ADMINS
-        admins = User.objects.filter(is_superuser=True)
-        if not admins.exists():  # FALLBACK
-            admins = User.objects.filter(is_staff=True)
-            
-        for admin in admins:
-            Notification.objects.create(
-                user=admin,
-                sender=request.user,
-                sender_type='staff',
-                message=f"❌ {request.user.staff.name} DECLINED: {assignment.event.title} - Duty {assignment.duty_number}",
-                notification_type='assignment_response',
-                related_event=assignment.event,
-                related_assignment=assignment
-            )
-            
-        messages.warning(request, "Duty declined. Admin has been notified.")
+    assignment = get_object_or_404(Assignment, pk=pk, staff__user=request.user)
+    
+    if assignment.status == 'declined':
+        messages.warning(request, "You already declined this duty")
         return redirect('staff:my_dashboard')
         
-    except Assignment.DoesNotExist:
-        messages.error(request, "Assignment not found")
-        return redirect('staff:my_dashboard')
+    assignment.status = 'declined'
+    assignment.save()
+    
+    # SAFE: Get staff name without crashing
+    staff_name = getattr(request.user, 'staff', None)
+    staff_name = staff_name.name if staff_name else request.user.username
+    
+    # SEND NOTIFICATION TO ALL ADMINS
+    admins = User.objects.filter(is_superuser=True)
+    if not admins.exists():  # FALLBACK
+        admins = User.objects.filter(is_staff=True)
+        
+    for admin in admins:
+        Notification.objects.create(
+            user=admin,
+            sender=request.user,
+            sender_type='staff',
+            message=f"❌ {staff_name} DECLINED: {assignment.event.title} - Duty {assignment.duty_number}",
+            notification_type='assignment_response',
+            related_event=assignment.event,
+            related_assignment=assignment
+        )
+        
+    messages.warning(request, "Duty declined. Admin has been notified.")
+    return redirect('staff:my_dashboard')
 
 # 7. RECRUITMENT VIEWS
     
