@@ -1032,43 +1032,30 @@ def create_assignments_from_template(request, event_id):
     Assignment.objects.bulk_create(assignments)
     messages.success(request, f"Created {len(assignments)} assignments from template")
     return redirect('staff:assignment_list', event_id=event_id)
-import logging # ADD THIS AT TOP OF views.py
-
-logger = logging.getLogger(__name__) # ADD THIS AT TOP OF views.py
 
 def _send_manager_notification(sender_user, assignment, action_emoji, action_text):
     """Helper so we don't repeat code"""
-    logger.warning(f"=== NOTIFICATION FUNCTION STARTED ===") 
+    print(f"***** NOTIFICATION FUNCTION CALLED *****") 
     staff_name = getattr(sender_user, 'staff', None)
     staff_name = staff_name.name if staff_name else sender_user.username
-    logger.warning(f"Staff doing action: {staff_name}") 
+    print(f"Staff: {staff_name}")
     
-    # Get all managers + superusers as fallback
     managers = User.objects.filter(Q(is_manager=True) | Q(is_superuser=True)).distinct()
-    logger.warning(f"Managers/Superusers found: {managers.count()}")
-    logger.warning(f"Manager usernames: {[m.username for m in managers]}")
+    print(f"Managers found: {managers.count()} - {[m.username for m in managers]}")
     
-    created_count = 0
     for manager in managers:
-        # Only create if manager actually has the field or is superuser
         if getattr(manager, 'is_manager', False) or manager.is_superuser:
-            logger.warning(f"Attempting to create notification for: {manager.username}")
-            try:
-                Notification.objects.create(
-                    user=manager,
-                    sender=sender_user,
-                    sender_type='staff',
-                    message=f"{action_emoji} {staff_name} {action_text}: {assignment.event.title} - Duty {assignment.duty_number}",
-                    notification_type='assignment_response',
-                    related_event=assignment.event,
-                    related_assignment=assignment
-                )
-                created_count += 1
-                logger.warning(f"SUCCESS: Notification created for {manager.username}")
-            except Exception as e:
-                logger.error(f"FAILED to create notification: {e}")
-    
-    logger.warning(f"=== NOTIFICATION FUNCTION ENDED. Total created: {created_count} ===")
+            print(f"Creating for: {manager.username}")
+            Notification.objects.create(
+                user=manager,
+                sender=sender_user,
+                sender_type='staff',
+                message=f"{action_emoji} {staff_name} {action_text}: {assignment.event.title} - Duty {assignment.duty_number}",
+                notification_type='assignment_response',
+                related_event=assignment.event,
+                related_assignment=assignment
+            )
+    print(f"***** NOTIFICATION FUNCTION DONE *****")
 
 @login_required(login_url='staff:staff_login')
 def decline_assignment(request, pk):
@@ -1089,8 +1076,8 @@ def decline_assignment(request, pk):
 
 @login_required(login_url='staff:staff_login')
 def accept_assignment(request, pk):
+    print(f"*** ACCEPT VIEW HIT FOR PK={pk} ***")  # ADD THIS LINE
     assignment = get_object_or_404(Assignment, pk=pk, staff__user=request.user)
-    
     if assignment.status == 'accepted':
         messages.warning(request, "You already accepted this duty")
         return redirect('staff:my_dashboard')

@@ -19,7 +19,7 @@
         <div class="col-lg-6">
             <div class="card shadow-sm h-100">
                 <div class="card-header fw-bold d-flex justify-content-between align-items-center">
-                    <span>Upcoming Events</span>
+                    <span>My Event Assignments</span>
                     <span class="badge bg-primary">{{ assigned_count }}</span>
                 </div>
                 <div class="card-body">
@@ -34,19 +34,15 @@
                                             {{ a.role.name }} | {{ a.event.start_time|date:"D, M j - H:i" }} @ {{ a.event.location }}
                                         </small>
                                     </div>
-                                    <!-- Accept / Decline Buttons - NOW POST FORMS -->
+                                    <!-- Accept / Decline Buttons - FIXED URLS -->
                                     {% if a.status == 'assigned' %}
                                         <div class="d-flex gap-2">
-                                            <form method="post" class="d-inline">
+                                            <form method="post" action="{% url 'staff:accept_assignment' a.pk %}" class="d-inline">
                                                 {% csrf_token %}
-                                                <input type="hidden" name="action" value="accept">
-                                                <input type="hidden" name="assignment_id" value="{{ a.pk }}">
                                                 <button type="submit" class="btn btn-success btn-sm">Accept</button>
                                             </form>
-                                            <form method="post" class="d-inline">
+                                            <form method="post" action="{% url 'staff:decline_assignment' a.pk %}" class="d-inline">
                                                 {% csrf_token %}
-                                                <input type="hidden" name="action" value="decline">
-                                                <input type="hidden" name="assignment_id" value="{{ a.pk }}">
                                                 <button type="submit" class="btn btn-outline-danger btn-sm">Decline</button>
                                             </form>
                                         </div>
@@ -151,10 +147,10 @@ new Chart(ctx, {
     }
 });
 
-// Mark notification read - FIXED URL
+// Mark notification read
 document.querySelectorAll('.mark-read').forEach(btn => {
     btn.addEventListener('click', () => {
-        fetch(`/staff/notifications/${btn.dataset.id}/mark-read/`, { // matches your CBV
+        fetch(`/staff/notifications/${btn.dataset.id}/mark-read/`, {
             method: 'POST', 
             headers: {'X-CSRFToken': '{{ csrf_token }}'}
         })
