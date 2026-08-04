@@ -3,6 +3,7 @@
 
 {% block content %}
 <div class="container-fluid py-4">
+    {% csrf_token %} <!-- ADDED: So getCSRFToken() works -->
 
     <!-- STAT CARDS -->
     <div class="row g-3 mb-4">
@@ -82,7 +83,6 @@
         </div>
 
         <div class="card-body">
-            <!-- NEW: Added Accepted and Declined badges -->
             <p class="mb-3 d-flex flex-wrap gap-2">
                 <span class="badge bg-success">✅ {{ event.accepted }} Accepted</span>
                 <span class="badge bg-danger">❌ {{ event.declined }} Declined</span>
@@ -100,7 +100,7 @@
                             <th>Staff</th>
                             <th style="width: 150px;">Role</th>
                             <th style="width: 120px;">Reliability</th>
-                            <th style="width: 120px;">Status</th> <!-- WIDER FOR NEW BADGES -->
+                            <th style="width: 120px;">Status</th>
                             <th style="width: 250px;">Action</th>
                         </tr>
                     </thead>
@@ -119,7 +119,6 @@
                             <td>{{ d.role }}</td>
                             <td>{% if d.score > 0 %}<strong>{{ d.score }}%</strong>{% else %}—{% endif %}</td>
                             <td>
-                                <!-- NEW: Show Assignment Status first -->
                                 {% if d.assignment_status == 'accepted' %}
                                     <span class="badge bg-success">Accepted</span>
                                 {% elif d.assignment_status == 'declined' %}
@@ -133,8 +132,7 @@
                             <td>
                                 {% if d.assignment_id %}
                                 <div class="d-flex gap-1">
-                                    <!-- Hide Replace button if Declined -->
-                                    {% if d.assignment_status!= 'declined' %}
+                                    {% if d.assignment_status != 'declined' %}
                                         {% if d.candidates %}
                                         <div class="dropdown">
                                             <button class="btn btn-green btn-sm dropdown-toggle" type="button" id="replace-{{ d.assignment_id }}" data-bs-toggle="dropdown" aria-expanded="false">
@@ -155,7 +153,6 @@
                                         <span class="text-muted small">No action</span>
                                     {% endif %}
 
-                                    <!-- View Details -->
                                     {% if event and event.id %}
                                     <a href="{% url 'staff:event_detail' event.id %}" class="btn btn-purple btn-sm">
                                         View Details
@@ -180,7 +177,7 @@
 function replaceStaff(assignmentId, newStaffId) {
     if(!newStaffId) return;
     if(!confirm('Replace staff for this duty?')) return;
-    fetch('/staff/api/assignments/' + assignmentId + '/reassign/', {
+    fetch('/staff/api/assignments/' + assignmentId + '/replace_staff/', { // <-- FIXED: was /reassign/
         method: 'POST',
         headers: {'X-CSRFToken': getCSRFToken(), 'Content-Type': 'application/json'},
         body: JSON.stringify({'new_staff_id': newStaffId, 'reason': 'Quick replace'})
@@ -206,7 +203,13 @@ function getCSRFToken() {
 }
 
 function showToast(msg, cls) {
-    alert(msg); // simple fallback
+    // Simple toast
+    const toast = document.createElement('div');
+    toast.className = `alert ${cls} position-fixed top-0 end-0 m-3`;
+    toast.style.zIndex = '9999';
+    toast.innerText = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
 }
 </script>
 {% endblock %}

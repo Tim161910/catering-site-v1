@@ -1,7 +1,7 @@
 # 1. IMPORT + HELPERS + MIXINS
 
 from django.contrib.admin.views.decorators import staff_member_required
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
 from django.contrib.auth import logout
 from django.contrib.auth.models import User
@@ -38,6 +38,7 @@ def is_admin(user):
 
 from .models import Recruitment, Applicant, RolePlay, Incident, Event, Staff, Assignment, Role, RolePlayResponse, InterviewSlot, Task, Notification, LeaveRequest
 from .forms import RecruitmentForm, ApplicantForm, IncidentForm, EventForm, StaffForm, RolePlayForm, RolePlayResponseForm, InterviewSlotForm
+
 
 class StaffRequiredMixin(UserPassesTestMixin):
     """Only allow users who have a Staff profile"""
@@ -183,71 +184,76 @@ class EventDeleteView(StaffRequiredMixin, DeleteView):
 
 class EventStatusView(StaffRequiredMixin, View):
     def get(self, request):
-        """
-        Admin dashboard showing event staffing risks and replacement options
-        """
         print(">>>NEW EVENT_STATUS IS RUNNING")
-
         today = timezone.now().date()
 
-        # Dashboard card stats
         stats = {
             'total_events': Event.objects.count(),
             'upcoming': Event.objects.filter(start_time__date__gte=today).count(),
             'past': Event.objects.filter(start_time__date__lt=today).count(),
-            'this_month': Event.objects.filter(
-                start_time__year=today.year,
-                start_time__month=today.month
-            ).count(),
+            'this_month': Event.objects.filter(start_time__year=today.year, start_time__month=today.month).count(),
         }
 
         event_data = []
         events = Event.objects.filter(start_time__date__gte=today).prefetch_related(
-            'assignments__staff',
-            'assignments__role'
+            'assignments__staff', 'assignments__role'
         ).order_by('start_time')
 
         for event in events:
             duties = []
             at_risk = 0
             empty = 0
-            accepted = 0  # NEW
-            declined = 0  # NEW
+            accepted = 0
+            declined = 0
+            ok = 0
             
-            # CHANGED: get all statuses so we can count them
             assignments = event.assignments.filter(status__in=['assigned', 'accepted', 'declined'])
-            assigned_staff_ids = assignments.exclude(staff=None).values_list('staff_id', flat=True)
+            assigned_staff_ids = list(assignments.exclude(staff=None).values_list('staff_id', flat=True))
+
+            # FIX: Calculate busy staff ONCE per event, not per assignment
+            busy_staff_ids = Assignment.objects.filter(
+                status__in=['assigned', 'accepted'],
+                staff__isnull=False,
+                event__start_time__lt=event.end_time,
+                event__end_time__gt=event.start_time
+            ).values_list('staff_id', flat=True)
+            busy_staff_ids = list(busy_staff_ids) # convert to list so we can reuse
 
             for a in assignments:
+                score = getattr(a.staff, 'reliability_score', 0) if a.staff else 0
+                
+                # Determine status badge
                 if a.staff is None:
-                    score = 0
-                    status = 'warning'
+                    status = 'empty'
                     empty += 1
-                else:
-                    score = getattr(a.staff, 'reliability_score', 100)
-                    
-                    # NEW: Check assignment status first
-                    if a.status == 'accepted':
-                        status = 'ok'
-                        accepted += 1
-                    elif a.status == 'declined':
-                        status = 'critical'
-                        declined += 1
-                    elif score < 50:
-                        status = 'critical'
-                        at_risk += 1
-                    elif score < 75:
-                        status = 'warning'
-                        at_risk += 1
-                    else:
-                        status = 'ok'
+                elif a.status == 'declined':
+                    status = 'critical' # show red badge
+                    declined += 1
+                elif a.status == 'accepted' and score >= 75:
+                    status = 'ok'
+                    accepted += 1
+                    ok += 1
+                elif a.status == 'accepted' and score < 75:
+                    status = 'warning' # accepted but risky
+                    accepted += 1
+                    at_risk += 1
+                elif score < 50:
+                    status = 'critical'
+                    at_risk += 1
+                elif score < 75:
+                    status = 'warning'
+                    at_risk += 1
+                else: # assigned but score >=75
+                    status = 'ok'
+                    ok += 1
 
+                # Get replacements - exclude staff on this event AND busy at this time
                 if a.role:
                     replacements = Staff.objects.filter(
-                        role=a.role,
-                        is_active=True,
-                        reliability_score__gte=90
-                    ).exclude(id__in=assigned_staff_ids).order_by('-reliability_score')[:5]
+                        role=a.role, 
+                        is_active=True, 
+                        reliability_score__gte=75
+                    ).exclude(id__in=assigned_staff_ids).exclude(id__in=busy_staff_ids).order_by('-reliability_score')[:5]
                 else:
                     replacements = Staff.objects.none()
 
@@ -258,7 +264,7 @@ class EventStatusView(StaffRequiredMixin, View):
                     'role': a.role.name if a.role else 'No Role',
                     'score': score,
                     'status': status,
-                    'assignment_status': a.status,  # NEW: send to template
+                    'assignment_status': a.status,
                     'candidates': replacements
                 })
 
@@ -271,107 +277,89 @@ class EventStatusView(StaffRequiredMixin, View):
                 'total_duties': len(duties),
                 'at_risk': at_risk,
                 'empty': empty,
-                'accepted': accepted,  # NEW
-                'declined': declined,  # NEW
-                'ok': len(duties) - at_risk - empty - declined  # CHANGED
+                'accepted': accepted,
+                'declined': declined,
+                'ok': ok
             })
 
-        recent_events = Event.objects.order_by('-start_time')[:5]
-
-        context = {
-            'stats': stats,
-            'recent_events': recent_events,
-            'events': event_data
-        }
+        context = {'stats': stats, 'events': event_data}
         return render(request, 'staff/event_status.html', context)
 
 # AUTO-FILL HELPERS
-def auto_fill_event(event):
-    """Auto-fill empty or dropped assignments for a single Event instance.
-    Returns the number of duties filled."""
+def _find_best_candidate(role, event, exclude_ids):
+    """Helper: Find best available staff for a role + event time"""
+    # Staff already booked at this time in ANY event
+    busy_staff_ids = Assignment.objects.filter(
+        status__in=['assigned', 'accepted'],
+        staff__isnull=False,
+        event__start_time__lt=event.end_time,
+        event__end_time__gt=event.start_time
+    ).values_list('staff_id', flat=True)
+
+    candidate = Staff.objects.filter(
+        role=role,
+        is_active=True,
+        reliability_score__gte=75
+    ).exclude(id__in=exclude_ids).exclude(id__in=busy_staff_ids).order_by('-reliability_score', '-events_completed').first()
+    
+    return candidate
+
+def auto_fill_event(event, sender_user=None):
+    """Core logic used by both single and bulk auto-fill.
+    Returns: (filled_count, skipped_roles_list)"""
+    if sender_user is None:
+        sender_user = User.objects.filter(is_superuser=True).first()
+
     empty_assignments = event.assignments.filter(
         Q(staff__isnull=True) | Q(status='dropped')
     ).select_related('role')
 
     filled_count = 0
-    for assign in empty_assignments:
-        assigned_staff_ids = event.assignments.filter(
-            status='assigned'
-        ).exclude(id=assign.id).values_list('staff_id', flat=True)
+    skipped_roles = []
 
-        candidate = Staff.objects.filter(
-            role=assign.role,
-            is_active=True,
-            reliability_score__gte=75
-        ).exclude(id__in=assigned_staff_ids).order_by('-reliability_score').first()
+    for assign in empty_assignments:
+        if not assign.role:
+            continue
+            
+        # Staff already assigned to THIS event
+        assigned_staff_ids = event.assignments.exclude(id=assign.id).values_list('staff_id', flat=True)
+
+        candidate = _find_best_candidate(assign.role, event, assigned_staff_ids)
 
         if candidate:
             assign.staff = candidate
             assign.status = 'assigned'
             assign.save()
             
-            # NEW: Send notification
-            Notification.objects.create(
-               user=candidate.user,
-               sender=User.objects.filter(is_superuser=True).first(),
-               sender_type='system',
-               message=f'You have been auto-assigned to: {event.title} as {assign.role.name}',
-               notification_type='assignment',
-               related_event=event,
-               related_assignment=assign
-            )
-            
+            # Send notification
+            if candidate.user:
+                Notification.objects.create(
+                    user=candidate.user,
+                    sender=sender_user,
+                    sender_type='system',
+                    message=f'You have been auto-assigned to: {event.title} as {assign.role.name} on {event.start_time.strftime("%b %d, %H:%M")}',
+                    notification_type='assignment',
+                    related_event=event,
+                    related_assignment=assign
+                )
             filled_count += 1
+        else:
+            if assign.role.name not in skipped_roles:
+                skipped_roles.append(assign.role.name)
 
-    return filled_count
+    return filled_count, skipped_roles
 
 # AUTO-FILL VIEWS
 class AutoFillRosterView(StaffRequiredMixin, View):
     def get(self, request, event_id):
         event = get_object_or_404(Event, id=event_id)
-        empty_assignments = event.assignments.filter(
-            Q(staff__isnull=True) | Q(status='dropped')
-        ).select_related('role')
-
-        filled_count = 0
-        skipped_roles = []
-
-        for assign in empty_assignments:
-            assigned_staff_ids = event.assignments.filter(
-                status='assigned'
-            ).exclude(id=assign.id).values_list('staff_id', flat=True)
-
-            candidate = Staff.objects.filter(
-                role=assign.role,
-                is_active=True,
-                reliability_score__gte=75
-            ).exclude(id__in=assigned_staff_ids).order_by('-reliability_score').first()
-
-            if candidate:
-                assign.staff = candidate
-                assign.status = 'assigned'
-                assign.save()
-                
-                # NEW: Send notification
-                Notification.objects.create(
-                    user=candidate.user,
-                    sender=request.user,  # who clicked auto-fill
-                    sender_type='staff',
-                    message=f'You have been auto-assigned to: {event.title} as {assign.role.name}',
-                    notification_type='assignment',
-                    related_event=event,
-                    related_assignment=assign
-                )
-                
-                filled_count += 1
-            else:
-                if assign.role and assign.role.name not in skipped_roles:
-                    skipped_roles.append(assign.role.name)
+        filled_count, skipped_roles = auto_fill_event(event, request.user)
+        request.session['last_auto_fill'] = timezone.now()
 
         if filled_count:
             messages.success(request, f"Auto-filled {filled_count} duties for {event.title}.")
         if skipped_roles:
-            messages.warning(request, f"No available staff for roles: {','.join(skipped_roles)}")
+            messages.warning(request, f"No available staff for roles: {', '.join(skipped_roles)}")
         if not filled_count and not skipped_roles:
             messages.info(request, f"{event.title} has no empty duties to fill.")
 
@@ -382,13 +370,69 @@ class AutoFillAllEventsView(StaffRequiredMixin, View):
         today = timezone.now().date()
         events = Event.objects.filter(start_time__date__gte=today)
         total_filled = 0
+        events_with_gaps = 0
+        
         for event in events:
-            filled = auto_fill_event(event)
+            filled, skipped = auto_fill_event(event, request.user)
             total_filled += filled
-        messages.success(request, f"Auto-filled {total_filled} duties across all upcoming events")
+            if skipped:
+                events_with_gaps += 1
+        
+        request.session['last_auto_fill'] = timezone.now()
+        messages.success(request, f"Auto-filled {total_filled} duties across {events.count()} upcoming events")
+        if events_with_gaps:
+            messages.warning(request, f"{events_with_gaps} events still have unfilled roles.")
+            
         return redirect('staff:event_status')
 
-# 4. STAFF
+# 4. RELIABILITY
+
+@method_decorator(staff_member_required, name='dispatch')
+class IncidentCreateView(CreateView):
+    model = Incident
+    form_class = IncidentForm
+    template_name = 'staff/incident_form.html'
+    success_url = reverse_lazy('staff:staff_dashboard')
+
+    def get_initial(self):
+        initial = super().get_initial()
+        staff_id = self.request.GET.get('staff_id')
+        if staff_id:
+            initial['staff'] = get_object_or_404(Staff, pk=staff_id)
+        return initial
+
+class IncidentListView(StaffRequiredMixin, ListView): pass
+
+def update_reliability_score(staff):
+    """Recalculate reliability: completed vs no-shows + incidents"""
+    total_completed = staff.assignments.filter(status='completed').count()
+    total_accepted = staff.assignments.filter(status__in=['accepted', 'completed']).count()
+    no_shows = staff.assignments.filter(status='no_show').count()
+    incidents = staff.incidents.count()
+    declines = staff.assignments.filter(status='declined').count()
+
+    # Base score starts at 100
+    score = 100
+
+    # Big penalties
+    score -= no_shows * 15      # no-show is worst
+    score -= incidents * 10     # incident logged
+    score -= declines * 5       # declining hurts but less
+
+    # Small bonus for actually completing what they accepted
+    if total_accepted > 0:
+        completion_rate = (total_completed / total_accepted) * 100
+        score = (score + completion_rate) / 2  # average with base penalties
+
+    # If they have no history, give them benefit of doubt
+    if total_accepted == 0 and no_shows == 0 and incidents == 0:
+        score = 100
+
+    staff.reliability_score = max(0, min(100, round(score)))
+    staff.save(update_fields=['reliability_score'])
+    return staff.reliability_score
+
+# 5. STAFF
 
 @method_decorator(staff_member_required, name='dispatch')
 class StaffListView(LoginRequiredMixin, ListView):
@@ -574,49 +618,67 @@ class StaffLogoutView(View):
         messages.success(request, "You have been logged out.")
         return redirect('staff:staff_login')
 
-@method_decorator(staff_member_required, name='dispatch')
+
+# 1. ADMIN/MANAGER VIEW - See all staff
+
+from django.db.models import Count, Q
+
+@method_decorator(staff_member_required, name='dispatch') 
 class StaffDashboardView(ListView):
     model = Staff
-    template_name = 'staff/staff_dashboard.html'
+    template_name = 'staff/staff_dashboard.html'  # Admin table view
     context_object_name = 'staff_list'
+    paginate_by = 20
 
     def get_queryset(self):
         qs = Staff.objects.filter(is_active=True).select_related('role').annotate(
-            events_worked=Count('assignments', filter=Q(assignments__status='completed')),
-            incident_count=Count('incidents'),
-            no_show=Count('incidents', filter=Q(incidents__incident_type='no_show'))
+            events_completed=Count('assignments', filter=Q(assignments__status='completed')), # renamed
+            incidents_count=Count('incidents'), # renamed
+            no_shows=Count('incidents', filter=Q(incidents__incident_type='no_show')) # renamed
         )
         
-        status = self.request.GET.get('status')
-        if status == 'A-Team':
+        # 1. FILTER - changed from 'status' to 'filter'
+        f = self.request.GET.get('filter', 'all')
+        if f == 'a_team':
             qs = qs.filter(reliability_score__gte=90)
-        elif status == 'Standard':
+        elif f == 'standard':
             qs = qs.filter(reliability_score__gte=60, reliability_score__lt=90)
-        elif status == 'Warning':
+        elif f == 'warning':
             qs = qs.filter(reliability_score__lt=60)
             
+        # 2. SEARCH
         q = self.request.GET.get('q')
         if q:
-            qs = qs.filter(Q(name__icontains=q) | Q(role__name__icontains=q))
+            qs = qs.filter(Q(name__icontains=q) | Q(email__icontains=q) | Q(role__name__icontains=q))
             
-        sort = self.request.GET.get('sort')
-        if sort == 'score':
-            qs = qs.order_by('-reliability_score')
-        elif sort == 'events':
-            qs = qs.order_by('-events_worked')
-        elif sort == 'incidents':
-            qs = qs.order_by('-incident_count')
+        # 3. SORT - changed to match new select names
+        sort = self.request.GET.get('sort', '-reliability_score')
+        if sort in ['reliability_score', '-reliability_score', 'name', '-events_completed', '-incidents_count']:
+            qs = qs.order_by(sort)
             
         return qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['upcoming_events'] = Event.objects.filter(start_time__gte=timezone.now()).order_by('start_time')[:5]
+        
+        # STATS CARDS
+        context['total_staff'] = Staff.objects.filter(is_active=True).count()
+        context['a_team_count'] = Staff.objects.filter(is_active=True, reliability_score__gte=90).count()
+        context['standard_count'] = Staff.objects.filter(is_active=True, reliability_score__gte=60, reliability_score__lt=90).count()
+        context['warning_count'] = Staff.objects.filter(is_active=True, reliability_score__lt=60).count()
+        
+        # For keeping form values
+        context['query'] = self.request.GET.get('q', '')
+        context['current_filter'] = self.request.GET.get('filter', 'all')
+        context['current_sort'] = self.request.GET.get('sort', '-reliability_score')
         return context
+
+# 2. STAFF PERSONAL VIEW - See only their assignments
 
 class StaffPersonalDashboardView(StaffRequiredMixin, LoginRequiredMixin, View):
     login_url = 'staff:staff_login'
-    template_name = 'staff/dashboard.html'
+    template_name = 'staff/my_dashboard.html'
 
     def get(self, request):
         staff, created = Staff.objects.get_or_create(
@@ -629,57 +691,61 @@ class StaffPersonalDashboardView(StaffRequiredMixin, LoginRequiredMixin, View):
         
         assignments = staff.assignments.filter(
             event__start_time__gte=timezone.now(), 
-            status='assigned'  # only show pending ones
+            status__in=['assigned', 'accepted'] # Show both
         ).select_related('event', 'role').order_by('event__start_time')
         
-        if hasattr(staff, 'notifications'):
-            notifications = Notification.objects.filter(user=request.user, is_read=False)
-            unread_count = notifications.count()
-        else:
-            notifications = []
-            unread_count = 0
+        notifications = Notification.objects.filter(user=request.user, is_read=False).order_by('-created_at')[:10]
+        
+        flag_rules = getattr(staff, 'flag_rules', None)
+        if flag_rules: flag_rules = flag_rules.all()
+        
+        interview_slots = getattr(staff, 'interview_slots', None) 
+        if interview_slots: interview_slots = interview_slots.all()
         
         context = {
             'staff': staff,
             'assignments': assignments,
             'assigned_count': assignments.count(),
             'notifications': notifications,
-            'unread_count': unread_count,
+            'unread_count': notifications.count(),
             'reliability_score': staff.reliability_score or 0,
             'chart_labels': json.dumps(['Week 1', 'Week 2', 'Week 3', 'Week 4']),
-            'chart_data': json.dumps([85, 90, 88, staff.reliability_score or 0])
+            'chart_data': json.dumps([85, 90, 88, staff.reliability_score or 0]),
+            'flag_rules': flag_rules,
+            'interview_slots': interview_slots,
         }
         return render(request, self.template_name, context)
 
     def post(self, request):
         action = request.POST.get('action')
-        assignment_id = request.POST.get('assignment_id')
-        notification_id = request.POST.get('notification_id')
         staff = request.user.staff
-
+        
         if action == 'accept':
-            assignment = get_object_or_404(Assignment, id=assignment_id, staff=staff)
+            assignment_id = request.POST.get('assignment_id')
+            assignment = get_object_or_404(Assignment, pk=assignment_id, staff=staff)
             assignment.status = 'accepted'
             assignment.save()
-            messages.success(request, f'Accepted: {assignment.event.title} - Duty {assignment.duty_number}')
-        
+            update_reliability_score(staff)
+            messages.success(request, f"You accepted {assignment.event.title}")
+            
         elif action == 'decline':
-            assignment = get_object_or_404(Assignment, id=assignment_id, staff=staff)
+            assignment_id = request.POST.get('assignment_id')
+            assignment = get_object_or_404(Assignment, pk=assignment_id, staff=staff)
             assignment.status = 'declined'
             assignment.save()
-            messages.warning(request, f'Declined: {assignment.event.title} - Duty {assignment.duty_number}')
-
+            update_reliability_score(staff)
+            messages.warning(request, f"You declined {assignment.event.title}")
+            
         elif action == 'mark_read':
-            notif = get_object_or_404(Notification, id=notification_id, user=request.user)
-            notif.is_read = True
-            notif.save()
-            messages.success(request, 'Notification marked as read.')
+            notification_id = request.POST.get('notification_id')
+            notification = get_object_or_404(Notification, pk=notification_id, user=request.user)
+            notification.is_read = True
+            notification.save()
+            
         elif action == 'mark_all_read':
             Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
-            messages.success(request, 'All notifications marked as read.')
-        else:
-            messages.error(request, 'Invalid action.')
-
+            messages.success(request, "All notifications marked as read")
+        
         return redirect('staff:my_dashboard')
 
 class RiskDashboardView(StaffRequiredMixin, View):
@@ -847,23 +913,6 @@ class HRLeaveDetailView(LoginRequiredMixin, View):
 
         return redirect('staff:hr_leave_list')
 
-# 5. RELIABILITY
-
-@method_decorator(staff_member_required, name='dispatch')
-class IncidentCreateView(CreateView):
-    model = Incident
-    form_class = IncidentForm
-    template_name = 'staff/incident_form.html'
-    success_url = reverse_lazy('staff:staff_dashboard')
-
-    def get_initial(self):
-        initial = super().get_initial()
-        staff_id = self.request.GET.get('staff_id')
-        if staff_id:
-            initial['staff'] = get_object_or_404(Staff, pk=staff_id)
-        return initial
-
-class IncidentListView(StaffRequiredMixin, ListView): pass
 
 # 6. ASSIGNMENTS
 
@@ -934,40 +983,47 @@ def reassign_assignment(request, assignment_id):
         new_staff_id = data.get('new_staff_id')
         reason = data.get('reason', '').strip()
 
-        old_assignment = get_object_or_404(Assignment, id=assignment_id, status='assigned')
+        assignment = get_object_or_404(Assignment, id=assignment_id)
         new_staff_obj = get_object_or_404(Staff, id=new_staff_id) 
+        old_staff_name = assignment.staff.name if assignment.staff else 'Empty'
 
-        if old_assignment.event.assignments.filter(staff_id=new_staff_id, status='assigned').exists():
+        # 1. Check if new staff already on this event
+        if assignment.event.assignments.filter(staff_id=new_staff_id, status__in=['assigned', 'accepted']).exists():
             return JsonResponse({'success': False, 'error': 'Staff already assigned to this event'}, status=400)
 
-        # Drop old assignment and reason
-        old_assignment.status = 'dropped'
-        old_assignment.reassignment_reason = reason
-        old_assignment.save(update_fields=['status', 'reassignment_reason'])
+        # 2. Check if new staff busy at this time
+        is_busy = Assignment.objects.filter(
+            staff=new_staff_obj,
+            status__in=['assigned', 'accepted'],
+            event__start_time__lt=assignment.event.end_time,
+            event__end_time__gt=assignment.event.start_time
+        ).exists()
+        if is_busy:
+            return JsonResponse({'success': False, 'error': f'{new_staff_obj.name} is busy at this time'}, status=400)
 
-        # Create new assignment for same duty
-        new_assignment = Assignment.objects.create(
-            event=old_assignment.event,
-            staff=new_staff_obj, # now this works
-            duty_number=old_assignment.duty_number,
-            role=old_assignment.role, 
-            status='assigned'
-        )
+        # 3. UPDATE in place
+        assignment.staff = new_staff_obj
+        assignment.status = 'assigned' # reset status
+        assignment.reassigned_at = timezone.now()
+        assignment.reassigned_by = request.user
+        assignment.reassignment_reason = reason
+        assignment.save()
 
+        # 4. Notify new staff
         Notification.objects.create(
             user=new_staff_obj.user,
             sender=request.user,
             sender_type='staff',
-            message=f'You have been reassigned to: {old_assignment.event.title} - Duty {old_assignment.duty_number}', # FIXED: old_assignment
+            message=f'You have been assigned to: {assignment.event.title} as {assignment.role.name} - Duty {assignment.duty_number}',
             notification_type='assignment',
-            related_event=old_assignment.event,
-            related_assignment=new_assignment
+            related_event=assignment.event,
+            related_assignment=assignment
         )
         
         return JsonResponse({
             'success': True,
-            'new_staff': new_assignment.staff.name,
-            'duty': new_assignment.duty_number
+            'new_staff': assignment.staff.name,
+            'new_score': assignment.staff.reliability_score
         })
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)

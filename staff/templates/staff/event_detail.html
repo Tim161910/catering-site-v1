@@ -3,11 +3,13 @@
 
 {% block content %}
 <div class="container mt-4">
+  {% csrf_token %} <!-- FIXED: Added so getCSRFToken() works -->
+
   <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
       <h2>{{ event.title }}</h2>
       <p class="text-muted">
-        {{ event.start_time|date:"F j, Y g:i A" }} - {{ event.end_time|date:"g:i A" }} 
+        {{ event.start_time|date:"F j, Y g:i A" }} - {{ event.end_time|date:"g:i A" }}
         @ {{ event.location }}
       </p>
     </div>
@@ -15,7 +17,7 @@
   </div>
 
   <h4 class="mt-4">Duty Assignments: {{ assignments|length }}</h4>
-  
+
   <div class="table-responsive">
     <table class="table table-bordered table-hover align-middle">
       <thead class="table-light">
@@ -31,14 +33,14 @@
         <tr class="{% if not assignment.staff %}table-warning{% endif %}">
           <td>{{ assignment.duty_number }}</td>
 
-          <td> 
-            <select class="form-select form-select-sm role-select" 
+          <td>
+            <select class="form-select form-select-sm role-select"
                     data-assignment-id="{{ assignment.id }}">
               {% for role in roles %}
               <option value="{{ role.id }}" {% if assignment.role.id == role.id %}selected{% endif %}>
-                {{ role.name }}  
+                {{ role.name }}
               </option>
-              {% endfor %} 
+              {% endfor %}
             </select>
           </td>
 
@@ -59,9 +61,9 @@
                 <option value="">Select new staff...</option>
                 {% for staff in available_staff %}
                   <option value="{{ staff.id }}">{{ staff.get_full_name|default:staff.email }}</option>
-                {% endfor %}   
+                {% endfor %}
               </select>
-              <button type="button" class="btn btn-sm btn-primary reassign-btn" 
+              <button type="button" class="btn btn-sm btn-primary reassign-btn"
                       data-assignment-id="{{ assignment.id }}">Confirm</button>
             </div>
           </td>
@@ -98,8 +100,12 @@
 <script>
 let currentAssignmentId = null;
 
+function getCSRFToken() { // FIXED: Added helper
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+           document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-  // Wire up Confirm buttons
   document.querySelectorAll('.reassign-btn').forEach(btn => {
     btn.addEventListener('click', function() {
       const assignmentId = this.dataset.assignmentId;
@@ -107,7 +113,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  // Wire up Role dropdowns
   document.querySelectorAll('.role-select').forEach(select => {
     select.addEventListener('change', function() {
       const assignmentId = this.dataset.assignmentId;
@@ -115,7 +120,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  // Confirm reassign in modal
   document.getElementById('confirmReassignBtn').addEventListener('click', function() {
     const reason = document.getElementById('reassignReason').value;
     const staffId = document.getElementById(`staff-${currentAssignmentId}`).value;
@@ -135,18 +139,34 @@ function openReassignModal(assignmentId) {
 }
 
 function showToast(message, bgClass) {
-  // Add your toast logic here
-  alert(message);
+  const toast = document.createElement('div'); // FIXED: Better toast
+  toast.className = `alert ${bgClass} position-fixed top-0 end-0 m-3`;
+  toast.style.zIndex = '9999';
+  toast.innerText = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
 }
 
 function updateRole(assignmentId, roleId) {
-  // Add your AJAX call here
-  console.log('Update role', assignmentId, roleId);
+  console.log('Update role', assignmentId, roleId); // TODO: wire this later
 }
 
 function reassignStaff(assignmentId, staffId, reason) {
-  // Add your AJAX call here
-  console.log('Reassign', assignmentId, staffId, reason);
+  if(!staffId) return; // FIXED: Added actual API call
+
+  fetch('/staff/api/assignments/' + assignmentId + '/replace_staff/', { // FIXED: Use replace_staff
+    method: 'POST',
+    headers: {'X-CSRFToken': getCSRFToken(), 'Content-Type': 'application/json'},
+    body: JSON.stringify({'new_staff_id': staffId, 'reason': reason || 'Quick replace'})
+  }).then(r => r.json()).then(data => {
+    if(data.success) {
+      showToast('Staff replaced!', 'bg-success');
+      bootstrap.Modal.getInstance(document.getElementById('reassignModal')).hide();
+      setTimeout(() => location.reload(), 800);
+    } else {
+      showToast('Error: ' + data.error, 'bg-danger');
+    }
+  });
 }
 </script>
 {% endblock extra_js %}
