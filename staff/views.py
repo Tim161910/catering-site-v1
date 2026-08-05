@@ -16,10 +16,11 @@ from django.views import View
 from django.conf import settings
 from django.core.mail import send_mail
 from django.db import transaction
-from django.db.models import Count, Q, ProtectedError
+from django.db.models import Count, Q, ProtectedError, Sum
 import csv
 import logging
 import json
+from django.views import View
 from datetime import datetime
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib import messages
@@ -27,6 +28,7 @@ from django.utils.decorators import method_decorator
 from django.forms import modelformset_factory
 from django.core.exceptions import PermissionDenied
 from django.contrib import messages
+from django.utils.dateparse import parse_datetime 
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +38,7 @@ def is_admin(user):
     return user.is_authenticated and (user.is_staff or user.is_superuser)
 
 
-from .models import Recruitment, Applicant, RolePlay, Incident, Event, Staff, Assignment, Role, RolePlayResponse, InterviewSlot, Task, Notification, LeaveRequest
+from .models import Recruitment, Applicant, RolePlay, Incident, Event, Staff, Assignment, Role, RolePlayResponse, InterviewSlot, Task, Notification, LeaveRequest, EventTemplate
 from .forms import RecruitmentForm, ApplicantForm, IncidentForm, EventForm, StaffForm, RolePlayForm, RolePlayResponseForm, InterviewSlotForm
 
 
@@ -184,7 +186,7 @@ class EventDeleteView(StaffRequiredMixin, DeleteView):
 
 class EventStatusView(StaffRequiredMixin, View):
     def get(self, request):
-        print(">>>NEW EVENT_STATUS IS RUNNING")
+        print(">>>NEW EVENT_STATUS IS RUNNING - FULL VERSION")
         today = timezone.now().date()
 
         stats = {
@@ -196,7 +198,7 @@ class EventStatusView(StaffRequiredMixin, View):
 
         event_data = []
         events = Event.objects.filter(start_time__date__gte=today).prefetch_related(
-            'assignments__staff', 'assignments__role'
+            'assignments__staff', 'assignments__role', 'template__required_roles'
         ).order_by('start_time')
 
         for event in events:
@@ -210,31 +212,36 @@ class EventStatusView(StaffRequiredMixin, View):
             assignments = event.assignments.filter(status__in=['assigned', 'accepted', 'declined'])
             assigned_staff_ids = list(assignments.exclude(staff=None).values_list('staff_id', flat=True))
 
-            # FIX: Calculate busy staff ONCE per event, not per assignment
-            busy_staff_ids = Assignment.objects.filter(
+            busy_staff_ids = list(Assignment.objects.filter(
                 status__in=['assigned', 'accepted'],
                 staff__isnull=False,
                 event__start_time__lt=event.end_time,
                 event__end_time__gt=event.start_time
-            ).values_list('staff_id', flat=True)
-            busy_staff_ids = list(busy_staff_ids) # convert to list so we can reuse
+            ).values_list('staff_id', flat=True))
 
+            # KEY 1: Get required count from template, not assignments
+            required_total = 0
+            if event.template:
+                required_total = event.template.required_roles.aggregate(total=Sum('quantity'))['total'] or 0
+            
+            accepted_count = assignments.filter(status='accepted').count()
+            assigned_count = assignments.filter(status='assigned').count()
+            empty_count = required_total - assignments.count()
+            if empty_count < 0: empty_count = 0
+
+            # Loop existing assignments
             for a in assignments:
                 score = getattr(a.staff, 'reliability_score', 0) if a.staff else 0
                 
-                # Determine status badge
-                if a.staff is None:
-                    status = 'empty'
-                    empty += 1
-                elif a.status == 'declined':
-                    status = 'critical' # show red badge
+                if a.status == 'declined':
+                    status = 'critical'
                     declined += 1
                 elif a.status == 'accepted' and score >= 75:
                     status = 'ok'
                     accepted += 1
                     ok += 1
                 elif a.status == 'accepted' and score < 75:
-                    status = 'warning' # accepted but risky
+                    status = 'warning'
                     accepted += 1
                     at_risk += 1
                 elif score < 50:
@@ -243,11 +250,10 @@ class EventStatusView(StaffRequiredMixin, View):
                 elif score < 75:
                     status = 'warning'
                     at_risk += 1
-                else: # assigned but score >=75
+                else: 
                     status = 'ok'
                     ok += 1
 
-                # Get replacements - exclude staff on this event AND busy at this time
                 if a.role:
                     replacements = Staff.objects.filter(
                         role=a.role, 
@@ -268,26 +274,101 @@ class EventStatusView(StaffRequiredMixin, View):
                     'candidates': replacements
                 })
 
+            # KEY 2: Add empty slots so dashboard shows what's missing
+            for i in range(empty_count):
+                duties.append({
+                    'assignment_id': None,
+                    'index': assignments.count() + i + 1,
+                    'staff': None,
+                    'role': 'Empty Slot',
+                    'score': 0,
+                    'status': 'empty',
+                    'assignment_status': 'empty',
+                    'candidates': Staff.objects.none()
+                })
+                empty += 1
+
+            # KEY 3: Overall event badge based on template
+            if accepted_count >= required_total and required_total > 0:
+                event_badge = "✅ Fully Staffed"
+                event_class = "success"
+            elif assigned_count > 0:
+                event_badge = "🟡 Pending Response"
+                event_class = "warning"
+            elif required_total > 0:
+                event_badge = f"❌ Needs Staff: {required_total} left"
+                event_class = "danger"
+            else:
+                event_badge = "⚠️ No Template"
+                event_class = "secondary"
+
             event_data.append({
                 'id': event.id,
                 'title': event.title,
                 'date': event.start_time,
                 'location': event.location,
                 'duties': duties,
-                'total_duties': len(duties),
+                'total_duties': required_total,
                 'at_risk': at_risk,
                 'empty': empty,
                 'accepted': accepted,
                 'declined': declined,
-                'ok': ok
+                'ok': ok,
+                'event_badge': event_badge,
+                'event_class': event_class,
             })
 
         context = {'stats': stats, 'events': event_data}
         return render(request, 'staff/event_status.html', context)
 
+class CreateEventFromTemplateView(LoginRequiredMixin, StaffRequiredMixin, View):
+    template_name = 'staff/create_event_from_template.html'
+
+    def get(self, request):
+        templates = EventTemplate.objects.filter(is_active=True).order_by('name')
+        return render(request, self.template_name, {'templates': templates})
+
+    def post(self, request):
+        template_id = request.POST.get('template_id')
+        title = request.POST.get('title', '').strip()
+        
+        if not title:
+            messages.error(request, "Event Name is required.")
+            return redirect('staff:create_event_from_template') # change to your url name
+
+        start_str = request.POST.get('start_time')
+        end_str = request.POST.get('end_time')
+        location = request.POST.get('location', '')
+
+        # Convert "2025-08-10T14:00" from datetime-local to datetime
+        start_time = parse_datetime(start_str) if start_str else None
+        end_time = parse_datetime(end_str) if end_str else None
+        
+        # Make timezone aware for Django
+        if start_time and timezone.is_naive(start_time):
+            start_time = timezone.make_aware(start_time)
+        if end_time and timezone.is_naive(end_time):
+            end_time = timezone.make_aware(end_time)
+
+        template = get_object_or_404(EventTemplate, id=template_id)
+
+        # Use your existing method!
+        event = template.create_event_with_assignments(
+            start_time=start_time,
+            title=title,
+            location=location,
+            end_time=end_time,
+            created_by=request.user
+        )
+
+        messages.success(request, f"Event '{event.title}' created with {event.assignments.count()} duties!")
+        return redirect('staff:event_detail', pk=event.id)
+
 # AUTO-FILL HELPERS
 def _find_best_candidate(role, event, exclude_ids):
     """Helper: Find best available staff for a role + event time"""
+    if not role:
+        return None  # safety
     # Staff already booked at this time in ANY event
     busy_staff_ids = Assignment.objects.filter(
         status__in=['assigned', 'accepted'],
@@ -305,10 +386,19 @@ def _find_best_candidate(role, event, exclude_ids):
     return candidate
 
 def auto_fill_event(event, sender_user=None):
-    """Core logic used by both single and bulk auto-fill.
-    Returns: (filled_count, skipped_roles_list)"""
+    """Core logic used by both single and bulk auto-fill."""
     if sender_user is None:
         sender_user = User.objects.filter(is_superuser=True).first()
+
+    if event.assignments.count() == 0 and event.template:
+        for role_req in event.template.required_roles.all():
+            for i in range(role_req.quantity):
+                Assignment.objects.create(
+                    event=event,
+                    role=role_req.role,
+                    duty_number=i+1,
+                    status='dropped' # 'dropped' = empty slot so we can fill it
+                )
 
     empty_assignments = event.assignments.filter(
         Q(staff__isnull=True) | Q(status='dropped')
@@ -321,17 +411,14 @@ def auto_fill_event(event, sender_user=None):
         if not assign.role:
             continue
             
-        # Staff already assigned to THIS event
         assigned_staff_ids = event.assignments.exclude(id=assign.id).values_list('staff_id', flat=True)
-
         candidate = _find_best_candidate(assign.role, event, assigned_staff_ids)
 
         if candidate:
             assign.staff = candidate
-            assign.status = 'assigned'
+            assign.status = 'assigned' # now it's assigned, not dropped
             assign.save()
             
-            # Send notification
             if candidate.user:
                 Notification.objects.create(
                     user=candidate.user,
@@ -373,6 +460,13 @@ class AutoFillAllEventsView(StaffRequiredMixin, View):
         events_with_gaps = 0
         
         for event in events:
+            # SKIP CHECK GOES HERE
+            if event.template:
+                required = event.template.required_roles.aggregate(total=Sum('quantity'))['total'] or 0
+                accepted = event.assignments.filter(status='accepted').count()
+                if accepted >= required and required > 0:
+                    continue # already fully staffed, skip
+            
             filled, skipped = auto_fill_event(event, request.user)
             total_filled += filled
             if skipped:

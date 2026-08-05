@@ -72,13 +72,12 @@ class EventForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        # BIT 3: If template is selected, override role counts with template defaults
         template = cleaned_data.get('template')
         if template:
             for tr in template.template_roles.all():
                 field_name = f'role_{tr.role.id}'
                 if field_name in self.fields:
-                    self.cleaned_data[field_name] = tr.default_count
+                    cleaned_data[field_name] = tr.default_count  # <- use cleaned_data here
         return cleaned_data
 
     def get_role_counts(self):
@@ -572,7 +571,3 @@ class LeaveRequestForm(forms.ModelForm): pass
 # 9. NOTIFICATIONS
 
 class NotificationForm(forms.ModelForm): pass
-
-
-
-

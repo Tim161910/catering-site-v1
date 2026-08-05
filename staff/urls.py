@@ -25,8 +25,10 @@ urlpatterns = [
     path('staff/export-csv/', views.ExportStaffCSVView.as_view(), name='export_staff_csv'),
     
     # EVENTS
-    path('events/', views.EventListView.as_view(), name='event_list'), # removed duplicate 'event/'
+    path('events/', views.EventListView.as_view(), name='event_list'),
     path('events/new/', views.EventCreateView.as_view(), name='event_create'),
+    path('events/create-from-template/', views.CreateEventFromTemplateView.as_view(), name='create_from_template'), # NEW EVENT
+    path('events/<int:event_id>/add-duties-from-template/', views.create_assignments_from_template, name='add_duties_from_template'), # OLD - RENAME
     path('events/<int:pk>/', views.EventDetailView.as_view(), name='event_detail'),
     path('events/<int:pk>/update/', views.EventUpdateView.as_view(), name='event_update'),
     path('events/<int:pk>/delete/', views.EventDeleteView.as_view(), name='event_delete'),
@@ -34,9 +36,8 @@ urlpatterns = [
     path('events/<int:event_id>/auto-fill/', views.AutoFillRosterView.as_view(), name='auto_fill_roster'),
     path('events/auto-fill-all/', views.AutoFillAllEventsView.as_view(), name='auto_fill_all_events'),
     path('events/<int:event_id>/assignments/', views.AssignmentListView.as_view(), name='assignment_list'),
-    path('events/<int:event_id>/create-from-template/', views.create_assignments_from_template, name='create_from_template'),
-    path('incident/add/', views.IncidentCreateView.as_view(), name='incident_add'),
-
+    path('incident/add/', views.IncidentCreateView.as_view(), name='incident_add'),  
+    
     # ASSIGNMENT API
     path('api/events/<int:pk>/assignments/', views.create_assignment, name='create_assignment'), 
     path('api/assignments/<int:assignment_id>/replace_staff/', views.replace_staff, name='replace_staff'), 

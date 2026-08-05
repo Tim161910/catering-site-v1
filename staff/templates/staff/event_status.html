@@ -64,21 +64,20 @@
                 <h5 class="mb-1 d-flex align-items-center gap-2 flex-wrap">
                     {{ event.title|default:"Untitled Event" }}
                     <span class="text-muted fw-normal">#{{ event.id }}</span>
-                    {% if event.empty > 0 %}
-                        <span class="badge bg-danger urgency-badge">{{ event.empty }} NEED STAFF</span>
-                    {% endif %}
+
+                    <!-- KEY FIX: Use view badge instead of old empty check -->
+                    <span class="badge bg-{{ event.event_class }} urgency-badge">{{ event.event_badge }}</span>
                 </h5>
                 <p class="text-muted mb-0">
                     {{ event.date|date:"D, M j, Y h:i A" }} {% if event.location %}@ {{ event.location }}{% endif %}
                 </p>
             </div>
 
-            {% if event.empty > 0 %}
+            <!-- KEY FIX: Show button if not fully staffed -->
+            {% if event.event_class != 'success' %}
                 <button data-url="{% url 'staff:auto_fill_roster' event.id %}" onclick="autoFill(this)" class="btn btn-green mt-2 mt-md-0">
                     ⚡ Auto-Fill {{ event.empty }} Duties
                 </button>
-            {% else %}
-                <span class="badge bg-success fs-6">✅ Fully Staffed</span>
             {% endif %}
         </div>
 
@@ -127,6 +126,8 @@
                                     {% if d.status == 'critical' %}<span class="badge bg-danger">Critical</span>
                                     {% elif d.status == 'warning' %}<span class="badge bg-warning text-dark">Warning</span>
                                     {% else %}<span class="badge bg-success">OK</span>{% endif %}
+                                {% elif d.assignment_status == 'empty' %}
+                                    <span class="badge bg-secondary">Empty</span>
                                 {% endif %}
                             </td>
                             <td>
@@ -159,6 +160,8 @@
                                     </a>
                                     {% endif %}
                                 </div>
+                                {% else %}
+                                <span class="text-muted small">Will be filled by Auto-Fill</span>
                                 {% endif %}
                             </td>
                         </tr>
@@ -177,7 +180,7 @@
 function replaceStaff(assignmentId, newStaffId) {
     if(!newStaffId) return;
     if(!confirm('Replace staff for this duty?')) return;
-    fetch('/staff/api/assignments/' + assignmentId + '/replace_staff/', { // <-- FIXED: was /reassign/
+    fetch('/staff/api/assignments/' + assignmentId + '/replace_staff/', {
         method: 'POST',
         headers: {'X-CSRFToken': getCSRFToken(), 'Content-Type': 'application/json'},
         body: JSON.stringify({'new_staff_id': newStaffId, 'reason': 'Quick replace'})
@@ -203,7 +206,6 @@ function getCSRFToken() {
 }
 
 function showToast(msg, cls) {
-    // Simple toast
     const toast = document.createElement('div');
     toast.className = `alert ${cls} position-fixed top-0 end-0 m-3`;
     toast.style.zIndex = '9999';

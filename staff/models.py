@@ -1,13 +1,24 @@
+from datetime import datetime
+
 from django.db.models import Sum
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.core.exceptions import ValidationError
+from django.shortcuts import get_object_or_404, redirect, render
+from django.contrib import messages
+from django.views import View
 
 from .fields import EncryptedCharField, EncryptedTextField
+
+
+class StaffRequiredMixin:
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
 
 # CORE / UTILS
 
@@ -29,12 +40,15 @@ class EventTemplate(models.Model):
     default_duration_hours = models.PositiveIntegerField(default=1, help_text="Default duration in hours")
     required_staff_count = models.PositiveIntegerField(default=1)
     notes = models.TextField(blank=True, help_text="Internal notes for staff")
+    
 
     def create_event_with_assignments(self, start_time, **kwargs):
         event = Event.objects.create(start_time=start_time, template=self, **kwargs)
+        counter = 1
         for tr in self.template_roles.all():
             for i in range(tr.count):
-                Assignment.objects.create(event=event, role=tr.role, duty_number=i+1)
+                Assignment.objects.create(event=event, role=tr.role, duty_number=counter)
+                counter += 1
         return event
 
     def __str__(self):
@@ -67,12 +81,14 @@ class Event(models.Model):
     location = models.CharField(max_length=255, blank=True)
     client_name = models.CharField(max_length=255, blank=True)
     template = models.ForeignKey('EventTemplate', null=True, blank=True, on_delete=models.SET_NULL)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         if self.start_time:
             return f"{self.title} ({self.start_time.strftime('%Y-%m-%d %H:%M')})"
         return f"{self.title} - No Date Set"
 
+    
 # STAFF
 
 class Staff(models.Model):

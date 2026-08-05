@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2>➕ Create Event From Template</h2>
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+    <form method="post" class="card p-4">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label class="form-label">Pick Template</label>
+            <select name="template_id" class="form-select" required>
+                <option value="">-- Select Template --</option>
+                {% for t in templates %}
+                <option value="{{ t.id }}">{{ t.name }} - {{ t.required_roles.count }} Roles</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Event Name</label>
+            <input type="text" name="title" class="form-control" required>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Start</label>
+                <input type="datetime-local" name="start_time" class="form-control" required>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">End</label>
+                <input type="datetime-local" name="end_time" class="form-control" required>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Location</label>
+            <input type="text" name="location" class="form-control">
+        </div>
+        <button type="submit" class="btn btn-success">Create Event + Auto-Create Duties</button>
+    </form>
+</div>
+{% endblock %}
