@@ -14,7 +14,7 @@ from django.urls import reverse_lazy
 class StaffSite(admin.AdminSite):
     site_header = 'Catering Management Administration'
     site_title = "Staff Portal"
-    index_title = "Staff Operations"
+    index_title = "Catering Operations"
     index_template = "admin/staff_index.html" 
     site_url = "/staff/events/" 
     
