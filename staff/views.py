@@ -198,8 +198,8 @@ class EventStatusView(StaffRequiredMixin, View):
 
         event_data = []
         events = Event.objects.filter(start_time__date__gte=today).prefetch_related(
-            'assignments__staff', 'assignments__role', 'template__required_roles'
-        ).order_by('start_time')
+            'assignments__staff', 'assignments__role'  # REMOVED template__required_roles
+        ).select_related('template').order_by('start_time') # ADDED select_related
 
         for event in events:
             duties = []
@@ -219,7 +219,6 @@ class EventStatusView(StaffRequiredMixin, View):
                 event__end_time__gt=event.start_time
             ).values_list('staff_id', flat=True))
 
-            # KEY 1: Get required count from template, not assignments
             required_total = 0
             if event.template:
                 required_total = event.template.required_roles.aggregate(total=Sum('quantity'))['total'] or 0
