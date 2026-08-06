@@ -221,8 +221,8 @@ class EventStatusView(StaffRequiredMixin, View):
 
             required_total = 0
             if event.template:
-                required_total = event.template.required_roles.aggregate(total=Sum('count'))['total'] or 0
-            
+                required_total = event.template_roles.aggregate(total=Sum('count'))['total'] or 0
+ 
             accepted_count = assignments.filter(status='accepted').count()
             assigned_count = assignments.filter(status='assigned').count()
             empty_count = required_total - assignments.count()
