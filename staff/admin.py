@@ -1,31 +1,22 @@
-from django.contrib import admin, messages
+from django.contrib import admin
+from django.utils.html import format_html
 from django.urls import path, reverse_lazy
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
 from django.utils import timezone
 from datetime import timedelta
-from django.utils.html import format_html
-from django.shortcuts import get_object_or_404, redirect, render
-from.forms import StaffForm 
 
-
-
-from .models import ( 
-    Role, EventTemplate, EventTemplateRole, Event,
-    Staff, IssueType, Incident, Assignment,
-)
-
-admin.site_header = "Catering Operations"
-admin.site.site_title = "Catering Admin" 
-admin.site.index_title = "Dashboard"
+from .models import Event, Staff, Assignment, Role, EventTemplate, EventTemplateRole, IssueType, Incident
+from .forms import StaffForm
 
 class StaffSite(admin.AdminSite):
     site_header = format_html(
-        '📊 <a href="{}" style="color:white; text-decoration:none;">Event Risk Dashboard</a>', 
-        reverse_lazy('staff:event_status')
+        '📊 <a href="/staff/events/status/" style="color:white; text-decoration:none;">Event Risk Dashboard</a>'
     )
     site_title = "Staff Portal"
     index_title = "Staff Operations"
     index_template = "admin/staff_index.html" 
-    site_url = "/staff/events/status/"
+    site_url = "/staff/events/status/"  
     
     def get_urls(self):
         urls = super().get_urls()
@@ -34,7 +25,7 @@ class StaffSite(admin.AdminSite):
             path('auto-fill-roster/<int:event_id>/', self.admin_view(self.auto_fill_roster), name='auto-fill-roster'),
         ]
         return custom_urls + urls
-
+    
     def risk_dashboard(self, request):
         today = timezone.now()
         upcoming_events = Event.objects.filter(
