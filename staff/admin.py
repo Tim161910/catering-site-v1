@@ -4,26 +4,29 @@ from django.utils import timezone
 from datetime import timedelta
 from django.utils.html import format_html
 from django.shortcuts import get_object_or_404, redirect, render
-from.forms import StaffForm # <-- FIXED DOT
-from django.contrib.auth.models import Group, User
+from.forms import StaffForm 
 
 
-from .models import ( # <-- FIXED DOT
+
+from .models import ( 
     Role, EventTemplate, EventTemplateRole, Event,
     Staff, IssueType, Incident, Assignment,
 )
 
 admin.site_header = "Catering Operations"
-admin.site.site_title = "Catering Admin" # <-- was admin.site_title
+admin.site.site_title = "Catering Admin" 
 admin.site.index_title = "Dashboard"
 
 class StaffSite(admin.AdminSite):
-    site_header = "Staff Manager Portal"
+    site_header = format_html(
+        '📊 <a href="{}" style="color:white; text-decoration:none;">Event Risk Dashboard</a>', 
+        reverse_lazy('event_status')
+    )
     site_title = "Staff Portal"
     index_title = "Staff Operations"
     index_template = "admin/staff_index.html" 
     site_url = "/staff/events/status/"
-
+    
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
@@ -31,9 +34,6 @@ class StaffSite(admin.AdminSite):
             path('auto-fill-roster/<int:event_id>/', self.admin_view(self.auto_fill_roster), name='auto-fill-roster'),
         ]
         return custom_urls + urls
-
-    # You can DELETE the whole index() override. We don't need it anymore
-    # because the template link is hardcoded now
 
     def risk_dashboard(self, request):
         today = timezone.now()
