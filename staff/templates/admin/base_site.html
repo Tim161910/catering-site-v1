@@ -1,9 +1,26 @@
-{% load i18n %}
-{% url 'staff:event_status' as dashboard_url %}
+{% extends "admin/base.html" %}
+{% load i18n static %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block branding %}
+<h1 id="site-name">
+    <a href="{% url 'admin:index' %}">
+        {{ site_header|default:_('Django administration') }}
+    </a>
+</h1>
+{% endblock %}
 
 {% block welcome-msg %}
 {% trans 'Welcome,' %} 
 <strong>{% firstof user.get_short_name user.get_username %}</strong>.
-<a href="{{ dashboard_url }}">📊 Event Risk Dashboard</a> |
+
+{% if request.path|slice:":12" == "/staff_admin/" %}
+    {% url 'staff:event_status' as dashboard_url %}
+    | <a href="{{ dashboard_url }}">📊 Event Risk Dashboard</a>
+{% endif %}
+
 {{ block.super }}
 {% endblock %}
+
+{% block nav-global %}{% endblock %}
