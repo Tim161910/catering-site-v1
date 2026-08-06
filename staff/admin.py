@@ -5,7 +5,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.utils import timezone
 from datetime import timedelta
-
+from django.contrib.admin import AdminSite
 from .models import Event, Staff, Assignment, Role, EventTemplate, EventTemplateRole, IssueType, Incident
 from .forms import StaffForm
 
@@ -57,6 +57,12 @@ class StaffSite(admin.AdminSite):
         filled_count = self.auto_fill_event(event)
         messages.success(request, f"Auto-filled {filled_count} duties for event '{event.title}'.")
         return redirect(reverse_lazy('staff_admin:risk-dashboard'))
+
+class StaffAdminSite(AdminSite):
+    site_header = 'Catering Management Administration'
+    index_template = 'staff_admin/index.html'  
+
+staff_admin_site = StaffAdminSite(name='staff_admin')
     
 # ADMIN CLASSES
 class RoleAdmin(admin.ModelAdmin):
