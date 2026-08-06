@@ -7,7 +7,7 @@
         <h2>{% translate 'Recent actions' %}</h2>
         <h3>{% translate 'My actions' %}</h3>
             {% load log %}
-            {% get_admin_log 10 as admin_log for user %}
+            {% get_admin_log 10 as admin_log for_user user %}
             {% if admin_log %}
             <table style="width:100%; border-collapse: collapse; font-size:13px;">
               <thead>
