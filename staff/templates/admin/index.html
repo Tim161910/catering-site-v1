@@ -1,13 +1,17 @@
 {% extends "admin/index.html" %}
-{% load i18n %}
+{% load i18n log %}
+
+{% block content %}
+<div id="content-main">
+  {% include "admin/app_list.html" with app_list=app_list show_changelinks=True %}
+</div>
+{% endblock %}
 
 {% block sidebar %}
-{# This completely replaces the default sidebar #}
 <div id="content-related">
     <div class="module" id="recent-actions-module">
         <h2>{% translate 'Recent actions' %}</h2>
         <h3>{% translate 'My actions' %}</h3>
-            {% load log %}
             {% get_admin_log 10 as admin_log for_user user %}
             {% if admin_log %}
             <table style="width:100%; border-collapse: collapse; font-size:13px;">
