@@ -9,10 +9,10 @@ from datetime import timedelta
 from .models import Event, Staff, Assignment, Role, EventTemplate, EventTemplateRole, IssueType, Incident
 from .forms import StaffForm
 
+from django.urls import reverse_lazy
+
 class StaffSite(admin.AdminSite):
-    site_header = format_html(
-        '📊 <a href="/staff/events/status/" style="color:white; text-decoration:none;">Event Risk Dashboard</a>'
-    )
+    site_header = 'Catering Management Administration'
     site_title = "Staff Portal"
     index_title = "Staff Operations"
     index_template = "admin/staff_index.html" 
