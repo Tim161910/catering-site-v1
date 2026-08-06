@@ -55,7 +55,10 @@ class EventTemplate(models.Model):
         return self.name
 
     class Meta:
+        verbose_name = "Event Template"
+        verbose_name_plural = "Event Templates"
         ordering = ['name']
+        
 
 class EventTemplateRole(models.Model):
     template = models.ForeignKey(EventTemplate, related_name='template_roles', on_delete=models.CASCADE)
@@ -127,6 +130,11 @@ class Staff(models.Model):
         self.reliability_score = max(0, 100 - min(penalty, 100))
         self.save(update_fields=['reliability_score'])
 
+    class Meta:  
+        verbose_name = "Staff Member"
+        verbose_name_plural = "Staff Members"
+        ordering = ['name'] 
+
 # ADD MANAGER FLAG TO DEFAULT USER
 User.add_to_class('is_manager', models.BooleanField(default=False))
 
@@ -161,10 +169,9 @@ class LeaveRequest(models.Model):
     class Meta:
         ordering = ['-submitted_at']
 
-    # THESE 3 MUST BE OUTSIDE Meta, INDENTED TO MATCH __str__
     @property
     def type(self):
-        return self.get_leave_type_display()  # shows "Annual Leave" instead of "annual"
+        return self.get_leave_type_display() 
 
     @property 
     def from_date(self):
@@ -373,12 +380,12 @@ class Recruitment(models.Model):
     STATUS_CHOICES = [
         ('open', 'Open'),
         ('closed', 'Closed'),
-        ('draft', 'Draft'), # added this - useful before publishing
+        ('draft', 'Draft'), 
     ]
 
     event = models.ForeignKey('Event', on_delete=models.SET_NULL, null=True, blank=True, related_name='recruitments')
     position = models.CharField(max_length=100)
-    title = models.CharField(max_length=255) # you can keep both, or make title = position
+    title = models.CharField(max_length=255)
     description = models.TextField()
     requirements = models.TextField()
     status = models.CharField(
@@ -446,7 +453,7 @@ class Applicant(models.Model):
     applied_at = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='applied')
     
-    interview_time = models.DateTimeField(null=True, blank=True) # <-- new field
+    interview_time = models.DateTimeField(null=True, blank=True) 
 
     def __str__(self):
         return f"{self.name} ({self.email})"
