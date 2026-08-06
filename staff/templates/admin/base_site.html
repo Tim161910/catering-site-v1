@@ -1,9 +1,9 @@
-    {% extends "admin/base.html" %}
-    {% load i18n %}
+{% load i18n %}
+{% url 'staff:event_status' as dashboard_url %}
 
-    {% block welcome-msg %}
-    {% trans 'Welcome,' %} 
-    <strong>{% firstof user.get_short_name user.get_username %}</strong>.
-    <a href="/staff/event-status/">📊 Event Risk Dashboard</a> |
-    {{ block.super }}
-    {% endblock %}
+{% block welcome-msg %}
+{% trans 'Welcome,' %} 
+<strong>{% firstof user.get_short_name user.get_username %}</strong>.
+<a href="{{ dashboard_url }}">📊 Event Risk Dashboard</a> |
+{{ block.super }}
+{% endblock %}
