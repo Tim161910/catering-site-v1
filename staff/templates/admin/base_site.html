@@ -1,12 +1,12 @@
 {% extends "admin/base.html" %}
 {% load i18n static %}
 
-{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+{% block title %}{{ title }} | {{ site_title|default:_('Staff Admin') }}{% endblock %}
 
 {% block branding %}
 <h1 id="site-name">
-    <a href="{% url 'admin:index' %}">
-        {{ site_header|default:_('Django administration') }}
+    <a href="/staff_admin/">
+        {{ site_header|default:_('Staff Operations') }}
     </a>
 </h1>
 {% endblock %}
@@ -14,12 +14,8 @@
 {% block welcome-msg %}
 {% trans 'Welcome,' %} 
 <strong>{% firstof user.get_short_name user.get_username %}</strong>.
-
-{% if request.path|slice:":12" == "/staff_admin/" %}
-    {% url 'staff:event_status' as dashboard_url %}
-    | <a href="{{ dashboard_url }}">📊 Event Risk Dashboard</a>
-{% endif %}
-
+{% url 'staff:event_status' as dashboard_url %}
+| <a href="{{ dashboard_url }}">📊 Event Risk Dashboard</a>
 {{ block.super }}
 {% endblock %}
 
