@@ -20,7 +20,7 @@ admin.site.index_title = "Dashboard"
 class StaffSite(admin.AdminSite):
     site_header = format_html(
         '📊 <a href="{}" style="color:white; text-decoration:none;">Event Risk Dashboard</a>', 
-        reverse_lazy('event_status')
+        reverse_lazy('staff:event_status')
     )
     site_title = "Staff Portal"
     index_title = "Staff Operations"
