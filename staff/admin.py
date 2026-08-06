@@ -21,7 +21,8 @@ class StaffSite(admin.AdminSite):
     site_header = "Staff Manager Portal"
     site_title = "Staff Portal"
     index_title = "Staff Operations"
-    index_template = "admin/staff_index.html"  # <-- ADD THIS LINE
+    index_template = "admin/staff_index.html" 
+    site_url = "/staff/events/status/"
 
     def get_urls(self):
         urls = super().get_urls()
