@@ -1,42 +1,43 @@
 {% extends "admin/index.html" %}
-{% load i18n admin_urls %}
+{% load i18n %}
 
 {% block sidebar %}
 <div id="content-related">
-  <div class="module" id="recent-actions-module">
-    <h2>{% translate 'Recent actions' %}</h2>
-    <h3>{% translate 'My actions' %}</h3>
-    
-    {% if admin_log %}
-    <table style="width:100%; border-collapse: collapse; font-size:12px;">
-      <thead>
-        <tr style="text-align:left; border-bottom: 1px solid #ddd;">
-          <th style="padding:6px;">Time</th>
-          <th style="padding:6px;">Action</th>
-          <th style="padding:6px;">Object</th>
-          <th style="padding:6px;">Type</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for entry in admin_log %}
-        <tr>
-          <td style="padding:6px;">{{ entry.action_time|date:"M d, H:i" }}</td>
-          <td style="padding:6px;">{{ entry.get_action_flag_display }}</td>
-          <td style="padding:6px;">
-            {% if entry.is_deletion or not entry.get_admin_url %}
-              {{ entry.object_repr }}
+    <div class="module" id="recent-actions-module">
+        <h2>{% translate 'Recent actions' %}</h2>
+        <h3>{% translate 'My actions' %}</h3>
+            {% load log %}
+            {% get_admin_log 10 as admin_log for user %}
+            {% if admin_log %}
+            <table style="width:100%; border-collapse: collapse; font-size:13px;">
+              <thead>
+                <tr style="text-align:left; border-bottom: 1px solid #ddd;">
+                  <th style="padding:6px;">Time</th>
+                  <th style="padding:6px;">Action</th>
+                  <th style="padding:6px;">Object</th>
+                  <th style="padding:6px;">Type</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for entry in admin_log %}
+                <tr>
+                  <td style="padding:6px;">{{ entry.action_time|date:"M d H:i" }}</td>
+                  <td style="padding:6px;">{{ entry.get_action_flag_display }}</td>
+                  <td style="padding:6px;">
+                    {% if entry.is_deletion or not entry.get_admin_url %}
+                      {{ entry.object_repr }}
+                    {% else %}
+                      <a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>
+                    {% endif %}
+                  </td>
+                  <td style="padding:6px;">{{ entry.content_type.name }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
             {% else %}
-              <a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>
+                <p>{% translate 'None available' %}</p>
             {% endif %}
-          </td>
-          <td style="padding:6px;">{{ entry.content_type.name }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% else %}
-      <p>{% translate 'None available' %}</p>
-    {% endif %}
-  </div>
+    </div>
 </div>
 {% endblock %}
