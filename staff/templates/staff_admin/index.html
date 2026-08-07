@@ -1,7 +1,8 @@
 {% extends "admin/index.html" %}
 {% load i18n log %}
 
-{% block content %}
+{% block app_list %}
+{# KILL THE OLD BULLET LIST COMPLETELY #}
 <div id="content-main">
   {% include "admin/app_list.html" with app_list=app_list show_changelinks=True %}
 </div>
@@ -13,36 +14,22 @@
         <h2>{% translate 'Recent actions' %}</h2>
         <h3>{% translate 'My actions' %}</h3>
             {% get_admin_log 10 as admin_log for_user user %}
-            {% if admin_log %}
+            {% if not admin_log %}<p>{% translate 'None available' %}</p>{% endif %}
             <table style="width:100%; border-collapse: collapse; font-size:13px;">
-              <thead>
-                <tr style="text-align:left; border-bottom: 1px solid #ddd;">
-                  <th style="padding:6px;">Time</th>
-                  <th style="padding:6px;">Action</th>
-                  <th style="padding:6px;">Object</th>
-                  <th style="padding:6px;">Type</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for entry in admin_log %}
-                <tr>
-                  <td style="padding:6px;">{{ entry.action_time|date:"M d H:i" }}</td>
-                  <td style="padding:6px;">{{ entry.get_action_flag_display }}</td>
-                  <td style="padding:6px;">
-                    {% if entry.is_deletion or not entry.get_admin_url %}
-                      {{ entry.object_repr }}
-                    {% else %}
-                      <a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>
-                    {% endif %}
-                  </td>
-                  <td style="padding:6px;">{{ entry.content_type.name }}</td>
-                </tr>
-                {% endfor %}
-              </tbody>
+              <thead><tr style="text-align:left; border-bottom: 1px solid #ddd;">
+                <th style="padding:6px;">Time</th><th style="padding:6px;">Action</th>
+                <th style="padding:6px;">Object</th><th style="padding:6px;">Type</th>
+              </tr></thead>
+              <tbody>{% for entry in admin_log %}<tr>
+                <td style="padding:6px;">{{ entry.action_time|date:"M d H:i" }}</td>
+                <td style="padding:6px;">{{ entry.get_action_flag_display }}</td>
+                <td style="padding:6px;">
+                  {% if entry.is_deletion or not entry.get_admin_url %}{{ entry.object_repr }}
+                  {% else %}<a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>{% endif %}
+                </td>
+                <td style="padding:6px;">{{ entry.content_type.name }}</td>
+              </tr>{% endfor %}</tbody>
             </table>
-            {% else %}
-                <p>{% translate 'None available' %}</p>
-            {% endif %}
     </div>
 </div>
 {% endblock %}

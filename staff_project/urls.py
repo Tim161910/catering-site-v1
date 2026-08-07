@@ -1,21 +1,39 @@
 from django.contrib import admin
-from django.http import HttpResponse
 from django.urls import path, include
-from django.contrib.auth.views import LogoutView
-from django.shortcuts import redirect  # ADD THIS
 from staff.admin import staff_admin_site
-from django.conf import settings
-from django.conf.urls.static import static
+from . import views
 
-def health_check(request):
-    print("HEALTH VIEW HIT")
-    return HttpResponse("ok")
+# --- INLINED EVENTS ADMIN SITE ---
+from django.contrib.admin import AdminSite
+from staff.admin_classes import RoleAdmin, StaffAdmin, AssignmentAdmin, EventTemplateAdmin, EventAdmin
+from staff.models import Role, Staff, Assignment, EventTemplate, Event
+
+class EventsAdminSite(AdminSite):
+    site_header = 'Catering Events Administration'
+    site_title = "Events Portal"
+    index_title = "Events Management"
+
+events_admin_site = EventsAdminSite(name='events_admin')
+
+events_admin_site.register(Role, RoleAdmin)
+events_admin_site.register(Staff, StaffAdmin)
+events_admin_site.register(Assignment, AssignmentAdmin)
+events_admin_site.register(EventTemplate, EventTemplateAdmin)
+events_admin_site.register(Event, EventAdmin)
+# --- END INLINED ---
+
 
 urlpatterns = [
-    path('health/', health_check),
+    # path('health/', include('health.urls')),  <- DELETE OR COMMENT THIS
     path('admin/', admin.site.urls),
     path('staff_admin/', staff_admin_site.urls),
-    path('staff/', include('staff.urls', namespace='staff')),
-    path('logout/', LogoutView.as_view(next_page='staff:staff_login'), name='logout'), # FIXED
-    path('', lambda request: redirect('staff:staff_login'), name='home'), # FIXED
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    path('eventsportal/', events_admin_site.urls), # <- This will 100% load now
+    
+    path('staff/', include('staff.urls')),
+    path('logout/', views.logout_view, name='logout'),
+    path('', views.home, name='home'),
+    # path('<path:path>', views.catch_all), # KEEP THIS COMMENTED FOR NOW
+]
+
+
+print(">>> FINAL URLS:", [str(p.pattern) for p in urlpatterns])
