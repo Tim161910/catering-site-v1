@@ -4,7 +4,7 @@ import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-ROOT_URLCONF = 'catering_site.urls'
+ROOT_URLCONF = 'staff_project.urls'
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-m+1abf)q6%si-7%vl0=sgof&jt^-!@$mt_*vir3s_l%_6*_n)p')
 
